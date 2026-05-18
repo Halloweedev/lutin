@@ -57,8 +57,8 @@ public final class Registry {
         guard FileManager.default.fileExists(atPath: storeURL.path) else {
             return RegistryFile(schemaVersion: 1, projects: [])
         }
-        let data = try Data(contentsOf: storeURL)
         do {
+            let data = try Data(contentsOf: storeURL)
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             return try decoder.decode(RegistryFile.self, from: data)
