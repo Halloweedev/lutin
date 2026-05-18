@@ -16,16 +16,23 @@ public struct LutinConfig: Codable, Equatable {
     public struct ProjectInfo: Codable, Equatable {
         public var name: String
         public var bundleId: String
+        public init(name: String, bundleId: String) {
+            self.name = name; self.bundleId = bundleId
+        }
     }
 
     public struct AppInfo: Codable, Equatable {
         public var path: String
+        public init(path: String) { self.path = path }
     }
 
     public struct OutputInfo: Codable, Equatable {
         public var directory: String
         public var dmgName: String
         public var volumeName: String
+        public init(directory: String, dmgName: String, volumeName: String) {
+            self.directory = directory; self.dmgName = dmgName; self.volumeName = volumeName
+        }
     }
 
     /// All fields optional in raw form; `Templates.merge` fills the gaps.
@@ -47,6 +54,12 @@ public struct LutinConfig: Codable, Equatable {
         public var grid: Bool?
         public var noise: Double?
         public var cornerRadius: Int?
+        public init(type: String?, template: String?, scale: Int?, colorA: String?,
+                    colorB: String?, grid: Bool?, noise: Double?, cornerRadius: Int?) {
+            self.type = type; self.template = template; self.scale = scale
+            self.colorA = colorA; self.colorB = colorB; self.grid = grid
+            self.noise = noise; self.cornerRadius = cornerRadius
+        }
     }
 
     public struct Item: Codable, Equatable {
@@ -83,5 +96,29 @@ public struct LutinConfig: Codable, Equatable {
         public var appcastPath: String?
         public var releaseNotesDirectory: String?
         public var downloadBaseURL: String?
+    }
+
+    public init(
+        project: ProjectInfo,
+        app: AppInfo,
+        output: OutputInfo,
+        window: WindowInfo?,
+        background: BackgroundInfo?,
+        items: [Item]?,
+        decorations: [Decoration]?,
+        signing: SigningInfo?,
+        notarization: NotarizationInfo?,
+        sparkle: SparkleInfo?
+    ) {
+        self.project = project
+        self.app = app
+        self.output = output
+        self.window = window
+        self.background = background
+        self.items = items
+        self.decorations = decorations
+        self.signing = signing
+        self.notarization = notarization
+        self.sparkle = sparkle
     }
 }
