@@ -96,4 +96,45 @@ public final class Registry {
         file.projects.append(entry)
         try write(file)
     }
+
+    /// Returns the entry with `name`, or nil.
+    public func find(name: String) throws -> RegistryEntry? {
+        try read().projects.first { $0.name == name }
+    }
+
+    /// Removes the entry with `name`; throws if it is not registered.
+    public func remove(name: String) throws {
+        var file = try read()
+        guard file.projects.contains(where: { $0.name == name }) else {
+            throw LutinError(
+                code: "project_not_in_registry",
+                message: "No project named '\(name)' is registered.",
+                details: ["name": name]
+            )
+        }
+        file.projects.removeAll { $0.name == name }
+        try write(file)
+    }
+
+    /// All entries with their on-disk status (`ok` / `missing`). Never prunes.
+    public func list() throws -> [RegistryEntryStatus] {
+        try read().projects.map { entry in
+            let exists = FileManager.default.fileExists(atPath: entry.configPath)
+            return RegistryEntryStatus(entry: entry, status: exists ? .ok : .missing)
+        }
+    }
+
+    /// Updates `lastOpenedDate` for an entry; throws if not registered.
+    public func touchOpened(name: String, date: Date = Date()) throws {
+        var file = try read()
+        guard let index = file.projects.firstIndex(where: { $0.name == name }) else {
+            throw LutinError(
+                code: "project_not_in_registry",
+                message: "No project named '\(name)' is registered.",
+                details: ["name": name]
+            )
+        }
+        file.projects[index].lastOpenedDate = date
+        try write(file)
+    }
 }
