@@ -16,8 +16,14 @@ let package = Package(
         .target(name: "LutinConfig", dependencies: ["LutinCore", "Yams"]),
         .target(name: "LutinRegistry", dependencies: ["LutinCore"]),
         .target(name: "LutinBuilder", dependencies: ["LutinCore", "LutinConfig"]),
+        .target(name: "LutinSigning", dependencies: ["LutinCore"]),
+        .target(name: "LutinNotarization", dependencies: ["LutinCore"]),
+        .target(name: "LutinRelease", dependencies: [
+            "LutinCore", "LutinConfig", "LutinBuilder", "LutinSigning", "LutinNotarization",
+        ]),
         .target(name: "LutinCLI", dependencies: [
             "LutinCore", "LutinConfig", "LutinRegistry", "LutinBuilder",
+            "LutinSigning", "LutinNotarization", "LutinRelease",
             .product(name: "ArgumentParser", package: "swift-argument-parser"),
         ]),
         .executableTarget(name: "LutinCLIExe", dependencies: ["LutinCLI"], path: "Apps/LutinCLI"),
@@ -26,6 +32,11 @@ let package = Package(
         .testTarget(name: "LutinConfigTests", dependencies: ["LutinConfig", "LutinCore", "TestSupport"]),
         .testTarget(name: "LutinRegistryTests", dependencies: ["LutinRegistry", "LutinCore", "TestSupport"]),
         .testTarget(name: "LutinBuilderTests", dependencies: ["LutinBuilder", "LutinConfig", "LutinCore", "TestSupport"]),
-        .testTarget(name: "LutinCLITests", dependencies: ["LutinCLI", "LutinRegistry", "LutinCore", "TestSupport"]),
+        .testTarget(name: "LutinSigningTests", dependencies: ["LutinSigning", "LutinCore", "TestSupport"]),
+        .testTarget(name: "LutinNotarizationTests", dependencies: ["LutinNotarization", "LutinCore", "TestSupport"]),
+        .testTarget(name: "LutinReleaseTests", dependencies: [
+            "LutinRelease", "LutinConfig", "LutinCore", "TestSupport"]),
+        .testTarget(name: "LutinCLITests", dependencies: [
+            "LutinCLI", "LutinRegistry", "LutinCore", "LutinBuilder", "LutinRelease", "TestSupport"]),
     ]
 )
