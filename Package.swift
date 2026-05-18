@@ -27,7 +27,7 @@ let package = Package(
             .product(name: "ArgumentParser", package: "swift-argument-parser"),
         ]),
         .executableTarget(name: "LutinCLIExe", dependencies: ["LutinCLI"], path: "Apps/LutinCLI"),
-        .target(name: "TestSupport", path: "Tests/TestSupport"),
+        .target(name: "TestSupport", dependencies: ["LutinCore"], path: "Tests/TestSupport"),
         .testTarget(name: "LutinCoreTests", dependencies: ["LutinCore", "TestSupport"]),
         .testTarget(name: "LutinConfigTests", dependencies: ["LutinConfig", "LutinCore", "TestSupport"]),
         .testTarget(name: "LutinRegistryTests", dependencies: ["LutinRegistry", "LutinCore", "TestSupport"]),

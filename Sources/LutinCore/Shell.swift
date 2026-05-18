@@ -4,6 +4,12 @@ public struct ShellResult {
     public let exitCode: Int32
     public let stdout: String
     public let stderr: String
+
+    public init(exitCode: Int32, stdout: String, stderr: String) {
+        self.exitCode = exitCode
+        self.stdout = stdout
+        self.stderr = stderr
+    }
 }
 
 /// Wraps `Process`, capturing stdout and stderr separately. Never hides failures.
