@@ -53,7 +53,7 @@ enum CommandLogic {
                           dmgName: "\(name)-${version}.dmg", volumeName: name),
             window: nil,
             background: LutinConfig.BackgroundInfo(
-                type: nil, template: template, scale: nil, colorA: nil,
+                type: nil, template: template, path: nil, scale: nil, colorA: nil,
                 colorB: nil, grid: nil, noise: nil, cornerRadius: nil),
             items: nil, decorations: nil, signing: nil, notarization: nil, sparkle: nil)
 

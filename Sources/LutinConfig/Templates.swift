@@ -84,6 +84,7 @@ public enum Templates {
         result.background = LutinConfig.BackgroundInfo(
             type: cb?.type ?? b.type,
             template: cb?.template ?? b.template,
+            path: cb?.path,
             scale: cb?.scale ?? b.scale,
             colorA: cb?.colorA ?? b.colorA,
             colorB: cb?.colorB ?? b.colorB,

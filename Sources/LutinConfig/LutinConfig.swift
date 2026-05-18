@@ -43,22 +43,33 @@ public struct LutinConfig: Codable, Equatable {
         public var textSize: Int?
         public var showToolbar: Bool?
         public var showSidebar: Bool?
+        public init(width: Int?, height: Int?, iconSize: Int?, textSize: Int?,
+                    showToolbar: Bool?, showSidebar: Bool?) {
+            self.width = width
+            self.height = height
+            self.iconSize = iconSize
+            self.textSize = textSize
+            self.showToolbar = showToolbar
+            self.showSidebar = showSidebar
+        }
     }
 
     public struct BackgroundInfo: Codable, Equatable {
         public var type: String?
         public var template: String?
+        public var path: String?
         public var scale: Int?
         public var colorA: String?
         public var colorB: String?
         public var grid: Bool?
         public var noise: Double?
         public var cornerRadius: Int?
-        public init(type: String?, template: String?, scale: Int?, colorA: String?,
-                    colorB: String?, grid: Bool?, noise: Double?, cornerRadius: Int?) {
-            self.type = type; self.template = template; self.scale = scale
-            self.colorA = colorA; self.colorB = colorB; self.grid = grid
-            self.noise = noise; self.cornerRadius = cornerRadius
+        public init(type: String?, template: String?, path: String?, scale: Int?,
+                    colorA: String?, colorB: String?, grid: Bool?, noise: Double?,
+                    cornerRadius: Int?) {
+            self.type = type; self.template = template; self.path = path
+            self.scale = scale; self.colorA = colorA; self.colorB = colorB
+            self.grid = grid; self.noise = noise; self.cornerRadius = cornerRadius
         }
     }
 
@@ -68,6 +79,13 @@ public struct LutinConfig: Codable, Equatable {
         public var x: Int
         public var y: Int
         public var label: String?
+        public init(type: String, id: String, x: Int, y: Int, label: String?) {
+            self.type = type
+            self.id = id
+            self.x = x
+            self.y = y
+            self.label = label
+        }
     }
 
     public struct Decoration: Codable, Equatable {
@@ -75,6 +93,12 @@ public struct LutinConfig: Codable, Equatable {
         public var from: String
         public var to: String
         public var label: String?
+        public init(type: String, from: String, to: String, label: String?) {
+            self.type = type
+            self.from = from
+            self.to = to
+            self.label = label
+        }
     }
 
     public struct SigningInfo: Codable, Equatable {
@@ -83,12 +107,25 @@ public struct LutinConfig: Codable, Equatable {
         public var hardenedRuntime: Bool?
         public var entitlements: String?
         public var signDmg: Bool?
+        public init(enabled: Bool, identity: String?, hardenedRuntime: Bool?,
+                    entitlements: String?, signDmg: Bool?) {
+            self.enabled = enabled
+            self.identity = identity
+            self.hardenedRuntime = hardenedRuntime
+            self.entitlements = entitlements
+            self.signDmg = signDmg
+        }
     }
 
     public struct NotarizationInfo: Codable, Equatable {
         public var enabled: Bool
         public var profile: String?
         public var staple: Bool?
+        public init(enabled: Bool, profile: String?, staple: Bool?) {
+            self.enabled = enabled
+            self.profile = profile
+            self.staple = staple
+        }
     }
 
     public struct SparkleInfo: Codable, Equatable {
@@ -96,6 +133,13 @@ public struct LutinConfig: Codable, Equatable {
         public var appcastPath: String?
         public var releaseNotesDirectory: String?
         public var downloadBaseURL: String?
+        public init(enabled: Bool, appcastPath: String?, releaseNotesDirectory: String?,
+                    downloadBaseURL: String?) {
+            self.enabled = enabled
+            self.appcastPath = appcastPath
+            self.releaseNotesDirectory = releaseNotesDirectory
+            self.downloadBaseURL = downloadBaseURL
+        }
     }
 
     public init(
