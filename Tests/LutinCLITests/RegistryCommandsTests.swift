@@ -21,6 +21,7 @@ final class RegistryCommandsTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(
             atPath: projectDir.appendingPathComponent("lutin.yml").path))
         XCTAssertEqual(try registry.find(name: "Barry")?.name, "Barry")
+        XCTAssertEqual(try registry.find(name: "Barry")?.appPath, appURL.path)
     }
 
     func testInitDryRunWritesNothing() throws {

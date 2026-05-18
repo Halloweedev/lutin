@@ -63,7 +63,8 @@ enum CommandLogic {
             let now = Date()
             try registry.upsert(RegistryEntry(
                 name: name, configPath: configURL.path,
-                appPath: URL(fileURLWithPath: relativeAppPath, relativeTo: directory).path,
+                appPath: directory.appendingPathComponent(
+                    URL(fileURLWithPath: relativeAppPath).lastPathComponent).path,
                 lastDetectedVersion: nil, lastReleaseStatus: nil,
                 createdDate: now, lastOpenedDate: now))
         }
