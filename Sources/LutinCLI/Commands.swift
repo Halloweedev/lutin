@@ -77,7 +77,7 @@ enum CommandLogic {
     /// Registers an existing `lutin.yml`. Fails on a duplicate name.
     @discardableResult
     static func addProject(configPath: String, overrideName: String?,
-                           registry: Registry) throws -> AddResult {
+                           registry: Registry, dryRun: Bool) throws -> AddResult {
         let configURL = URL(fileURLWithPath: configPath)
         let config = try LutinConfig.load(from: configURL)
         let name = overrideName ?? config.project.name
@@ -93,16 +93,28 @@ enum CommandLogic {
         }
         let appURL = URL(fileURLWithPath: config.app.path,
                          relativeTo: configURL.deletingLastPathComponent())
-        let now = Date()
-        try registry.upsert(RegistryEntry(
-            name: name, configPath: configURL.path, appPath: appURL.path,
-            lastDetectedVersion: nil, lastReleaseStatus: nil,
-            createdDate: now, lastOpenedDate: now))
+        if !dryRun {
+            let now = Date()
+            try registry.upsert(RegistryEntry(
+                name: name, configPath: configURL.path, appPath: appURL.path,
+                lastDetectedVersion: nil, lastReleaseStatus: nil,
+                createdDate: now, lastOpenedDate: now))
+        }
         return AddResult(name: name, configPath: configURL.path)
     }
 
-    static func removeProject(name: String, registry: Registry) throws {
-        try registry.remove(name: name)
+    static func removeProject(name: String, registry: Registry, dryRun: Bool) throws {
+        if dryRun {
+            guard try registry.find(name: name) != nil else {
+                throw LutinError(
+                    code: "project_not_in_registry",
+                    message: "No project named '\(name)' is registered.",
+                    details: ["name": name]
+                )
+            }
+        } else {
+            try registry.remove(name: name)
+        }
     }
 
     struct ProjectListItem: Encodable {
@@ -307,8 +319,11 @@ struct Add: ParsableCommand {
         let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
         do {
             let result = try CommandLogic.addProject(
-                configPath: path, overrideName: name, registry: Registry())
-            renderer.success(result, human: "Registered \(result.name).")
+                configPath: path, overrideName: name, registry: Registry(),
+                dryRun: common.dryRun)
+            renderer.success(result, human: common.dryRun
+                ? "Would register \(result.name)."
+                : "Registered \(result.name).")
         } catch let error as LutinError {
             renderer.failure(error); throw ExitCode(1)
         }
@@ -323,8 +338,11 @@ struct Remove: ParsableCommand {
     func run() throws {
         let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
         do {
-            try CommandLogic.removeProject(name: name, registry: Registry())
-            renderer.success(EmptyPayload(), human: "Removed \(name).")
+            try CommandLogic.removeProject(name: name, registry: Registry(),
+                                           dryRun: common.dryRun)
+            renderer.success(EmptyPayload(), human: common.dryRun
+                ? "Would remove \(name)."
+                : "Removed \(name).")
         } catch let error as LutinError {
             renderer.failure(error); throw ExitCode(1)
         }

@@ -43,9 +43,10 @@ final class RegistryCommandsTests: XCTestCase {
         let dir = try Fixtures.makeTempDirectory()
         let registry = Registry(storeURL: dir.appendingPathComponent("projects.json"))
         _ = try CommandLogic.addProject(configPath: Fixtures.barryConfig.path,
-                                        overrideName: nil, registry: registry)
+                                        overrideName: nil, registry: registry, dryRun: false)
         XCTAssertThrowsError(try CommandLogic.addProject(
-            configPath: Fixtures.barryConfig.path, overrideName: nil, registry: registry)) { error in
+            configPath: Fixtures.barryConfig.path, overrideName: nil, registry: registry,
+            dryRun: false)) { error in
             XCTAssertEqual((error as? LutinError)?.code, "duplicate_project")
         }
     }
@@ -54,8 +55,27 @@ final class RegistryCommandsTests: XCTestCase {
         let dir = try Fixtures.makeTempDirectory()
         let registry = Registry(storeURL: dir.appendingPathComponent("projects.json"))
         _ = try CommandLogic.addProject(configPath: Fixtures.barryConfig.path,
-                                        overrideName: nil, registry: registry)
-        try CommandLogic.removeProject(name: "Barry", registry: registry)
+                                        overrideName: nil, registry: registry, dryRun: false)
+        try CommandLogic.removeProject(name: "Barry", registry: registry, dryRun: false)
         XCTAssertNil(try registry.find(name: "Barry"))
+    }
+
+    func testAddDryRunDoesNotRegister() throws {
+        let dir = try Fixtures.makeTempDirectory()
+        let registry = Registry(storeURL: dir.appendingPathComponent("projects.json"))
+        let result = try CommandLogic.addProject(configPath: Fixtures.barryConfig.path,
+                                                  overrideName: nil, registry: registry,
+                                                  dryRun: true)
+        XCTAssertEqual(result.name, "Barry")
+        XCTAssertNil(try registry.find(name: "Barry"))
+    }
+
+    func testRemoveDryRunKeepsEntry() throws {
+        let dir = try Fixtures.makeTempDirectory()
+        let registry = Registry(storeURL: dir.appendingPathComponent("projects.json"))
+        _ = try CommandLogic.addProject(configPath: Fixtures.barryConfig.path,
+                                        overrideName: nil, registry: registry, dryRun: false)
+        try CommandLogic.removeProject(name: "Barry", registry: registry, dryRun: true)
+        XCTAssertNotNil(try registry.find(name: "Barry"))
     }
 }
