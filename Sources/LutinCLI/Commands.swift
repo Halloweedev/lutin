@@ -135,4 +135,315 @@ enum CommandLogic {
         try registry.touchOpened(name: name)
         return OpenResult(name: name, configPath: entry.configPath)
     }
+
+    // MARK: validate
+
+    static func validateConfig(configURL: URL) throws -> [ConfigIssue] {
+        let config = try LutinConfig.load(from: configURL)
+        return ConfigValidator.validate(config)
+    }
+
+    // MARK: doctor
+
+    struct DoctorCheck: Encodable {
+        let name: String
+        let ok: Bool
+        let detail: String
+    }
+
+    static func doctor(configURL: URL) throws -> [DoctorCheck] {
+        var checks: [DoctorCheck] = []
+
+        // config
+        let loaded: LutinConfig?
+        do {
+            let config = try LutinConfig.load(from: configURL)
+            let withDefaults = try Templates.applyDefaults(to: config)
+            let issues = ConfigValidator.validate(withDefaults)
+            let errorCount = issues.filter { $0.severity == .error }.count
+            checks.append(DoctorCheck(name: "config", ok: errorCount == 0,
+                detail: errorCount == 0 ? "lutin.yml is valid"
+                                        : "\(errorCount) validation error(s)"))
+            loaded = config
+        } catch let error as LutinError {
+            checks.append(DoctorCheck(name: "config", ok: false, detail: error.message))
+            loaded = nil
+        }
+
+        // appBundle
+        if let config = loaded {
+            let appURL = URL(fileURLWithPath: config.app.path,
+                             relativeTo: configURL.deletingLastPathComponent())
+            let info = try? InfoPlistReader.read(appBundle: appURL)
+            checks.append(DoctorCheck(name: "appBundle", ok: info != nil,
+                detail: info != nil ? "app bundle and Info.plist readable"
+                                     : "app bundle missing or Info.plist unreadable"))
+
+            // outputDirectory
+            let outURL = URL(fileURLWithPath: config.output.directory,
+                             relativeTo: configURL.deletingLastPathComponent())
+            let parent = outURL.deletingLastPathComponent()
+            let writable = FileManager.default.isWritableFile(atPath: parent.path)
+            checks.append(DoctorCheck(name: "outputDirectory", ok: writable,
+                detail: writable ? "output directory location is writable"
+                                  : "cannot write to \(parent.path)"))
+        } else {
+            checks.append(DoctorCheck(name: "appBundle", ok: false, detail: "skipped — config invalid"))
+            checks.append(DoctorCheck(name: "outputDirectory", ok: false, detail: "skipped — config invalid"))
+        }
+
+        // tools
+        let tools = ["/usr/bin/hdiutil", "/usr/bin/codesign", "/usr/bin/xcrun"]
+        let missing = tools.filter { !FileManager.default.isExecutableFile(atPath: $0) }
+        checks.append(DoctorCheck(name: "tools", ok: missing.isEmpty,
+            detail: missing.isEmpty ? "hdiutil, codesign, xcrun available"
+                                     : "missing: \(missing.joined(separator: ", "))"))
+        return checks
+    }
+
+    // MARK: build
+
+    static func build(configURL: URL, dryRun: Bool,
+                      onOutput: ((String) -> Void)? = nil) throws -> BuildResult {
+        let rawConfig = try LutinConfig.load(from: configURL)
+        let config = try Templates.applyDefaults(to: rawConfig)
+        let projectDir = configURL.deletingLastPathComponent()
+
+        let appURL = URL(fileURLWithPath: config.app.path, relativeTo: projectDir)
+        let info = try InfoPlistReader.read(appBundle: appURL)
+        let context = TokenResolver.Context(version: info.shortVersion, name: config.project.name)
+
+        let dmgName = TokenResolver.resolve(config.output.dmgName, context)
+        let outURL = URL(fileURLWithPath: config.output.directory, relativeTo: projectDir)
+
+        let request = BuildRequest(
+            appBundle: appURL.standardizedFileURL,
+            outputDirectory: outURL.standardizedFileURL,
+            dmgName: dmgName,
+            volumeName: TokenResolver.resolve(config.output.volumeName, context))
+        return try DMGBuilder.build(request, dryRun: dryRun, onOutput: onOutput)
+    }
+
+    // MARK: stubs
+
+    static func notImplemented(verb: String) throws -> Never {
+        throw LutinError(
+            code: "not_implemented",
+            message: "`lutin \(verb)` is not available yet — it ships in a later sub-project.",
+            details: ["verb": verb])
+    }
+}
+
+// MARK: - CLI commands
+
+/// Resolves the target config URL from common options, using the registry.
+private func resolveConfigURL(config: String?, name: String?) throws -> URL {
+    let registry = Registry()
+    return try ProjectResolver.resolve(
+        explicitConfig: config,
+        projectName: name,
+        currentDirectory: URL(fileURLWithPath: FileManager.default.currentDirectoryPath),
+        registryLookup: { projectName in
+            (try? registry.find(name: projectName))
+                .flatMap { $0 }
+                .map { URL(fileURLWithPath: $0.configPath) }
+        })
+}
+
+public struct Lutin: ParsableCommand {
+    public static let configuration = CommandConfiguration(
+        commandName: "lutin",
+        abstract: "Design, build, and release beautiful DMGs for macOS apps.",
+        subcommands: [Init.self, Projects.self, Add.self, Remove.self, Open.self,
+                      Validate.self, Doctor.self, Build.self, Release.self, Preview.self])
+    public init() {}
+}
+
+struct Init: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Create a new lutin.yml.")
+    @OptionGroup var common: CommonOptions
+    @Option(name: .long, help: "Path to the .app bundle.") var app: String?
+    @Option(name: .long, help: "Template name.") var template: String = Templates.defaultTemplateName
+
+    func run() throws {
+        let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
+        do {
+            let result = try CommandLogic.initProject(
+                directory: URL(fileURLWithPath: FileManager.default.currentDirectoryPath),
+                appPath: app, template: template, registry: Registry(), dryRun: common.dryRun)
+            renderer.success(result, human: result.dryRun
+                ? "Would create \(result.configPath) for \(result.projectName)."
+                : "Created \(result.configPath) for \(result.projectName).")
+        } catch let error as LutinError {
+            renderer.failure(error); throw ExitCode(1)
+        }
+    }
+}
+
+struct Projects: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "List remembered projects.")
+    @OptionGroup var common: CommonOptions
+
+    func run() throws {
+        let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
+        do {
+            let items = try CommandLogic.listProjects(registry: Registry())
+            let human = items.isEmpty
+                ? "No projects registered. Run `lutin init`."
+                : items.map { "\($0.name)  [\($0.status)]  \($0.configPath)" }.joined(separator: "\n")
+            renderer.success(items, human: human)
+        } catch let error as LutinError {
+            renderer.failure(error); throw ExitCode(1)
+        }
+    }
+}
+
+struct Add: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Register an existing lutin.yml.")
+    @OptionGroup var common: CommonOptions
+    @Argument(help: "Path to a lutin.yml file.") var path: String
+    @Option(name: .long, help: "Register under a different name.") var name: String?
+
+    func run() throws {
+        let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
+        do {
+            let result = try CommandLogic.addProject(
+                configPath: path, overrideName: name, registry: Registry())
+            renderer.success(result, human: "Registered \(result.name).")
+        } catch let error as LutinError {
+            renderer.failure(error); throw ExitCode(1)
+        }
+    }
+}
+
+struct Remove: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Forget a project.")
+    @OptionGroup var common: CommonOptions
+    @Argument(help: "Project name.") var name: String
+
+    func run() throws {
+        let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
+        do {
+            try CommandLogic.removeProject(name: name, registry: Registry())
+            renderer.success(EmptyPayload(), human: "Removed \(name).")
+        } catch let error as LutinError {
+            renderer.failure(error); throw ExitCode(1)
+        }
+    }
+}
+
+struct Open: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Show a project's location.")
+    @OptionGroup var common: CommonOptions
+    @Option(name: .long, help: "Project name.") var name: String
+
+    func run() throws {
+        let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
+        do {
+            let result = try CommandLogic.openProject(name: name, registry: Registry())
+            renderer.success(result, human: result.configPath)
+        } catch let error as LutinError {
+            renderer.failure(error); throw ExitCode(1)
+        }
+    }
+}
+
+struct Validate: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Validate a project's lutin.yml.")
+    @OptionGroup var common: CommonOptions
+    @Option(name: .long, help: "Path to lutin.yml.") var config: String?
+    @Option(name: .long, help: "Project name.") var name: String?
+
+    func run() throws {
+        let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
+        do {
+            let url = try resolveConfigURL(config: config, name: name)
+            let issues = try CommandLogic.validateConfig(configURL: url)
+            let errors = issues.filter { $0.severity == .error }
+            let human = issues.isEmpty
+                ? "lutin.yml is valid."
+                : issues.map { "[\($0.severity.rawValue)] \($0.path): \($0.message)" }
+                        .joined(separator: "\n")
+            renderer.success(issues, human: human)
+            if !errors.isEmpty { throw ExitCode(1) }
+        } catch let error as LutinError {
+            renderer.failure(error); throw ExitCode(1)
+        }
+    }
+}
+
+struct Doctor: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Check a project's release readiness.")
+    @OptionGroup var common: CommonOptions
+    @Option(name: .long, help: "Path to lutin.yml.") var config: String?
+    @Option(name: .long, help: "Project name.") var name: String?
+
+    func run() throws {
+        let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
+        do {
+            let url = try resolveConfigURL(config: config, name: name)
+            let checks = try CommandLogic.doctor(configURL: url)
+            let human = checks.map { "\($0.ok ? "✓" : "✗") \($0.name): \($0.detail)" }
+                              .joined(separator: "\n")
+            renderer.success(checks, human: human)
+            if checks.contains(where: { !$0.ok }) { throw ExitCode(1) }
+        } catch let error as LutinError {
+            renderer.failure(error); throw ExitCode(1)
+        }
+    }
+}
+
+struct Build: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Build a DMG (unsigned).")
+    @OptionGroup var common: CommonOptions
+    @Option(name: .long, help: "Path to lutin.yml.") var config: String?
+    @Option(name: .long, help: "Project name.") var name: String?
+
+    func run() throws {
+        let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
+        do {
+            let url = try resolveConfigURL(config: config, name: name)
+            let result = try CommandLogic.build(
+                configURL: url, dryRun: common.dryRun,
+                onOutput: { renderer.verboseLine($0) })
+            let human: String
+            if result.dryRun {
+                human = "Dry run — planned steps:\n"
+                      + result.plannedSteps.map { "  • \($0)" }.joined(separator: "\n")
+            } else {
+                human = "Built \(result.dmgPath?.path ?? "")\n"
+                      + "  size: \(result.sizeBytes ?? 0) bytes\n"
+                      + "  sha256: \(result.sha256 ?? "")"
+            }
+            renderer.success(result, human: human)
+        } catch let error as LutinError {
+            renderer.failure(error); throw ExitCode(1)
+        }
+    }
+}
+
+struct Release: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Release a DMG (not yet implemented).")
+    @OptionGroup var common: CommonOptions
+    @Option(name: .long, help: "Path to lutin.yml.") var config: String?
+    @Option(name: .long, help: "Project name.") var name: String?
+
+    func run() throws {
+        let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
+        do { _ = try CommandLogic.notImplemented(verb: "release") }
+        catch let error as LutinError { renderer.failure(error); throw ExitCode(1) }
+    }
+}
+
+struct Preview: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Preview the design (not yet implemented).")
+    @OptionGroup var common: CommonOptions
+    @Option(name: .long, help: "Path to lutin.yml.") var config: String?
+    @Option(name: .long, help: "Project name.") var name: String?
+
+    func run() throws {
+        let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
+        do { _ = try CommandLogic.notImplemented(verb: "preview") }
+        catch let error as LutinError { renderer.failure(error); throw ExitCode(1) }
+    }
 }

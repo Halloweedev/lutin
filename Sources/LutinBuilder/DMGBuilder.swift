@@ -85,3 +85,17 @@ public enum DMGBuilder {
                            dmgPath: dmgPath, sizeBytes: size, sha256: hex)
     }
 }
+
+extension BuildResult: Encodable {
+    enum CodingKeys: String, CodingKey {
+        case dryRun, plannedSteps, dmgPath, sizeBytes, sha256
+    }
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(dryRun, forKey: .dryRun)
+        try c.encode(plannedSteps, forKey: .plannedSteps)
+        try c.encodeIfPresent(dmgPath?.path, forKey: .dmgPath)
+        try c.encodeIfPresent(sizeBytes, forKey: .sizeBytes)
+        try c.encodeIfPresent(sha256, forKey: .sha256)
+    }
+}
