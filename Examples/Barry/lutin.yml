@@ -1,0 +1,14 @@
+project:
+  name: Barry
+  bundleId: com.anotheragence.barry
+
+app:
+  path: ./Barry.app
+
+output:
+  directory: ./release
+  dmgName: Barry-${version}.dmg
+  volumeName: Barry
+
+background:
+  template: blueprint
