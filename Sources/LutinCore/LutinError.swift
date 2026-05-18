@@ -17,12 +17,12 @@ public struct LutinError: Error, Codable, Equatable {
 public struct EmptyPayload: Codable { public init() {} }
 
 /// The `--json` output envelope: `{ "ok", "data", "error" }`.
-public struct JSONEnvelope<Data: Encodable>: Encodable {
+public struct JSONEnvelope<Payload: Encodable>: Encodable {
     public let ok: Bool
-    public let data: Data?
+    public let data: Payload?
     public let error: LutinError?
 
-    public static func success(_ data: Data) -> JSONEnvelope {
+    public static func success(_ data: Payload) -> JSONEnvelope {
         JSONEnvelope(ok: true, data: data, error: nil)
     }
 
