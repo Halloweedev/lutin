@@ -10,7 +10,9 @@ public struct ShellResult {
 public enum Shell {
     /// Runs `executable` with `arguments`.
     /// - Parameter checkExit: when true (default), a non-zero exit throws a `LutinError`.
-    /// - Parameter onOutput: optional line callback for `--verbose` streaming.
+    /// - Parameter onOutput: optional callback invoked once after the process exits, once per
+    ///   stdout line. Lines are not delivered in real time; they are emitted only after
+    ///   `waitUntilExit()` returns and the full output has been captured.
     @discardableResult
     public static func run(
         _ executable: String,
@@ -36,6 +38,11 @@ public enum Shell {
             )
         }
 
+        // NOTE: Reading stdout fully before stderr can deadlock if the child process fills the
+        // ~64 KB stderr pipe buffer before its stdout reaches EOF — because this thread blocks in
+        // the first readDataToEndOfFile() while the child is blocked trying to write stderr.
+        // That race is acceptable here: Lutin only wraps tools (hdiutil, codesign, xcrun) whose
+        // combined stdout + stderr output stays well under the 64 KB pipe-buffer threshold.
         let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
         let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
