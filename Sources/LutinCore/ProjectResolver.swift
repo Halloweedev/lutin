@@ -7,7 +7,7 @@ public enum ProjectResolver {
         explicitConfig: String?,
         projectName: String?,
         currentDirectory: URL,
-        registryLookup: (String) -> URL?
+        registryLookup: (String) throws -> URL?
     ) throws -> URL {
         // 1. Explicit --config wins.
         if let explicitConfig {
@@ -24,7 +24,7 @@ public enum ProjectResolver {
 
         // 2. Named registry argument.
         if let projectName {
-            guard let url = registryLookup(projectName) else {
+            guard let url = try registryLookup(projectName) else {
                 throw LutinError(
                     code: "project_not_in_registry",
                     message: "No project named '\(projectName)' is registered. Run `lutin projects`.",

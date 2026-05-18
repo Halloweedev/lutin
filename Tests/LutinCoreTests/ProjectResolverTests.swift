@@ -58,4 +58,12 @@ final class ProjectResolverTests: XCTestCase {
             XCTAssertEqual((error as? LutinError)?.code, "config_not_found")
         }
     }
+
+    func testRegistryLookupErrorPropagates() {
+        struct Boom: Error {}
+        XCTAssertThrowsError(try ProjectResolver.resolve(
+            explicitConfig: nil, projectName: "Barry",
+            currentDirectory: FileManager.default.temporaryDirectory,
+            registryLookup: { _ in throw Boom() }))
+    }
 }

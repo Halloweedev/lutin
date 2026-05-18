@@ -244,8 +244,7 @@ private func resolveConfigURL(config: String?, name: String?) throws -> URL {
         projectName: name,
         currentDirectory: URL(fileURLWithPath: FileManager.default.currentDirectoryPath),
         registryLookup: { projectName in
-            (try? registry.find(name: projectName))
-                .flatMap { $0 }
+            try registry.find(name: projectName)
                 .map { URL(fileURLWithPath: $0.configPath) }
         })
 }
@@ -430,7 +429,7 @@ struct Release: ParsableCommand {
 
     func run() throws {
         let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
-        do { _ = try CommandLogic.notImplemented(verb: "release") }
+        do { try CommandLogic.notImplemented(verb: "release") }
         catch let error as LutinError { renderer.failure(error); throw ExitCode(1) }
     }
 }
@@ -443,7 +442,7 @@ struct Preview: ParsableCommand {
 
     func run() throws {
         let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
-        do { _ = try CommandLogic.notImplemented(verb: "preview") }
+        do { try CommandLogic.notImplemented(verb: "preview") }
         catch let error as LutinError { renderer.failure(error); throw ExitCode(1) }
     }
 }
