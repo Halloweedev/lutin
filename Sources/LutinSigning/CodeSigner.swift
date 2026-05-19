@@ -54,4 +54,46 @@ public enum CodeSigner {
                 details: ["target": target.path])
         }
     }
+
+    private static let security = "/usr/bin/security"
+
+    /// Signs a `.dmg` file with `codesign`.
+    public static func signDMG(_ dmg: URL, identity: String,
+                               runner: CommandRunning) throws {
+        do {
+            _ = try runner.run(codesign, ["--force", "--sign", identity,
+                                          "--timestamp", dmg.path])
+        } catch let error as LutinError {
+            throw LutinError(code: "signing_failed",
+                             message: "codesign failed for the DMG: \(error.message)",
+                             details: ["target": dmg.path])
+        }
+    }
+
+    /// Throws `identity_not_found` if `identity` is not in the Keychain.
+    public static func verifyIdentityExists(_ identity: String,
+                                            runner: CommandRunning) throws {
+        let result = try runner.runAllowingFailure(
+            security, ["find-identity", "-v", "-p", "codesigning"])
+        if !result.stdout.contains(identity) {
+            throw LutinError(
+                code: "identity_not_found",
+                message: "Signing identity '\(identity)' was not found in the Keychain. "
+                       + "Import your Developer ID certificate, or check signing.identity.",
+                details: ["identity": identity])
+        }
+    }
+
+    /// Verifies a signed bundle with `codesign --verify --deep --strict`.
+    public static func verifySignature(of bundle: URL,
+                                       runner: CommandRunning) throws {
+        do {
+            _ = try runner.run(codesign, ["--verify", "--deep", "--strict", bundle.path])
+        } catch let error as LutinError {
+            throw LutinError(code: "signing_failed",
+                             message: "Signature verification failed for "
+                                    + "\(bundle.lastPathComponent): \(error.message)",
+                             details: ["target": bundle.path])
+        }
+    }
 }
