@@ -1,6 +1,7 @@
 import Foundation
 import CoreGraphics
 import CoreText
+import ImageIO
 import LutinCore
 
 /// A point in window-point coordinates (top-left origin), as used by `lutin.yml`.
@@ -119,10 +120,32 @@ struct DecorationCompositor {
         cg.restoreGState()
     }
 
-    /// Implemented in Task 9.
     private func drawImage(in cg: CGContext, imageHeight: Int, url: URL, x: Int, y: Int,
                            widthPoints: Int?, scale: CGFloat) throws {
-        throw LutinError(code: "render_failed",
-                         message: "Image decorations are implemented in a later task.")
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw LutinError(code: "decoration_image_not_found",
+                             message: "Decoration image not found at path: \(url.path)",
+                             details: ["path": url.path])
+        }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            throw LutinError(code: "render_failed",
+                             message: "Could not decode decoration image at \(url.path).")
+        }
+        let drawW: CGFloat
+        let drawH: CGFloat
+        if let wp = widthPoints {
+            drawW = CGFloat(wp) * scale
+            drawH = drawW * CGFloat(image.height) / CGFloat(max(1, image.width))
+        } else {
+            drawW = CGFloat(image.width)
+            drawH = CGFloat(image.height)
+        }
+        // x/y are window points with top-left origin.
+        // In a bottom-up CGContext, the draw rect's origin y is measured from the bottom.
+        let rectX = CGFloat(x) * scale
+        let rectY = CGFloat(imageHeight) - CGFloat(y) * scale - drawH
+        let rect = CGRect(x: rectX, y: rectY, width: drawW, height: drawH)
+        cg.draw(image, in: rect)
     }
 }
