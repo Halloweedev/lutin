@@ -25,8 +25,8 @@ final class PipelineCommandsTests: XCTestCase {
         XCTAssertFalse(result.plannedSteps.isEmpty)
     }
 
-    func testReleaseStubReturnsNotImplemented() {
-        XCTAssertThrowsError(try CommandLogic.notImplemented(verb: "release")) { error in
+    func testNotImplementedHelperThrowsCorrectCode() {
+        XCTAssertThrowsError(try CommandLogic.notImplemented(verb: "preview")) { error in
             XCTAssertEqual((error as? LutinError)?.code, "not_implemented")
         }
     }

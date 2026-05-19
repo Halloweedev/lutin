@@ -118,8 +118,8 @@ public enum ReleasePipeline {
 
     /// Resolves the background image: explicit `background.path`, else the
     /// `assets/background.png` convention, else none.
-    private static func resolveBackground(config: LutinConfig,
-                                  projectDirectory: URL) -> URL? {
+    public static func resolveBackground(config: LutinConfig,
+                                         projectDirectory: URL) -> URL? {
         if let path = config.background?.path {
             return URL(fileURLWithPath: path, relativeTo: projectDirectory)
                 .standardizedFileURL
@@ -131,7 +131,7 @@ public enum ReleasePipeline {
     }
 
     /// Resolves the volume icon via the `assets/VolumeIcon.icns` convention.
-    private static func resolveVolumeIcon(projectDirectory: URL) -> URL? {
+    public static func resolveVolumeIcon(projectDirectory: URL) -> URL? {
         let convention = projectDirectory
             .appendingPathComponent("assets/VolumeIcon.icns")
         return FileManager.default.fileExists(atPath: convention.path)

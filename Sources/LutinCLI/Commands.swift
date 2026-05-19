@@ -4,6 +4,7 @@ import LutinCore
 import LutinConfig
 import LutinRegistry
 import LutinBuilder
+import LutinRelease
 
 // MARK: - Shared options
 
@@ -213,7 +214,7 @@ enum CommandLogic {
         return checks
     }
 
-    // MARK: build
+    // MARK: build / release
 
     static func build(configURL: URL, dryRun: Bool,
                       onOutput: ((String) -> Void)? = nil) throws -> BuildResult {
@@ -221,33 +222,46 @@ enum CommandLogic {
         let config = try Templates.applyDefaults(to: rawConfig)
         let projectDir = configURL.deletingLastPathComponent()
 
-        let appURL = URL(fileURLWithPath: config.app.path, relativeTo: projectDir)
-        let info = try InfoPlistReader.read(appBundle: appURL)
-        let context = TokenResolver.Context(version: info.shortVersion, name: config.project.name)
-
-        let dmgName = TokenResolver.resolve(config.output.dmgName, context)
-        let outURL = URL(fileURLWithPath: config.output.directory, relativeTo: projectDir)
-
-        let layout = try LayoutResolver.resolve(
-            config: config,
-            appFileName: appURL.lastPathComponent)
-
-        let backgroundImage: URL?
-        if let bgPath = config.background?.path {
-            backgroundImage = URL(fileURLWithPath: bgPath, relativeTo: projectDir)
-        } else {
-            backgroundImage = nil
+        if dryRun {
+            let appURL = URL(fileURLWithPath: config.app.path, relativeTo: projectDir)
+            let info = try InfoPlistReader.read(appBundle: appURL)
+            let context = TokenResolver.Context(version: info.shortVersion,
+                                                name: config.project.name)
+            let layout = try LayoutResolver.resolve(config: config,
+                                                    appFileName: appURL.lastPathComponent)
+            let outURL = URL(fileURLWithPath: config.output.directory,
+                             relativeTo: projectDir)
+            let request = BuildRequest(
+                appBundle: appURL.standardizedFileURL,
+                outputDirectory: outURL.standardizedFileURL,
+                dmgName: TokenResolver.resolve(config.output.dmgName, context),
+                volumeName: TokenResolver.resolve(config.output.volumeName, context),
+                layout: layout,
+                backgroundImage: ReleasePipeline.resolveBackground(
+                    config: config, projectDirectory: projectDir),
+                volumeIcon: ReleasePipeline.resolveVolumeIcon(
+                    projectDirectory: projectDir))
+            return try DMGBuilder.build(request, dryRun: true)
         }
 
-        let request = BuildRequest(
-            appBundle: appURL.standardizedFileURL,
-            outputDirectory: outURL.standardizedFileURL,
-            dmgName: dmgName,
-            volumeName: TokenResolver.resolve(config.output.volumeName, context),
-            layout: layout,
-            backgroundImage: backgroundImage,
-            volumeIcon: nil)
-        return try DMGBuilder.build(request, dryRun: dryRun, onOutput: onOutput)
+        let result = try ReleasePipeline.run(
+            config: config, projectDirectory: projectDir,
+            mode: .build, runner: ShellCommandRunner())
+        return BuildResult(
+            dryRun: false, plannedSteps: [],
+            dmgPath: result.dmgPath,
+            sizeBytes: result.summary.dmgSizeBytes,
+            sha256: result.summary.sha256)
+    }
+
+    static func release(configURL: URL) throws -> ReleaseSummary {
+        let rawConfig = try LutinConfig.load(from: configURL)
+        let config = try Templates.applyDefaults(to: rawConfig)
+        let projectDir = configURL.deletingLastPathComponent()
+        let result = try ReleasePipeline.run(
+            config: config, projectDirectory: projectDir,
+            mode: .release, runner: ShellCommandRunner())
+        return result.summary
     }
 
     // MARK: stubs
@@ -454,15 +468,30 @@ struct Build: ParsableCommand {
 }
 
 struct Release: ParsableCommand {
-    static let configuration = CommandConfiguration(abstract: "Release a DMG (not yet implemented).")
+    static let configuration = CommandConfiguration(abstract: "Build, sign, notarize, and staple a DMG.")
     @OptionGroup var common: CommonOptions
     @Option(name: .long, help: "Path to lutin.yml.") var config: String?
     @Option(name: .long, help: "Project name.") var name: String?
 
     func run() throws {
         let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
-        do { try CommandLogic.notImplemented(verb: "release") }
-        catch let error as LutinError { renderer.failure(error); throw ExitCode(1) }
+        do {
+            let url = try resolveConfigURL(config: config, name: name)
+            if common.dryRun {
+                renderer.success(EmptyPayload(),
+                                 human: "Dry run — `release` would build, sign, "
+                                      + "notarize, and staple the DMG.")
+                return
+            }
+            let summary = try CommandLogic.release(configURL: url)
+            let human = "Released \(summary.dmgPath)\n"
+                      + "  version: \(summary.version)  size: \(summary.dmgSizeBytes) bytes\n"
+                      + "  signing: \(summary.signingStatus)  "
+                      + "notarization: \(summary.notarizationStatus)"
+            renderer.success(summary, human: human)
+        } catch let error as LutinError {
+            renderer.failure(error); throw ExitCode(1)
+        }
     }
 }
 

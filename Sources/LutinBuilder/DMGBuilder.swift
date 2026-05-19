@@ -34,6 +34,15 @@ public struct BuildResult {
     public let dmgPath: URL?
     public let sizeBytes: Int?
     public let sha256: String?
+
+    public init(dryRun: Bool, plannedSteps: [String],
+                dmgPath: URL?, sizeBytes: Int?, sha256: String?) {
+        self.dryRun = dryRun
+        self.plannedSteps = plannedSteps
+        self.dmgPath = dmgPath
+        self.sizeBytes = sizeBytes
+        self.sha256 = sha256
+    }
 }
 
 extension BuildResult: Encodable {
