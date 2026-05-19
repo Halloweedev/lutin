@@ -293,6 +293,19 @@ enum CommandLogic {
         return result.summary
     }
 
+    // MARK: notary
+
+    /// Builds the `xcrun` arguments for `notarytool store-credentials`.
+    /// Any flag left nil is omitted; pass all flags for non-interactive use.
+    static func notarySetupArguments(profile: String, appleID: String?,
+                                     teamID: String?, password: String?) -> [String] {
+        var args = ["notarytool", "store-credentials", profile]
+        if let appleID { args += ["--apple-id", appleID] }
+        if let teamID { args += ["--team-id", teamID] }
+        if let password { args += ["--password", password] }
+        return args
+    }
+
     // MARK: stubs
 
     static func notImplemented(verb: String) throws -> Never {
@@ -323,7 +336,8 @@ public struct Lutin: ParsableCommand {
         commandName: "lutin",
         abstract: "Design, build, and release beautiful DMGs for macOS apps.",
         subcommands: [Init.self, Projects.self, Add.self, Remove.self, Open.self,
-                      Validate.self, Doctor.self, Build.self, Release.self, Preview.self])
+                      Validate.self, Doctor.self, Build.self, Release.self, Preview.self,
+                      Notary.self])
     public init() {}
 }
 
@@ -534,5 +548,42 @@ struct Preview: ParsableCommand {
         let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
         do { try CommandLogic.notImplemented(verb: "preview") }
         catch let error as LutinError { renderer.failure(error); throw ExitCode(1) }
+    }
+}
+
+struct Notary: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "notary",
+        abstract: "Manage the Apple notary profile.",
+        subcommands: [NotarySetup.self])
+}
+
+struct NotarySetup: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "setup",
+        abstract: "Store Apple notary credentials in the Keychain. Pass --apple-id/--team-id/--password for non-interactive use.")
+    @OptionGroup var common: CommonOptions
+    @Option(name: .long, help: "Profile name to create.") var profile: String = "lutin-notary"
+    @Option(name: .long, help: "Apple ID email.") var appleID: String?
+    @Option(name: .long, help: "Apple Developer Team ID.") var teamID: String?
+    @Option(name: .long, help: "App-specific password.") var password: String?
+
+    func run() throws {
+        let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
+        let args = CommandLogic.notarySetupArguments(
+            profile: profile, appleID: appleID, teamID: teamID, password: password)
+        if common.dryRun {
+            renderer.success(EmptyPayload(),
+                             human: "Dry run — would run: xcrun \(args.joined(separator: " "))")
+            return
+        }
+        do {
+            // Shell captures stdio via pipes; pass all flags for non-interactive use.
+            _ = try Shell.run("/usr/bin/xcrun", args)
+            renderer.success(EmptyPayload(),
+                             human: "Notary profile '\(profile)' stored in the Keychain.")
+        } catch let error as LutinError {
+            renderer.failure(error); throw ExitCode(1)
+        }
     }
 }
