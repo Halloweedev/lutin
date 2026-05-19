@@ -39,7 +39,10 @@ public enum ReleasePipeline {
         // release mode: sign the app first (inner-to-outer).
         var signingStatus = "skipped"
         if mode == .release, let signing = config.signing, signing.enabled {
-            let identity = signing.identity ?? ""
+            guard let identity = signing.identity, !identity.isEmpty else {
+                throw LutinError(code: "config_invalid",
+                                 message: "signing.identity is required when signing.enabled is true.")
+            }
             try CodeSigner.verifyIdentityExists(identity, runner: runner)
             let entitlements = signing.entitlements.map {
                 URL(fileURLWithPath: $0, relativeTo: projectDirectory).path
@@ -70,12 +73,20 @@ public enum ReleasePipeline {
         if mode == .release {
             if let signing = config.signing, signing.enabled,
                signing.signDmg == true {
-                try CodeSigner.signDMG(dmgPath, identity: signing.identity ?? "",
+                guard let identity = signing.identity, !identity.isEmpty else {
+                    throw LutinError(code: "config_invalid",
+                                     message: "signing.identity is required when signing.enabled is true.")
+                }
+                try CodeSigner.signDMG(dmgPath, identity: identity,
                                        runner: runner)
             }
             if let notarization = config.notarization, notarization.enabled {
+                guard let profile = notarization.profile, !profile.isEmpty else {
+                    throw LutinError(code: "config_invalid",
+                                     message: "notarization.profile is required when notarization.enabled is true.")
+                }
                 try Notarizer.submit(dmg: dmgPath,
-                                     profile: notarization.profile ?? "",
+                                     profile: profile,
                                      runner: runner)
                 notarizationStatus = "notarized"
                 if notarization.staple == true {
@@ -107,7 +118,7 @@ public enum ReleasePipeline {
 
     /// Resolves the background image: explicit `background.path`, else the
     /// `assets/background.png` convention, else none.
-    static func resolveBackground(config: LutinConfig,
+    private static func resolveBackground(config: LutinConfig,
                                   projectDirectory: URL) -> URL? {
         if let path = config.background?.path {
             return URL(fileURLWithPath: path, relativeTo: projectDirectory)
@@ -120,7 +131,7 @@ public enum ReleasePipeline {
     }
 
     /// Resolves the volume icon via the `assets/VolumeIcon.icns` convention.
-    static func resolveVolumeIcon(projectDirectory: URL) -> URL? {
+    private static func resolveVolumeIcon(projectDirectory: URL) -> URL? {
         let convention = projectDirectory
             .appendingPathComponent("assets/VolumeIcon.icns")
         return FileManager.default.fileExists(atPath: convention.path)

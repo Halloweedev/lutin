@@ -30,6 +30,7 @@ final class ReleasePipelineTests: XCTestCase {
     func testBuildPathProducesDmgAndSummary() throws {
         let projectDir = Fixtures.barryProject
         let outDir = try Fixtures.makeTempDirectory()
+        addTeardownBlock { try? FileManager.default.removeItem(at: outDir) }
         var config = makeConfig(signing: false, notarization: false)
         config.output.directory = outDir.path
 
@@ -45,6 +46,7 @@ final class ReleasePipelineTests: XCTestCase {
     func testReleasePathSignsAndNotarizesViaRunner() throws {
         let projectDir = Fixtures.barryProject
         let outDir = try Fixtures.makeTempDirectory()
+        addTeardownBlock { try? FileManager.default.removeItem(at: outDir) }
         var config = makeConfig(signing: true, notarization: true)
         config.output.directory = outDir.path
 
@@ -69,6 +71,7 @@ final class ReleasePipelineTests: XCTestCase {
     func testReleaseWithSigningAndNotarizationDisabledStillBuilds() throws {
         let projectDir = Fixtures.barryProject
         let outDir = try Fixtures.makeTempDirectory()
+        addTeardownBlock { try? FileManager.default.removeItem(at: outDir) }
         var config = makeConfig(signing: false, notarization: false)
         config.output.directory = outDir.path
         let result = try ReleasePipeline.run(
@@ -76,5 +79,6 @@ final class ReleasePipelineTests: XCTestCase {
             mode: .release, runner: ShellCommandRunner())
         XCTAssertTrue(FileManager.default.fileExists(atPath: result.summary.dmgPath))
         XCTAssertEqual(result.summary.signingStatus, "skipped")
+        XCTAssertEqual(result.summary.notarizationStatus, "skipped")
     }
 }
