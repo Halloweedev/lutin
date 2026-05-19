@@ -95,6 +95,10 @@ public enum DiskImage {
         if FileManager.default.fileExists(atPath: destination.path) {
             try FileManager.default.removeItem(at: destination)
         }
+        var converted = false
+        // If `hdiutil convert` fails mid-write, drop the truncated output so it
+        // doesn't linger in the user's output directory.
+        defer { if !converted { try? FileManager.default.removeItem(at: destination) } }
         do {
             _ = try runner.run(hdiutil, [
                 "convert", source.path, "-format", "UDZO", "-o", destination.path,
@@ -104,5 +108,6 @@ public enum DiskImage {
                              message: "Could not compress the DMG: \(error.message)",
                              details: error.details)
         }
+        converted = true
     }
 }

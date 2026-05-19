@@ -32,8 +32,7 @@ enum DSStoreRecords {
             "ShowTabView": false,
             "SidebarWidth": 0,
         ]
-        return (try? PropertyListSerialization.data(
-            fromPropertyList: dict, format: .binary, options: 0)) ?? Data()
+        return serializeBinaryPlist(dict, record: "bwsp")
     }
 
     /// The `icvp` (icon view properties) blob — a binary plist.
@@ -62,7 +61,23 @@ enum DSStoreRecords {
             dict["backgroundType"] = 2
             dict["backgroundImageAlias"] = alias
         }
-        return (try? PropertyListSerialization.data(
-            fromPropertyList: dict, format: .binary, options: 0)) ?? Data()
+        return serializeBinaryPlist(dict, record: "icvp")
+    }
+
+    /// Serializes a `.DS_Store` record dictionary to a binary plist. The
+    /// dictionaries are assembled here from fixed, well-typed Foundation
+    /// values, so serialization cannot fail at runtime — a failure means a
+    /// future edit introduced a non-plist value, which traps loudly rather
+    /// than silently emitting an empty, structurally-broken record.
+    private static func serializeBinaryPlist(_ dict: [String: Any],
+                                             record: String) -> Data {
+        do {
+            return try PropertyListSerialization.data(
+                fromPropertyList: dict, format: .binary, options: 0)
+        } catch {
+            preconditionFailure(
+                "\(record) plist is built from fixed well-typed values; "
+                + "serialization must not fail: \(error)")
+        }
     }
 }
