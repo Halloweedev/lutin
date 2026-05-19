@@ -1,5 +1,6 @@
 import Foundation
 import CoreGraphics
+import ImageIO
 import LutinCore
 
 /// A fully-resolved description of the background to render. The caller
@@ -104,10 +105,33 @@ struct BackgroundRenderer {
         }
     }
 
-    /// Replaced in Task 7 with real user-image loading.
+    /// Loads the user's background image and cover-fits it to the canvas.
     private func renderImage(_ spec: BackgroundSpec) throws -> CGImage {
-        throw LutinError(code: "render_failed",
-                         message: "Image backgrounds are implemented in a later task.")
+        guard let url = spec.imageURL,
+              FileManager.default.fileExists(atPath: url.path) else {
+            throw LutinError(
+                code: "render_failed",
+                message: "The background image could not be found at "
+                       + "\(spec.imageURL?.path ?? "(no path)").")
+        }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let loaded = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            throw LutinError(code: "render_failed",
+                             message: "The background image at \(url.path) could not be decoded.")
+        }
+        let ctx = try RenderContext(pixelWidth: spec.pixelWidth, pixelHeight: spec.pixelHeight)
+        let canvasW = CGFloat(spec.pixelWidth)
+        let canvasH = CGFloat(spec.pixelHeight)
+        let imgW = CGFloat(loaded.width)
+        let imgH = CGFloat(loaded.height)
+        // Cover-fit: scale so the image fills the canvas, centred, excess cropped.
+        let scale = max(canvasW / imgW, canvasH / imgH)
+        let drawW = imgW * scale
+        let drawH = imgH * scale
+        let rect = CGRect(x: (canvasW - drawW) / 2, y: (canvasH - drawH) / 2,
+                          width: drawW, height: drawH)
+        ctx.cg.draw(loaded, in: rect)
+        return ctx.finish()
     }
 
     /// Fills the whole context with a top-left → bottom-right linear gradient.
