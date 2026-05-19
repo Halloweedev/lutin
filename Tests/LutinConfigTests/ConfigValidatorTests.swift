@@ -34,6 +34,6 @@ final class ConfigValidatorTests: XCTestCase {
         config.items = [.init(type: "app", id: "app", x: 0, y: 0, label: nil)]
         config.decorations = [.init(type: "arrow", from: "app", to: "ghost", label: nil)]
         let issues = ConfigValidator.validate(config)
-        XCTAssertTrue(issues.contains { $0.severity == .error && $0.path == "decorations[].to" })
+        XCTAssertTrue(issues.contains { $0.severity == .error && $0.path == "decorations[0].to" })
     }
 }

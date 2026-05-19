@@ -44,15 +44,43 @@ public enum ConfigValidator {
             }
         }
 
-        for decoration in config.decorations ?? [] {
-            if decoration.type != "arrow" {
-                error("decorations[].type", "Unknown decoration type '\(decoration.type)'.")
-            }
-            if !seenIds.contains(decoration.from) {
-                error("decorations[].from", "Decoration references unknown item id '\(decoration.from)'.")
-            }
-            if !seenIds.contains(decoration.to) {
-                error("decorations[].to", "Decoration references unknown item id '\(decoration.to)'.")
+        for (idx, decoration) in (config.decorations ?? []).enumerated() {
+            switch decoration.type {
+            case "arrow":
+                if let from = decoration.from, !from.isEmpty {
+                    if !seenIds.contains(from) {
+                        error("decorations[\(idx)].from",
+                              "Decoration references unknown item id '\(from)'.")
+                    }
+                } else {
+                    error("decorations[\(idx)].from",
+                          "An arrow decoration requires a 'from' item id.")
+                }
+                if let to = decoration.to, !to.isEmpty {
+                    if !seenIds.contains(to) {
+                        error("decorations[\(idx)].to",
+                              "Decoration references unknown item id '\(to)'.")
+                    }
+                } else {
+                    error("decorations[\(idx)].to",
+                          "An arrow decoration requires a 'to' item id.")
+                }
+            case "image":
+                if (decoration.path ?? "").trimmingCharacters(in: .whitespaces).isEmpty {
+                    error("decorations[\(idx)].path",
+                          "An image decoration requires a 'path' to the overlay file.")
+                }
+                if decoration.x == nil {
+                    error("decorations[\(idx)].x",
+                          "An image decoration requires an 'x' position.")
+                }
+                if decoration.y == nil {
+                    error("decorations[\(idx)].y",
+                          "An image decoration requires a 'y' position.")
+                }
+            default:
+                error("decorations[\(idx)].type",
+                      "Unknown decoration type '\(decoration.type)'. Use 'arrow' or 'image'.")
             }
         }
         return issues

@@ -89,15 +89,25 @@ public struct LutinConfig: Codable, Equatable {
     }
 
     public struct Decoration: Codable, Equatable {
-        public var type: String       // "arrow"
-        public var from: String
-        public var to: String
-        public var label: String?
-        public init(type: String, from: String, to: String, label: String?) {
+        public var type: String                // "arrow" | "image"
+        public var from: String?               // arrow: source item id
+        public var to: String?                 // arrow: target item id
+        public var label: String?              // arrow: optional text
+        public var path: String?               // image: overlay file (project-relative)
+        public var x: Int?                      // image: position, window points
+        public var y: Int?                      // image: position, window points
+        public var width: Int?                  // image: drawn width, window points
+        public init(type: String, from: String? = nil, to: String? = nil,
+                    label: String? = nil, path: String? = nil,
+                    x: Int? = nil, y: Int? = nil, width: Int? = nil) {
             self.type = type
             self.from = from
             self.to = to
             self.label = label
+            self.path = path
+            self.x = x
+            self.y = y
+            self.width = width
         }
     }
 
