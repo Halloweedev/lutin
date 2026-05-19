@@ -100,6 +100,7 @@ public enum DMGBuilder {
 
         let rwDMG = workDir.appendingPathComponent("work.dmg")
         let appSize = directorySizeBytes(request.appBundle)
+        // 20 MB floor; 30 MB headroom for .background, .DS_Store, symlink, and filesystem overhead.
         let megabytes = max(20, appSize / 1_000_000 + 30)
         try DiskImage.createWritable(at: rwDMG, volumeName: request.volumeName,
                                      megabytes: megabytes, runner: runner)
@@ -132,11 +133,14 @@ public enum DMGBuilder {
         //     Best-effort: a missing icon or a missing `SetFile` is not fatal.
         if let icon = request.volumeIcon, fm.fileExists(atPath: icon.path) {
             let dest = mount.mountPoint.appendingPathComponent(".VolumeIcon.icns")
-            try? fm.copyItem(at: icon, to: dest)
-            // Set the volume's "has custom icon" Finder flag.
-            _ = try? runner.runAllowingFailure(
-                "/usr/bin/SetFile", ["-a", "C", mount.mountPoint.path])
-            onOutput?("Applied volume icon")
+            if (try? fm.copyItem(at: icon, to: dest)) != nil {
+                // Set the volume's "has custom icon" Finder flag (best-effort).
+                _ = try? runner.runAllowingFailure(
+                    "/usr/bin/SetFile", ["-a", "C", mount.mountPoint.path])
+                onOutput?("Applied volume icon")
+            } else {
+                onOutput?("Warning: could not copy volume icon — skipped")
+            }
         }
 
         // 5. Write the .DS_Store.
@@ -158,6 +162,8 @@ public enum DMGBuilder {
         // 7. Size + SHA-256.
         let attrs = try fm.attributesOfItem(atPath: dmgPath.path)
         let size = (attrs[.size] as? Int) ?? 0
+        // Maps the whole DMG into memory — acceptable for typical app-DMG sizes;
+        // revisit if targeting multi-GB payloads.
         let digest = SHA256.hash(data: try Data(contentsOf: dmgPath))
         let hex = digest.map { String(format: "%02x", $0) }.joined()
         onOutput?("Built \(dmgPath.lastPathComponent)")
@@ -169,6 +175,8 @@ public enum DMGBuilder {
     /// Recursive byte size of a directory tree.
     private static func directorySizeBytes(_ url: URL) -> Int {
         let fm = FileManager.default
+        // Returning 0 on enumerator failure is intentional: the max(20, …) floor covers it,
+        // and an invalid app bundle is caught earlier by validation.
         guard let walker = fm.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey])
         else { return 0 }
         var total = 0

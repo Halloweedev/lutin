@@ -42,7 +42,7 @@ final class FullBuildTests: XCTestCase {
             .appendingPathComponent(".background/background.png").path))
     }
 
-    func testVolumeIconIsCopiedIntoTheVolume() throws {
+    func testVolumeIconFileIsCopiedIntoTheVolume() throws {
         let outDir = try Fixtures.makeTempDirectory()
         let request = BuildRequest(
             appBundle: Fixtures.barryApp, outputDirectory: outDir,
