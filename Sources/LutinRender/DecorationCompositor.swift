@@ -30,7 +30,7 @@ struct DecorationCompositor {
         if decorations.isEmpty { return base }
         let s = CGFloat(max(1, scale))
         let w = base.width, h = base.height
-        let space = CGColorSpaceCreateDeviceRGB()
+        let space = CGColorSpace(name: CGColorSpace.sRGB)!
         guard let cg = CGContext(
             data: nil, width: w, height: h,
             bitsPerComponent: 8, bytesPerRow: 0, space: space,
@@ -39,14 +39,13 @@ struct DecorationCompositor {
             throw LutinError(code: "render_failed",
                              message: "Could not create a \(w)x\(h) composite surface.")
         }
-        // Draw the base image. CGContext default has y=0 at bottom; draw fills the
-        // full rect so the image appears un-flipped.
+        // This plain CGContext has y=0 at the bottom; decoration y-coordinates (RenderPoint.y * scale) map directly to bottom-up pixel rows.
         cg.draw(base, in: CGRect(x: 0, y: 0, width: w, height: h))
 
         for decoration in decorations {
             switch decoration {
             case let .arrow(from, to, label):
-                drawArrow(in: cg, imageHeight: h, from: from, to: to, label: label,
+                drawArrow(in: cg, from: from, to: to, label: label,
                           iconSizePoints: iconSizePoints, scale: s)
             case let .image(url, x, y, widthPoints):
                 try drawImage(in: cg, imageHeight: h, url: url, x: x, y: y,
@@ -59,12 +58,10 @@ struct DecorationCompositor {
         return result
     }
 
-    private func drawArrow(in cg: CGContext, imageHeight: Int,
+    private func drawArrow(in cg: CGContext,
                            from: RenderPoint, to: RenderPoint,
                            label: String?, iconSizePoints: Int, scale: CGFloat) {
-        // Point coordinates * scale gives pixel positions. In a plain CGContext (y=0
-        // at bottom), using point_y * scale directly places the arrow at the correct
-        // visual position after hasMark's coordinate conversion.
+        // Plain bottom-up CGContext: RenderPoint.y * scale maps directly to the pixel row; no flip needed.
         let p0 = CGPoint(x: CGFloat(from.x) * scale, y: CGFloat(from.y) * scale)
         let p1 = CGPoint(x: CGFloat(to.x) * scale, y: CGFloat(to.y) * scale)
         let dx = p1.x - p0.x, dy = p1.y - p0.y
@@ -117,7 +114,7 @@ struct DecorationCompositor {
         cg.saveGState()
         // Core Text draws in the current coordinate system (bottom-up).
         cg.textMatrix = .identity
-        cg.textPosition = CGPoint(x: centeredAt.x - bounds.width / 2, y: centeredAt.y)
+        cg.textPosition = CGPoint(x: centeredAt.x - bounds.width / 2 - bounds.origin.x, y: centeredAt.y)
         CTLineDraw(line, cg)
         cg.restoreGState()
     }
