@@ -45,8 +45,63 @@ struct BackgroundRenderer {
                              message: "background.colorB is not a valid #RRGGBB colour: '\(spec.colorB)'.")
         }
         let ctx = try RenderContext(pixelWidth: spec.pixelWidth, pixelHeight: spec.pixelHeight)
-        drawGradient(in: ctx, from: colorA, to: colorB)
+        let scale = CGFloat(max(1, spec.scale))
+        let radius = CGFloat(spec.cornerRadius) * scale
+
+        if radius > 0 {
+            // Backdrop fill, then a rounded-rect panel inset by a fixed margin.
+            ctx.cg.setFillColor(colorA.withAlpha(1).cgColor)
+            ctx.cg.fill(CGRect(x: 0, y: 0, width: ctx.cg.width, height: ctx.cg.height))
+            let margin = 14 * scale
+            let panel = CGRect(x: margin, y: margin,
+                               width: CGFloat(ctx.cg.width) - 2 * margin,
+                               height: CGFloat(ctx.cg.height) - 2 * margin)
+            ctx.cg.saveGState()
+            ctx.cg.addPath(CGPath(roundedRect: panel, cornerWidth: radius,
+                                  cornerHeight: radius, transform: nil))
+            ctx.cg.clip()
+            drawGradient(in: ctx, from: colorA, to: colorB)
+            if spec.grid { drawGrid(in: ctx, scale: scale) }
+            if spec.noise > 0 { drawNoise(in: ctx, intensity: spec.noise, scale: scale) }
+            ctx.cg.restoreGState()
+        } else {
+            drawGradient(in: ctx, from: colorA, to: colorB)
+            if spec.grid { drawGrid(in: ctx, scale: scale) }
+            if spec.noise > 0 { drawNoise(in: ctx, intensity: spec.noise, scale: scale) }
+        }
         return ctx.finish()
+    }
+
+    /// A faint engineering grid: lines every 26 points.
+    private func drawGrid(in ctx: RenderContext, scale: CGFloat) {
+        let step = 26 * scale
+        let w = CGFloat(ctx.cg.width)
+        let h = CGFloat(ctx.cg.height)
+        ctx.cg.setStrokeColor(CGColor(srgbRed: 0.35, green: 0.47, blue: 0.78, alpha: 0.16))
+        ctx.cg.setLineWidth(max(1, scale))
+        var x: CGFloat = step
+        while x < w { ctx.cg.move(to: CGPoint(x: x, y: 0)); ctx.cg.addLine(to: CGPoint(x: x, y: h)); x += step }
+        var y: CGFloat = step
+        while y < h { ctx.cg.move(to: CGPoint(x: 0, y: y)); ctx.cg.addLine(to: CGPoint(x: w, y: y)); y += step }
+        ctx.cg.strokePath()
+    }
+
+    /// A subtle, deterministic noise dither. `intensity` (0...1) scales how many
+    /// faint specks are drawn. A fixed seed keeps renders reproducible.
+    private func drawNoise(in ctx: RenderContext, intensity: Double, scale: CGFloat) {
+        var rng = SeededRNG(seed: 0x6C7574696E)   // "lutin"
+        let w = ctx.cg.width
+        let h = ctx.cg.height
+        let count = Int(Double(w * h) * min(0.5, max(0, intensity)) * 0.25)
+        let dot = max(1, scale)
+        for _ in 0..<count {
+            let px = Int(rng.next() % UInt64(w))
+            let py = Int(rng.next() % UInt64(h))
+            let dark = (rng.next() & 1) == 0
+            let v: CGFloat = dark ? 0 : 1
+            ctx.cg.setFillColor(CGColor(srgbRed: v, green: v, blue: v, alpha: 0.05))
+            ctx.cg.fill(CGRect(x: CGFloat(px), y: CGFloat(py), width: dot, height: dot))
+        }
     }
 
     /// Replaced in Task 7 with real user-image loading.
@@ -77,5 +132,16 @@ struct BackgroundRenderer {
             start: CGPoint(x: 0, y: h),   // visual top-left in flipped user space
             end: CGPoint(x: w, y: 0),     // visual bottom-right in flipped user space
             options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+    }
+}
+
+/// A tiny deterministic PRNG (linear congruential) so noise renders are
+/// byte-for-byte reproducible across runs.
+struct SeededRNG: RandomNumberGenerator {
+    private var state: UInt64
+    init(seed: UInt64) { state = seed == 0 ? 0x9E3779B97F4A7C15 : seed }
+    mutating func next() -> UInt64 {
+        state = state &* 6364136223846793005 &+ 1442695040888963407
+        return state
     }
 }
