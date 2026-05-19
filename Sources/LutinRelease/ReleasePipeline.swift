@@ -13,6 +13,7 @@ public enum ReleasePipeline {
     public struct Result {
         public let summary: ReleaseSummary
         public let dmgPath: URL
+        public let plannedSteps: [String]
     }
 
     /// Runs the pipeline.
@@ -22,7 +23,8 @@ public enum ReleasePipeline {
     ///     pass a real `ShellCommandRunner` so DMGs are genuinely built).
     public static func run(config: LutinConfig, projectDirectory: URL,
                            mode: Mode, runner: CommandRunning,
-                           dmgRunner: CommandRunning? = nil) throws -> Result {
+                           dmgRunner: CommandRunning? = nil,
+                           onOutput: ((String) -> Void)? = nil) throws -> Result {
         let dmgRunner = dmgRunner ?? runner
 
         // Resolve app bundle + version.
@@ -62,7 +64,7 @@ public enum ReleasePipeline {
             appBundle: appURL, outputDirectory: outDir, dmgName: dmgName,
             volumeName: volumeName, layout: layout, backgroundImage: background,
             volumeIcon: volumeIcon)
-        let build = try DMGBuilder.build(request, dryRun: false, runner: dmgRunner)
+        let build = try DMGBuilder.build(request, dryRun: false, runner: dmgRunner, onOutput: onOutput)
         guard let dmgPath = build.dmgPath else {
             throw LutinError(code: "convert_failed",
                              message: "The build did not produce a DMG.")
@@ -113,7 +115,7 @@ public enum ReleasePipeline {
         if mode == .release {
             try summary.write(toDirectory: outDir)
         }
-        return Result(summary: summary, dmgPath: dmgPath)
+        return Result(summary: summary, dmgPath: dmgPath, plannedSteps: build.plannedSteps)
     }
 
     /// Resolves the background image: explicit `background.path`, else the

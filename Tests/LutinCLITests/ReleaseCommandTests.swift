@@ -6,6 +6,7 @@ import LutinCore
 final class ReleaseCommandTests: XCTestCase {
     func testBuildLogicProducesLaidOutDmg() throws {
         let projectDir = try Fixtures.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: projectDir) }
         let fm = FileManager.default
         try fm.copyItem(at: Fixtures.barryApp,
                         to: projectDir.appendingPathComponent("Barry.app"))
@@ -20,6 +21,7 @@ final class ReleaseCommandTests: XCTestCase {
 
     func testReleaseLogicWithSigningDisabledBuildsAndSummarizes() throws {
         let projectDir = try Fixtures.makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: projectDir) }
         let fm = FileManager.default
         try fm.copyItem(at: Fixtures.barryApp,
                         to: projectDir.appendingPathComponent("Barry.app"))

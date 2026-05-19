@@ -246,9 +246,10 @@ enum CommandLogic {
 
         let result = try ReleasePipeline.run(
             config: config, projectDirectory: projectDir,
-            mode: .build, runner: ShellCommandRunner())
+            mode: .build, runner: ShellCommandRunner(),
+            onOutput: onOutput)
         return BuildResult(
-            dryRun: false, plannedSteps: [],
+            dryRun: false, plannedSteps: result.plannedSteps,
             dmgPath: result.dmgPath,
             sizeBytes: result.summary.dmgSizeBytes,
             sha256: result.summary.sha256)
