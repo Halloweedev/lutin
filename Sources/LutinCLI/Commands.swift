@@ -211,6 +211,34 @@ enum CommandLogic {
         checks.append(DoctorCheck(name: "tools", ok: missing.isEmpty,
             detail: missing.isEmpty ? "hdiutil, codesign, xcrun available"
                                      : "missing: \(missing.joined(separator: ", "))"))
+
+        // signingIdentity — only when signing is enabled.
+        if let config = loaded, let signing = config.signing, signing.enabled {
+            let identity = signing.identity ?? ""
+            let runner = ShellCommandRunner()
+            let found = (try? runner.runAllowingFailure(
+                "/usr/bin/security",
+                ["find-identity", "-v", "-p", "codesigning"]).stdout) ?? ""
+            let ok = !identity.isEmpty && found.contains(identity)
+            checks.append(DoctorCheck(name: "signingIdentity", ok: ok,
+                detail: ok ? "signing identity found in the Keychain"
+                            : "signing identity '\(identity)' not found in the Keychain"))
+        }
+
+        // notaryProfile — only when notarization is enabled.
+        if let config = loaded, let notarization = config.notarization,
+           notarization.enabled {
+            let profile = notarization.profile ?? ""
+            let runner = ShellCommandRunner()
+            // `notarytool history` against the profile succeeds iff it exists.
+            let result = try? runner.runAllowingFailure("/usr/bin/xcrun",
+                ["notarytool", "history", "--keychain-profile", profile])
+            let ok = (result?.exitCode == 0)
+            checks.append(DoctorCheck(name: "notaryProfile", ok: ok,
+                detail: ok ? "notary profile '\(profile)' is configured"
+                            : "notary profile '\(profile)' not found — run `lutin notary setup`"))
+        }
+
         return checks
     }
 
