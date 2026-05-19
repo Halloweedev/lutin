@@ -292,6 +292,35 @@ enum CommandLogic {
         return result.summary
     }
 
+    struct PreviewResult: Encodable {
+        let dmgPath: String
+        let mountPath: String
+        let dryRun: Bool
+    }
+
+    /// Builds the DMG (no signing/notarization), mounts it, and opens it in
+    /// Finder for a human visual check. The volume is left mounted on purpose.
+    static func preview(configURL: URL,
+                        opener: CommandRunning = ShellCommandRunner()) throws -> PreviewResult {
+        let rawConfig = try LutinConfig.load(from: configURL)
+        let config = try Templates.applyDefaults(to: rawConfig)
+        let projectDir = configURL.deletingLastPathComponent()
+
+        let result = try ReleasePipeline.run(
+            config: config, projectDirectory: projectDir,
+            mode: .preview, runner: ShellCommandRunner())
+
+        // Detach a stale preview of the same volume, if any, then mount fresh.
+        let volume = "/Volumes/" + TokenResolver.resolve(config.output.volumeName,
+            TokenResolver.Context(version: "", name: config.project.name))
+        _ = try? opener.runAllowingFailure("/usr/bin/hdiutil", ["detach", volume, "-force"])
+
+        let mount = try DiskImage.mount(result.dmgPath, runner: ShellCommandRunner())
+        _ = try? opener.runAllowingFailure("/usr/bin/open", [mount.mountPoint.path])
+        return PreviewResult(dmgPath: result.dmgPath.path,
+                             mountPath: mount.mountPoint.path, dryRun: false)
+    }
+
     // MARK: notary
 
     /// Builds the `xcrun` arguments for `notarytool store-credentials`.
@@ -538,15 +567,29 @@ struct Release: ParsableCommand {
 }
 
 struct Preview: ParsableCommand {
-    static let configuration = CommandConfiguration(abstract: "Preview the design (not yet implemented).")
+    static let configuration = CommandConfiguration(
+        abstract: "Build the DMG and open it in Finder for a visual check.")
     @OptionGroup var common: CommonOptions
     @Option(name: .long, help: "Path to lutin.yml.") var config: String?
     @Option(name: .long, help: "Project name.") var name: String?
 
     func run() throws {
         let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
-        do { try CommandLogic.notImplemented(verb: "preview") }
-        catch let error as LutinError { renderer.failure(error); throw ExitCode(1) }
+        do {
+            let url = try resolveConfigURL(config: config, name: name)
+            if common.dryRun {
+                renderer.success(EmptyPayload(),
+                                 human: "Dry run — `preview` would build, mount, "
+                                      + "and open the DMG in Finder.")
+                return
+            }
+            let result = try CommandLogic.preview(configURL: url)
+            renderer.success(result,
+                             human: "Preview mounted at \(result.mountPath)\n"
+                                  + "  DMG: \(result.dmgPath)")
+        } catch let error as LutinError {
+            renderer.failure(error); throw ExitCode(1)
+        }
     }
 }
 

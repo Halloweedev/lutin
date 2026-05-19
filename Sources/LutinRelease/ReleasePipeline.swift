@@ -9,7 +9,7 @@ import LutinRender
 /// Orchestrates the build / release pipeline over the builder, signer, and
 /// notarizer. The single entry point the CLI (and later the GUI) calls.
 public enum ReleasePipeline {
-    public enum Mode { case build, release }
+    public enum Mode { case build, release, preview }
 
     public struct Result {
         public let summary: ReleaseSummary
