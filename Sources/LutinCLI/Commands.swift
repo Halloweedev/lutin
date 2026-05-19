@@ -56,7 +56,16 @@ enum CommandLogic {
             background: LutinConfig.BackgroundInfo(
                 type: nil, template: template, path: nil, scale: nil, colorA: nil,
                 colorB: nil, grid: nil, noise: nil, cornerRadius: nil),
-            items: nil, decorations: nil, signing: nil, notarization: nil, sparkle: nil)
+            items: [
+                LutinConfig.Item(type: "app", id: "app", x: 180, y: 220, label: name),
+                LutinConfig.Item(type: "applications", id: "applications",
+                                 x: 500, y: 220, label: "Applications"),
+            ],
+            decorations: [
+                LutinConfig.Decoration(type: "arrow", from: "app", to: "applications",
+                                       label: "Drag to install"),
+            ],
+            signing: nil, notarization: nil, sparkle: nil)
 
         let configURL = directory.appendingPathComponent("lutin.yml")
         if !dryRun {
