@@ -4,6 +4,7 @@ import LutinConfig
 import LutinBuilder
 import LutinSigning
 import LutinNotarization
+import LutinRender
 
 /// Orchestrates the build / release pipeline over the builder, signer, and
 /// notarizer. The single entry point the CLI (and later the GUI) calls.
@@ -57,8 +58,9 @@ public enum ReleasePipeline {
         // Resolve layout + background, then build the DMG (real hdiutil).
         let layout = try LayoutResolver.resolve(config: config,
                                                 appFileName: appURL.lastPathComponent)
-        let background = resolveBackground(config: config,
-                                           projectDirectory: projectDirectory)
+        let background = try renderedBackground(config: config,
+                                                projectDirectory: projectDirectory,
+                                                onOutput: onOutput)
         let volumeIcon = resolveVolumeIcon(projectDirectory: projectDirectory)
         let request = BuildRequest(
             appBundle: appURL, outputDirectory: outDir, dmgName: dmgName,
@@ -116,6 +118,20 @@ public enum ReleasePipeline {
             try summary.write(toDirectory: outDir)
         }
         return Result(summary: summary, dmgPath: dmgPath, plannedSteps: build.plannedSteps)
+    }
+
+    /// Produces the background image to embed. Renders via `LutinRender` when
+    /// the config asks for a generated background or carries decorations;
+    /// otherwise falls back to the plain user-image resolution.
+    static func renderedBackground(config: LutinConfig, projectDirectory: URL,
+                                   onOutput: ((String) -> Void)?) throws -> URL? {
+        let hasDecorations = !(config.decorations ?? []).isEmpty
+        let isGenerated = (config.background?.type ?? "") == "generated"
+        if isGenerated || hasDecorations {
+            return try LutinRenderer.renderBackground(
+                config: config, projectDirectory: projectDirectory, onOutput: onOutput)
+        }
+        return resolveBackground(config: config, projectDirectory: projectDirectory)
     }
 
     /// Resolves the background image: explicit `background.path`, else the

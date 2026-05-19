@@ -39,7 +39,7 @@ let package = Package(
         .testTarget(name: "LutinRenderTests", dependencies: [
             "LutinRender", "LutinConfig", "LutinCore", "TestSupport"]),
         .testTarget(name: "LutinReleaseTests", dependencies: [
-            "LutinRelease", "LutinConfig", "LutinCore", "TestSupport"]),
+            "LutinRelease", "LutinConfig", "LutinCore", "LutinBuilder", "TestSupport"]),
         .testTarget(name: "LutinCLITests", dependencies: [
             "LutinCLI", "LutinRegistry", "LutinCore", "LutinBuilder", "LutinRelease", "TestSupport"]),
     ]
