@@ -61,12 +61,26 @@ public enum ReleasePipeline {
         let background = try renderedBackground(config: config,
                                                 projectDirectory: projectDirectory,
                                                 onOutput: onOutput)
+        // Track whether `background` is a renderer-produced temp file so we can
+        // delete it after the DMG is built.  Renderer temps live under the system
+        // temp directory and always carry a "lutin-render-" prefix.
+        let rendererTempBackground: URL? = background.flatMap { url in
+            let tmpDir = FileManager.default.temporaryDirectory
+                .standardizedFileURL.path
+            let urlPath = url.standardizedFileURL.path
+            return (urlPath.hasPrefix(tmpDir) &&
+                    url.lastPathComponent.hasPrefix("lutin-render-")) ? url : nil
+        }
         let volumeIcon = resolveVolumeIcon(projectDirectory: projectDirectory)
         let request = BuildRequest(
             appBundle: appURL, outputDirectory: outDir, dmgName: dmgName,
             volumeName: volumeName, layout: layout, backgroundImage: background,
             volumeIcon: volumeIcon)
         let build = try DMGBuilder.build(request, dryRun: false, runner: dmgRunner, onOutput: onOutput)
+        // Clean up the renderer temp PNG now that it has been copied into the DMG.
+        if let tmp = rendererTempBackground {
+            try? FileManager.default.removeItem(at: tmp)
+        }
         guard let dmgPath = build.dmgPath else {
             throw LutinError(code: "convert_failed",
                              message: "The build did not produce a DMG.")

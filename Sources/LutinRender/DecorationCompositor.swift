@@ -40,7 +40,13 @@ struct DecorationCompositor {
             throw LutinError(code: "render_failed",
                              message: "Could not create a \(w)x\(h) composite surface.")
         }
-        // This plain CGContext has y=0 at the bottom; decoration y-coordinates (RenderPoint.y * scale) map directly to bottom-up pixel rows.
+        // This plain CGContext has y=0 at the bottom (bottom-up).
+        // drawArrow uses `point.y * scale` directly as the context y-coordinate; in a
+        // bottom-up context that places the stroke at pixel-buffer row (h - 1 - point.y*scale),
+        // which is top-left y = point.y*scale — matching the config convention. ✓
+        // drawImage positions a rect whose origin is its bottom-left corner in the bottom-up
+        // context, so it must compute rectY = h - y*scale - drawH to land at the same top-left
+        // y = y*scale.  Both functions are consistent with the top-left config origin.
         cg.draw(base, in: CGRect(x: 0, y: 0, width: w, height: h))
 
         for decoration in decorations {
@@ -62,7 +68,10 @@ struct DecorationCompositor {
     private func drawArrow(in cg: CGContext,
                            from: RenderPoint, to: RenderPoint,
                            label: String?, iconSizePoints: Int, scale: CGFloat) {
-        // Plain bottom-up CGContext: RenderPoint.y * scale maps directly to the pixel row; no flip needed.
+        // Bottom-up CGContext: context y = point.y * scale → pixel-buffer row = h-1-point.y*scale
+        // → top-left y = point.y*scale.  No additional flip is needed here; the bottom-up
+        // context's y-inversion does the equivalent work.  drawImage, which positions a rect
+        // rather than a point, applies an explicit rectY = h - y*scale - drawH for the same reason.
         let p0 = CGPoint(x: CGFloat(from.x) * scale, y: CGFloat(from.y) * scale)
         let p1 = CGPoint(x: CGFloat(to.x) * scale, y: CGFloat(to.y) * scale)
         let dx = p1.x - p0.x, dy = p1.y - p0.y

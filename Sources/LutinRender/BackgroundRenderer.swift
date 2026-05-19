@@ -24,8 +24,8 @@ struct BackgroundSpec {
     var pixelHeight: Int { heightPoints * max(1, scale) }
 }
 
-/// Draws the base background layer — gradient (this task), with grid/noise/
-/// corners (Task 6) and the user-image case (Task 7) layered in later.
+/// Draws the base background layer: gradient, grid, noise, corner rounding,
+/// and the user-supplied background image.
 struct BackgroundRenderer {
     func renderBase(_ spec: BackgroundSpec) throws -> CGImage {
         switch spec.kind {
