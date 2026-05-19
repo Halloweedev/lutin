@@ -18,8 +18,10 @@ let package = Package(
         .target(name: "LutinBuilder", dependencies: ["LutinCore", "LutinConfig"]),
         .target(name: "LutinSigning", dependencies: ["LutinCore"]),
         .target(name: "LutinNotarization", dependencies: ["LutinCore"]),
+        .target(name: "LutinRender", dependencies: ["LutinCore", "LutinConfig"]),
         .target(name: "LutinRelease", dependencies: [
-            "LutinCore", "LutinConfig", "LutinBuilder", "LutinSigning", "LutinNotarization",
+            "LutinCore", "LutinConfig", "LutinBuilder", "LutinSigning",
+            "LutinNotarization", "LutinRender",
         ]),
         .target(name: "LutinCLI", dependencies: [
             "LutinCore", "LutinConfig", "LutinRegistry", "LutinBuilder",
@@ -34,6 +36,8 @@ let package = Package(
         .testTarget(name: "LutinBuilderTests", dependencies: ["LutinBuilder", "LutinConfig", "LutinCore", "TestSupport"]),
         .testTarget(name: "LutinSigningTests", dependencies: ["LutinSigning", "LutinCore", "TestSupport"]),
         .testTarget(name: "LutinNotarizationTests", dependencies: ["LutinNotarization", "LutinCore", "TestSupport"]),
+        .testTarget(name: "LutinRenderTests", dependencies: [
+            "LutinRender", "LutinConfig", "LutinCore", "TestSupport"]),
         .testTarget(name: "LutinReleaseTests", dependencies: [
             "LutinRelease", "LutinConfig", "LutinCore", "TestSupport"]),
         .testTarget(name: "LutinCLITests", dependencies: [
