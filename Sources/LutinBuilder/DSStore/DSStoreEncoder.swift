@@ -15,6 +15,7 @@ enum DSStoreEncoder {
     }
 
     /// Builds the `.DS_Store` byte stream for `layout` and `background`.
+    // throws reserved for future validation (e.g. invalid filename encoding)
     static func encode(layout: DMGLayout,
                        background: DSStoreRecords.Background) throws -> Data {
         // 1. Build the records.
@@ -67,6 +68,7 @@ enum DSStoreEncoder {
         //    The leaf is block #1 within the buddy container (block #0 is the
         //    allocator's own info block); BuddyAllocator places DSDB at #1 and
         //    the leaf at #2 — see assemble().
+        // INVARIANT: block 2 = leaf node; must match BuddyAllocator.assemble's reallocate(block: 2, ...).
         let leafBlockNumber: UInt32 = 2
         var dsdb = ByteBuffer()
         dsdb.appendUInt32(leafBlockNumber)                    // root node block #

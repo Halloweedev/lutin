@@ -28,7 +28,7 @@ final class DSStoreEncoderTests: XCTestCase {
     func testIsNonEmptyAndAllocatorOffsetWithinBounds() throws {
         let bytes = try DSStoreEncoder.encode(layout: sampleLayout(), background: .none)
         XCTAssertGreaterThan(bytes.count, 64)
-        let rootOffset = bytes[8...11].reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
-        XCTAssertLessThan(Int(rootOffset), bytes.count)
+        let rootAllocatorOffset = bytes[8...11].reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
+        XCTAssertLessThan(Int(rootAllocatorOffset), bytes.count)
     }
 }

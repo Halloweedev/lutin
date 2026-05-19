@@ -46,7 +46,10 @@ struct BuddyAllocator {
         /// as needed. Mirrors `_alloc` in buddy.py.
         private mutating func alloc(width: Int) -> Int {
             var w = width
-            while free[w].isEmpty { w += 1 }
+            while free[w].isEmpty {
+                precondition(w < free.count, "buddy allocator out of address space")
+                w += 1
+            }
             while w > width {
                 let offset = free[w].removeFirst()
                 w -= 1
@@ -109,6 +112,7 @@ struct BuddyAllocator {
         alloc.offsets = [0]
 
         // Block 1: DSDB superblock. Block 2: the B-tree leaf node.
+        // INVARIANT: block 2 = leaf node; must match DSStoreEncoder's leafBlockNumber = 2.
         alloc.reallocate(block: 1, byteCount: dsdbHeaderBlock.count)
         alloc.reallocate(block: 2, byteCount: leafNodeBlock.count)
 
@@ -139,7 +143,7 @@ struct BuddyAllocator {
         }
 
         // ---- Build the file image ----
-        var maxEnd = 36  // 32-byte header + 4-byte skew region
+        var maxEnd = 36  // 36-byte outer header
         for block in 0..<alloc.offsets.count {
             maxEnd = max(maxEnd, alloc.filePosition(of: block) + alloc.size(of: block))
         }
