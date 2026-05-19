@@ -94,9 +94,9 @@ public struct LutinConfig: Codable, Equatable {
         public var to: String?                 // arrow: target item id
         public var label: String?              // arrow: optional text
         public var path: String?               // image: overlay file (project-relative)
-        public var x: Int?                      // image: position, window points
-        public var y: Int?                      // image: position, window points
-        public var width: Int?                  // image: drawn width, window points
+        public var x: Int?                     // image: position, window points
+        public var y: Int?                     // image: position, window points
+        public var width: Int?                 // image: drawn width, window points
         public init(type: String, from: String? = nil, to: String? = nil,
                     label: String? = nil, path: String? = nil,
                     x: Int? = nil, y: Int? = nil, width: Int? = nil) {

@@ -47,7 +47,7 @@ public enum ConfigValidator {
         for (idx, decoration) in (config.decorations ?? []).enumerated() {
             switch decoration.type {
             case "arrow":
-                if let from = decoration.from, !from.isEmpty {
+                if let from = decoration.from, !from.trimmingCharacters(in: .whitespaces).isEmpty {
                     if !seenIds.contains(from) {
                         error("decorations[\(idx)].from",
                               "Decoration references unknown item id '\(from)'.")
@@ -56,7 +56,7 @@ public enum ConfigValidator {
                     error("decorations[\(idx)].from",
                           "An arrow decoration requires a 'from' item id.")
                 }
-                if let to = decoration.to, !to.isEmpty {
+                if let to = decoration.to, !to.trimmingCharacters(in: .whitespaces).isEmpty {
                     if !seenIds.contains(to) {
                         error("decorations[\(idx)].to",
                               "Decoration references unknown item id '\(to)'.")

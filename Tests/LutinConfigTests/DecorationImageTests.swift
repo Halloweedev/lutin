@@ -1,5 +1,5 @@
 import XCTest
-import LutinCore
+import TestSupport
 @testable import LutinConfig
 
 final class DecorationImageTests: XCTestCase {
@@ -64,16 +64,17 @@ final class DecorationImageTests: XCTestCase {
         XCTAssertEqual(config.decorations?.first?.type, "image")
         XCTAssertEqual(config.decorations?.first?.path, "assets/arrow.png")
         XCTAssertEqual(config.decorations?.first?.x, 300)
+        XCTAssertEqual(config.decorations?.first?.y, 220)
+        XCTAssertEqual(config.decorations?.first?.width, 120)
     }
 }
 
 /// Small helper so the test does not depend on Yams import details.
 enum YAMLDecoderConfig {
     static func decode(_ yaml: String) throws -> LutinConfig {
-        let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("lutin-deco-\(UUID().uuidString).yml")
+        let dir = try Fixtures.makeTempDirectory()
+        let tmp = dir.appendingPathComponent("lutin.yml")
         try yaml.write(to: tmp, atomically: true, encoding: .utf8)
-        defer { try? FileManager.default.removeItem(at: tmp) }
         return try LutinConfig.load(from: tmp)
     }
 }
