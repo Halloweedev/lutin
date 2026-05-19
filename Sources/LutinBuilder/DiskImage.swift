@@ -18,6 +18,7 @@ public enum DiskImage {
             try FileManager.default.removeItem(at: url)
         }
         do {
+            // -layout NONE suppresses the Apple Partition Map; the writable DMG is an intermediate artifact.
             _ = try runner.run(hdiutil, [
                 "create", "-size", "\(megabytes)m", "-fs", "HFS+",
                 "-volname", volumeName, "-layout", "NONE", url.path,
@@ -42,9 +43,18 @@ public enum DiskImage {
                              message: "Could not mount \(url.lastPathComponent): \(error.message)",
                              details: error.details)
         }
-        guard let plistData = result.stdout.data(using: .utf8),
-              let plist = try? PropertyListSerialization.propertyList(
-                from: plistData, options: [], format: nil) as? [String: Any],
+        guard let plistData = result.stdout.data(using: .utf8) else {
+            throw LutinError(code: "mount_failed",
+                             message: "Could not parse hdiutil attach output for \(url.path).")
+        }
+        let rawPlist: Any
+        do {
+            rawPlist = try PropertyListSerialization.propertyList(from: plistData, options: [], format: nil)
+        } catch {
+            throw LutinError(code: "mount_failed",
+                             message: "Could not parse hdiutil output: \(error.localizedDescription)")
+        }
+        guard let plist = rawPlist as? [String: Any],
               let entities = plist["system-entities"] as? [[String: Any]]
         else {
             throw LutinError(code: "mount_failed",
@@ -66,10 +76,16 @@ public enum DiskImage {
     public static func unmount(_ image: MountedImage, runner: CommandRunning) throws {
         do {
             _ = try runner.run(hdiutil, ["detach", image.device])
-        } catch let error as LutinError {
+        } catch let firstError as LutinError {
             // Retry once with -force before giving up.
-            _ = try? runner.runAllowingFailure(hdiutil, ["detach", image.device, "-force"])
-            _ = error
+            let forced = try runner.runAllowingFailure(hdiutil, ["detach", image.device, "-force"])
+            if forced.exitCode != 0 {
+                throw LutinError(
+                    code: "unmount_failed",
+                    message: "Could not detach \(image.device): \(firstError.message)",
+                    details: firstError.details
+                )
+            }
         }
     }
 

@@ -17,6 +17,7 @@ final class DiskImageTests: XCTestCase {
 
         // Mount it; write a file; unmount.
         let mount = try DiskImage.mount(rwDMG, runner: runner)
+        addTeardownBlock { try? DiskImage.unmount(mount, runner: runner) }
         XCTAssertTrue(FileManager.default.fileExists(atPath: mount.mountPoint.path))
         try "hello".write(to: mount.mountPoint.appendingPathComponent("note.txt"),
                           atomically: true, encoding: .utf8)
@@ -28,6 +29,7 @@ final class DiskImageTests: XCTestCase {
 
         // The converted image still mounts and contains the file.
         let remount = try DiskImage.mount(finalDMG, runner: runner)
+        addTeardownBlock { try? DiskImage.unmount(remount, runner: runner) }
         XCTAssertTrue(FileManager.default.fileExists(
             atPath: remount.mountPoint.appendingPathComponent("note.txt").path))
         try DiskImage.unmount(remount, runner: runner)
