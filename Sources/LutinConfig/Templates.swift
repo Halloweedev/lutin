@@ -47,6 +47,22 @@ public enum Templates {
                               colorA: "#FFFFFF", colorB: "#F2F2F2", grid: false,
                               noise: 0.0, cornerRadius: 24)
         ),
+        "dark": Template(
+            name: "dark",
+            window: .init(width: 680, height: 420, iconSize: 96,
+                          textSize: 13, showToolbar: false, showSidebar: false),
+            background: .init(type: "generated", template: "dark", scale: 2,
+                              colorA: "#2A2D3A", colorB: "#1C1E26", grid: true,
+                              noise: 0.03, cornerRadius: 28)
+        ),
+        "warm": Template(
+            name: "warm",
+            window: .init(width: 640, height: 400, iconSize: 96,
+                          textSize: 13, showToolbar: false, showSidebar: false),
+            background: .init(type: "generated", template: "warm", scale: 2,
+                              colorA: "#FBEFE6", colorB: "#F3DCC9", grid: false,
+                              noise: 0.02, cornerRadius: 26)
+        ),
     ]
 
     public static let defaultTemplateName = "blueprint"
