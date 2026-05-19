@@ -32,6 +32,6 @@ final class AliasRecordTests: XCTestCase {
         let path = "/Volumes/Barry/.background/background.png"
         let data = AliasRecord.encode(volumeName: "Barry",
                                       fileName: "background.png", posixPath: path)
-        XCTAssertTrue(data.range(of: Data(path.utf8)) != nil)
+        XCTAssertNotNil(data.range(of: Data(path.utf8)))
     }
 }

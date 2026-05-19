@@ -44,6 +44,7 @@ enum AliasRecord {
 
         // --- Backfill record size at offset 4 (2 bytes, big-endian) ---
         var data = buf.data
+        precondition(data.count <= Int(UInt16.max), "AliasRecord too large: \(data.count) bytes")
         let total = UInt16(data.count)
         data[4] = UInt8(truncatingIfNeeded: total >> 8)
         data[5] = UInt8(truncatingIfNeeded: total)
@@ -68,7 +69,6 @@ enum AliasRecord {
         buf.appendUInt16(UInt16(dataLength))
         buf.appendUInt16(UInt16(unitCount))
         buf.appendUTF16BE(string)
-        if dataLength % 2 != 0 { buf.appendUInt8(0) }
     }
 
     private static func appendUTF8Tag(_ buf: inout ByteBuffer,
