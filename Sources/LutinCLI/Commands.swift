@@ -164,7 +164,8 @@ enum CommandLogic {
         let detail: String
     }
 
-    static func doctor(configURL: URL) throws -> [DoctorCheck] {
+    static func doctor(configURL: URL,
+                       runner: CommandRunning = ShellCommandRunner()) throws -> [DoctorCheck] {
         var checks: [DoctorCheck] = []
 
         // config
@@ -215,7 +216,6 @@ enum CommandLogic {
         // signingIdentity — only when signing is enabled.
         if let config = loaded, let signing = config.signing, signing.enabled {
             let identity = signing.identity ?? ""
-            let runner = ShellCommandRunner()
             let found = (try? runner.runAllowingFailure(
                 "/usr/bin/security",
                 ["find-identity", "-v", "-p", "codesigning"]).stdout) ?? ""
@@ -229,7 +229,6 @@ enum CommandLogic {
         if let config = loaded, let notarization = config.notarization,
            notarization.enabled {
             let profile = notarization.profile ?? ""
-            let runner = ShellCommandRunner()
             // `notarytool history` against the profile succeeds iff it exists.
             let result = try? runner.runAllowingFailure("/usr/bin/xcrun",
                 ["notarytool", "history", "--keychain-profile", profile])

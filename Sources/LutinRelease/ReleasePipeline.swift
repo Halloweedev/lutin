@@ -42,7 +42,7 @@ public enum ReleasePipeline {
         var signingStatus = "skipped"
         if mode == .release, let signing = config.signing, signing.enabled {
             guard let identity = signing.identity, !identity.isEmpty else {
-                throw LutinError(code: "config_invalid",
+                throw LutinError(code: "invalid_config",
                                  message: "signing.identity is required when signing.enabled is true.")
             }
             try CodeSigner.verifyIdentityExists(identity, runner: runner)
@@ -76,7 +76,7 @@ public enum ReleasePipeline {
             if let signing = config.signing, signing.enabled,
                signing.signDmg == true {
                 guard let identity = signing.identity, !identity.isEmpty else {
-                    throw LutinError(code: "config_invalid",
+                    throw LutinError(code: "invalid_config",
                                      message: "signing.identity is required when signing.enabled is true.")
                 }
                 try CodeSigner.signDMG(dmgPath, identity: identity,
@@ -84,7 +84,7 @@ public enum ReleasePipeline {
             }
             if let notarization = config.notarization, notarization.enabled {
                 guard let profile = notarization.profile, !profile.isEmpty else {
-                    throw LutinError(code: "config_invalid",
+                    throw LutinError(code: "invalid_config",
                                      message: "notarization.profile is required when notarization.enabled is true.")
                 }
                 try Notarizer.submit(dmg: dmgPath,

@@ -68,6 +68,40 @@ final class ReleasePipelineTests: XCTestCase {
             $0.executable.hasSuffix("xcrun") && $0.arguments.first == "notarytool" })
     }
 
+    func testReleaseThrowsInvalidConfigWhenSigningEnabledButIdentityNil() throws {
+        let projectDir = Fixtures.barryProject
+        let outDir = try Fixtures.makeTempDirectory()
+        addTeardownBlock { try? FileManager.default.removeItem(at: outDir) }
+        // Build a config with signing.enabled = true but signing.identity = nil.
+        var config = LutinConfig(
+            project: .init(name: "Barry", bundleId: "com.anotheragence.barry"),
+            app: .init(path: "./Barry.app"),
+            output: .init(directory: outDir.path, dmgName: "Barry-${version}.dmg",
+                          volumeName: "Barry"),
+            window: LutinConfig.WindowInfo(width: 680, height: 420, iconSize: 96,
+                textSize: 13, showToolbar: false, showSidebar: false),
+            background: nil,
+            items: [.init(type: "app", id: "app", x: 180, y: 220, label: "Barry"),
+                    .init(type: "applications", id: "applications", x: 500, y: 220,
+                          label: "Applications")],
+            decorations: nil,
+            signing: LutinConfig.SigningInfo(
+                enabled: true, identity: nil,
+                hardenedRuntime: true, entitlements: nil, signDmg: false),
+            notarization: nil,
+            sparkle: nil)
+        config.output.directory = outDir.path
+
+        let fake = FakeCommandRunner()
+        XCTAssertThrowsError(
+            try ReleasePipeline.run(config: config, projectDirectory: projectDir,
+                                    mode: .release, runner: fake,
+                                    dmgRunner: ShellCommandRunner())
+        ) { error in
+            XCTAssertEqual((error as? LutinError)?.code, "invalid_config")
+        }
+    }
+
     func testReleaseWithSigningAndNotarizationDisabledStillBuilds() throws {
         let projectDir = Fixtures.barryProject
         let outDir = try Fixtures.makeTempDirectory()

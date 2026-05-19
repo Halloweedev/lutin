@@ -36,8 +36,18 @@ final class FullBuildTests: XCTestCase {
             .appendingPathComponent("Barry.app").path))
         XCTAssertTrue(fm.fileExists(atPath: mount.mountPoint
             .appendingPathComponent("Applications").path))
-        XCTAssertTrue(fm.fileExists(atPath: mount.mountPoint
-            .appendingPathComponent(".DS_Store").path))
+        let dsStorePath = mount.mountPoint.appendingPathComponent(".DS_Store")
+        XCTAssertTrue(fm.fileExists(atPath: dsStorePath.path))
+        // Verify Buddy-allocator magic bytes: 0x00000001 followed by "Bud1".
+        let dsStoreBytes = try XCTUnwrap(
+            try? Data(contentsOf: dsStorePath),
+            ".DS_Store should be readable")
+        let bytes = Array(dsStoreBytes)
+        XCTAssertGreaterThanOrEqual(bytes.count, 8, ".DS_Store must have at least 8 bytes")
+        XCTAssertEqual(Array(bytes[0..<4]), [0x00, 0x00, 0x00, 0x01],
+                       ".DS_Store first 4 bytes must be 0x00000001")
+        XCTAssertEqual(Array(bytes[4..<8]), Array("Bud1".utf8),
+                       ".DS_Store bytes 4-7 must be 'Bud1' magic")
         XCTAssertTrue(fm.fileExists(atPath: mount.mountPoint
             .appendingPathComponent(".background/background.png").path))
     }
