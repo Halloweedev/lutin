@@ -228,11 +228,25 @@ enum CommandLogic {
         let dmgName = TokenResolver.resolve(config.output.dmgName, context)
         let outURL = URL(fileURLWithPath: config.output.directory, relativeTo: projectDir)
 
+        let layout = try LayoutResolver.resolve(
+            config: config,
+            appFileName: appURL.lastPathComponent)
+
+        let backgroundImage: URL?
+        if let bgPath = config.background?.path {
+            backgroundImage = URL(fileURLWithPath: bgPath, relativeTo: projectDir)
+        } else {
+            backgroundImage = nil
+        }
+
         let request = BuildRequest(
             appBundle: appURL.standardizedFileURL,
             outputDirectory: outURL.standardizedFileURL,
             dmgName: dmgName,
-            volumeName: TokenResolver.resolve(config.output.volumeName, context))
+            volumeName: TokenResolver.resolve(config.output.volumeName, context),
+            layout: layout,
+            backgroundImage: backgroundImage,
+            volumeIcon: nil)
         return try DMGBuilder.build(request, dryRun: dryRun, onOutput: onOutput)
     }
 

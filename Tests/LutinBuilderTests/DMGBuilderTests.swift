@@ -12,7 +12,11 @@ final class DMGBuilderTests: XCTestCase {
             appBundle: Fixtures.barryApp,
             outputDirectory: outDir,
             dmgName: "Barry-1.0.0.dmg",
-            volumeName: "Barry")
+            volumeName: "Barry",
+            layout: DMGLayout(windowWidth: 600, windowHeight: 400, iconSize: 96, textSize: 13,
+                              showSidebar: false, showToolbar: false, placements: [:]),
+            backgroundImage: nil,
+            volumeIcon: nil)
         return (request, outDir)
     }
 
@@ -39,7 +43,10 @@ final class DMGBuilderTests: XCTestCase {
         let (_, outDir) = try makeRequest()
         let request = BuildRequest(
             appBundle: Fixtures.examplesDirectory.appendingPathComponent("Ghost.app"),
-            outputDirectory: outDir, dmgName: "Ghost.dmg", volumeName: "Ghost")
+            outputDirectory: outDir, dmgName: "Ghost.dmg", volumeName: "Ghost",
+            layout: DMGLayout(windowWidth: 600, windowHeight: 400, iconSize: 96, textSize: 13,
+                              showSidebar: false, showToolbar: false, placements: [:]),
+            backgroundImage: nil, volumeIcon: nil)
         XCTAssertThrowsError(try DMGBuilder.build(request, dryRun: false)) { error in
             XCTAssertEqual((error as? LutinError)?.code, "app_bundle_invalid")
         }
