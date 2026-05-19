@@ -54,4 +54,14 @@ final class BackgroundGradientTests: XCTestCase {
             XCTAssertEqual((error as? LutinError)?.code, "render_failed")
         }
     }
+
+    func testMalformedColorBThrowsRenderFailed() {
+        let spec = BackgroundSpec(
+            kind: .generated, widthPoints: 50, heightPoints: 50, scale: 1,
+            colorA: "#FF0000", colorB: "not-a-color", grid: false, noise: 0,
+            cornerRadius: 0, imageURL: nil)
+        XCTAssertThrowsError(try BackgroundRenderer().renderBase(spec)) { error in
+            XCTAssertEqual((error as? LutinError)?.code, "render_failed")
+        }
+    }
 }

@@ -64,7 +64,7 @@ struct BackgroundRenderer {
     /// bottom-right we must convert: visual top-left is device (0, 0), which
     /// in the flipped user space is (0, h); visual bottom-right is device
     /// (w, h), which in user space is (w, 0).
-    func drawGradient(in ctx: RenderContext, from colorA: RenderColor, to colorB: RenderColor) {
+    private func drawGradient(in ctx: RenderContext, from colorA: RenderColor, to colorB: RenderColor) {
         let space = CGColorSpace(name: CGColorSpace.sRGB)!
         let gradient = CGGradient(
             colorsSpace: space,
