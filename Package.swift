@@ -40,12 +40,13 @@ let package = Package(
         .target(name: "LutinUI", dependencies: [
             "LutinCore", "LutinConfig", "LutinDocument", "LutinAppKit", "LutinRender",
         ], resources: [.process("Resources")]),
+        .target(name: "LutinAppPackagerCore", dependencies: ["LutinCore", "LutinConfig", "LutinSigning"]),
 
         .executableTarget(name: "LutinCLIExe", dependencies: ["LutinCLI"], path: "Apps/LutinCLI"),
         .executableTarget(name: "LutinAppExe", dependencies: ["LutinUI"], path: "Apps/LutinApp",
                           exclude: ["lutin.yml"]),
         .executableTarget(name: "LutinAppPackagerExe", dependencies: [
-            "LutinCore", "LutinConfig", "LutinSigning",
+            "LutinAppPackagerCore",
         ], path: "Apps/LutinAppPackager"),
 
         .target(name: "TestSupport", dependencies: ["LutinCore"], path: "Tests/TestSupport"),
@@ -68,7 +69,7 @@ let package = Package(
         .testTarget(name: "LutinUITests", dependencies: [
             "LutinUI", "LutinDocument", "LutinCore", "LutinConfig", "TestSupport"]),
         .testTarget(name: "LutinAppPackagerTests", dependencies: [
-            "LutinCore", "LutinConfig", "LutinSigning", "TestSupport"]),
+            "LutinAppPackagerCore", "LutinCore", "LutinConfig", "TestSupport"]),
     ],
     swiftLanguageModes: [.v5]
 )
