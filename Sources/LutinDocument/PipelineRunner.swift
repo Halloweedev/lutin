@@ -2,7 +2,6 @@ import Foundation
 import Observation
 import LutinCore
 import LutinConfig
-import LutinBuilder
 import LutinRelease
 
 @Observable
@@ -80,21 +79,16 @@ public final class PipelineRunner {
 
             // Preview mode mirrors the CLI: mount the produced DMG and open
             // its volume in Finder so the user gets the real Finder-rendered
-            // result without having to click Open in the drawer.
+            // result. Use `hdiutil attach -autoopen` — Finder needs the
+            // -autoopen signal to read the volume's .DS_Store fresh and show
+            // the baked-in background + icon positions; without it Finder
+            // serves a cached default layout on re-mounts of the same name.
             if mode == .preview {
-                do {
-                    let mount = try await Task.detached(priority: .userInitiated) { () -> URL in
-                        try DiskImage.mount(result.dmgPath, runner: runner).mountPoint
-                    }.value
-                    append(LogLine(kind: .stage, text: "Mounted at \(mount.path)"))
-                    _ = try? runner.runAllowingFailure("/usr/bin/open", [mount.path])
-                } catch let error as LutinError {
-                    append(LogLine(kind: .stderr,
-                                   text: "Preview mount failed: \(error.message)"))
-                } catch {
-                    append(LogLine(kind: .stderr,
-                                   text: "Preview mount failed: \(error.localizedDescription)"))
-                }
+                _ = try? runner.runAllowingFailure(
+                    "/usr/bin/hdiutil",
+                    ["attach", result.dmgPath.path, "-autoopen"])
+                append(LogLine(kind: .stage,
+                               text: "Opened \(result.dmgPath.lastPathComponent) in Finder"))
             }
             state = .succeeded(dmgPath: result.dmgPath.path)
         } catch let error as LutinError {
