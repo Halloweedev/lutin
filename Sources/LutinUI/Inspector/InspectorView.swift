@@ -35,6 +35,11 @@ public struct InspectorView: View {
             TextField("Background template", text: Binding(
                 get: { document.config.background?.template ?? "" },
                 set: { try? document.apply(.setBackgroundTemplate($0)) }))
+            Stepper("Icon size: \(document.config.window?.iconSize ?? 96) pt",
+                value: Binding(
+                    get: { document.config.window?.iconSize ?? 96 },
+                    set: { try? document.apply(.setIconSize($0)) }),
+                in: 32...256, step: 8)
         }
     }
 

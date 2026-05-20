@@ -65,6 +65,15 @@ public final class LutinProjectDocument: Identifiable {
             } else {
                 config.background?.template = template
             }
+        case .setIconSize(let size):
+            let clamped = max(16, min(512, size))
+            if config.window == nil {
+                config.window = LutinConfig.WindowInfo(
+                    width: nil, height: nil, iconSize: clamped, textSize: nil,
+                    showToolbar: nil, showSidebar: nil)
+            } else {
+                config.window?.iconSize = clamped
+            }
         }
         isDirty = true
         registerUndo(previous: previous)

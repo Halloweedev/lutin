@@ -15,4 +15,5 @@ public enum DocumentIntent: Equatable {
     case setProjectName(String)
     case setOutputDirectory(String)
     case setBackgroundTemplate(String)
+    case setIconSize(Int)
 }
