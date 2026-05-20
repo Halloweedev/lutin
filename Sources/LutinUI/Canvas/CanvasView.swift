@@ -11,31 +11,36 @@ public struct CanvasView: View {
     @State private var backgroundImage: CGImage?
     @State private var renderError: String?
     @State private var renderTask: Task<Void, Never>?
+    @State private var selection: CanvasSelection = .none
 
     public init(document: LutinProjectDocument) {
         self.document = document
     }
 
     public var body: some View {
-        ZStack {
-            if let backgroundImage {
-                Image(backgroundImage, scale: 2.0, label: Text("Background preview"))
-                    .resizable()
-                    .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
-                    .padding(Tokens.spacing(.lg))
-            } else if let renderError {
-                Text("Render failed: \(renderError)")
-                    .font(Typography.chromeSmall)
-                    .foregroundStyle(Tokens.color(.logError))
-                    .padding()
-            } else {
-                ProgressView().controlSize(.small)
+        GeometryReader { proxy in
+            ZStack(alignment: .topLeading) {
+                if let backgroundImage {
+                    Image(backgroundImage, scale: 2.0, label: Text("Background preview"))
+                        .resizable()
+                        .interpolation(.high)
+                        .aspectRatio(contentMode: .fit)
+                } else if let renderError {
+                    Text("Render failed: \(renderError)")
+                        .font(Typography.chromeSmall)
+                        .foregroundStyle(Tokens.color(.logError))
+                        .padding()
+                } else {
+                    ProgressView().controlSize(.small)
+                }
+                ItemLayer(document: document, selection: $selection)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Tokens.color(.canvasBackground))
+            .contentShape(Rectangle())
+            .onTapGesture { selection = .none }
+            .task(id: document.id) { await render() }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Tokens.color(.canvasBackground))
-        .task(id: document.id) { await render() }
     }
 
     @MainActor
