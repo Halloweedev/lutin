@@ -40,6 +40,7 @@ public struct CanvasView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Tokens.color(.canvasBackground))
             .contentShape(Rectangle())
+            .coordinateSpace(.named("canvas"))
             .onTapGesture { selection = .none }
             .task(id: document.id) { await render() }
         }

@@ -6,6 +6,8 @@ public struct ItemLayer: View {
     @Bindable var document: LutinProjectDocument
     @Binding var selection: CanvasSelection
     @Environment(PreferencesStore.self) private var preferences
+    @State private var hoveredID: String?
+    @State private var connectorDrag: ConnectorDragState = .idle
 
     public init(document: LutinProjectDocument, selection: Binding<CanvasSelection>) {
         self.document = document
@@ -18,8 +20,28 @@ public struct ItemLayer: View {
                 itemView(for: item)
                     .position(x: CGFloat(item.x), y: CGFloat(item.y))
                     .onTapGesture { selection = .item(id: item.id) }
+                    .onHover { hovering in
+                        hoveredID = hovering ? item.id : (hoveredID == item.id ? nil : hoveredID)
+                    }
+                    .overlay {
+                        if hoveredID == item.id {
+                            ConnectorHandles(document: document, item: item,
+                                             dragState: $connectorDrag)
+                        }
+                    }
                     .draggableItem(document: document, id: item.id,
                                    snapGrid: preferences.preferences.snapGridSize)
+            }
+        }
+        .onChange(of: connectorDrag) { _, newValue in
+            if case .ended(let src, let pt) = newValue {
+                let items = document.config.items ?? []
+                let iconSize = document.config.window?.iconSize ?? 96
+                if let target = ConnectorResolver.itemAt(point: pt, items: items, iconSize: iconSize),
+                   target.id != src {
+                    try? document.apply(.addArrow(from: src, to: target.id, label: nil))
+                }
+                connectorDrag = .idle
             }
         }
     }
