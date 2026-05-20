@@ -10,5 +10,9 @@ struct LutinApp: App {
         }
         .windowResizability(.contentMinSize)
         .commands { LutinCommands() }
+
+        Settings {
+            PreferencesContainer()
+        }
     }
 }
