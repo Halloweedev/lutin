@@ -1,11 +1,13 @@
 import SwiftUI
+import LutinUI
 
 @main
 struct LutinApp: App {
     var body: some Scene {
         WindowGroup("Lutin") {
-            Text("Lutin.app — Phase 1 scaffold")
-                .frame(minWidth: 800, minHeight: 600)
+            WorkspaceShell()
+                .frame(minWidth: 900, minHeight: 600)
         }
+        .windowResizability(.contentMinSize)
     }
 }
