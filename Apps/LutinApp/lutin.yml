@@ -1,0 +1,36 @@
+# Dogfood config: this file describes how `lutin` itself packages Lutin.app
+# into a DMG. The release-app.sh script feeds this to `lutin build` after
+# LutinAppPackager produces ./build/Lutin.app.
+project:
+  name: Lutin
+  bundleId: com.lutin.app
+app:
+  path: ./build/Lutin.app
+output:
+  directory: ../../release
+  dmgName: Lutin-${version}.dmg
+  volumeName: Lutin
+background:
+  template: blueprint
+items:
+- type: app
+  id: app
+  x: 180
+  y: 220
+  label: Lutin
+- type: applications
+  id: applications
+  x: 500
+  y: 220
+  label: Applications
+decorations:
+- type: arrow
+  from: app
+  to: applications
+  label: Drag to install
+signing:
+  enabled: false
+  identity: ""
+notarization:
+  enabled: false
+  profile: ""
