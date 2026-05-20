@@ -8,6 +8,7 @@ public struct ItemLayer: View {
     @Environment(PreferencesStore.self) private var preferences
     @State private var hoveredID: String?
     @State private var connectorDrag: ConnectorDragState = .idle
+    @State private var editingID: String?
 
     public init(document: LutinProjectDocument, selection: Binding<CanvasSelection>) {
         self.document = document
@@ -56,10 +57,24 @@ public struct ItemLayer: View {
             Image(systemName: item.type == "applications" ? "folder.fill" : "shippingbox.fill")
                 .font(.system(size: 24))
                 .foregroundStyle(Tokens.color(.brandAccent))
-            if let label = item.label, !label.isEmpty {
+            if editingID == item.id {
+                InlineLabelEditor(document: document, itemID: item.id,
+                                  isEditing: Binding(get: { editingID == item.id },
+                                                     set: { if !$0 { editingID = nil } }))
+                    .frame(width: 80)
+                    .offset(y: 36)
+            } else if let label = item.label, !label.isEmpty {
                 Text(label)
                     .font(Typography.canvasLabel)
                     .offset(y: 36)
+                    .onTapGesture(count: 2) { editingID = item.id }
+            } else {
+                // Allow double-clicking the empty label area to enter edit mode for unlabelled items.
+                Color.clear
+                    .frame(width: 64, height: 14)
+                    .offset(y: 36)
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) { editingID = item.id }
             }
         }
         .overlay(
