@@ -53,7 +53,10 @@ public struct ItemLayer: View {
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color.white)
                 .frame(width: 52, height: 52)
-                .shadow(color: .black.opacity(0.12), radius: 2, x: 0, y: 1)
+                .scaleEffect(isSelected ? 1.03 : 1.0)
+                .shadow(color: .black.opacity(isSelected ? 0.18 : 0.12),
+                        radius: isSelected ? 8 : 2, x: 0, y: isSelected ? 4 : 1)
+                .animation(.spring(response: 0.32, dampingFraction: 0.78), value: isSelected)
             Image(systemName: item.type == "applications" ? "folder.fill" : "shippingbox.fill")
                 .font(.system(size: 24))
                 .foregroundStyle(Tokens.color(.brandAccent))

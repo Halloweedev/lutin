@@ -35,6 +35,7 @@ public struct SidebarView: View {
 
 private struct SidebarRow: View {
     let status: RegistryEntryStatus
+    @State private var hovering = false
 
     var body: some View {
         HStack(spacing: Tokens.spacing(.md)) {
@@ -56,5 +57,12 @@ private struct SidebarRow: View {
             }
         }
         .padding(.vertical, Tokens.spacing(.xs))
+        .background(alignment: .leading) {
+            Rectangle()
+                .fill(Tokens.color(.brandAccent))
+                .frame(width: hovering ? 2 : 0)
+                .animation(.easeOut(duration: 0.12), value: hovering)
+        }
+        .onHover { hovering = $0 }
     }
 }

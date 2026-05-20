@@ -6,6 +6,7 @@ public struct ToolbarActions: ToolbarContent {
     @Bindable var document: LutinProjectDocument
     @Bindable var runner: PipelineRunner
     @Binding var showingDoctor: Bool
+    @State private var successPulse: Bool = false
 
     public init(document: LutinProjectDocument, runner: PipelineRunner, showingDoctor: Binding<Bool>) {
         self.document = document
@@ -21,6 +22,13 @@ public struct ToolbarActions: ToolbarContent {
                                          projectDirectory: document.projectDirectory) }
             } label: { Label("Build", systemImage: "play.fill") }
                 .disabled(isRunning)
+                .tint(successPulse ? Tokens.color(.logSuccess) : nil)
+                .onChange(of: runner.state) { _, newValue in
+                    if case .succeeded = newValue {
+                        successPulse = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { successPulse = false }
+                    }
+                }
 
             Button {
                 Task { await runner.run(mode: .preview,
