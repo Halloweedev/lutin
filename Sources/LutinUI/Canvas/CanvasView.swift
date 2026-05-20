@@ -26,6 +26,7 @@ public struct CanvasView: View {
                         .resizable()
                         .interpolation(.high)
                         .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let renderError {
                     Text("Render failed: \(renderError)")
                         .font(Typography.chromeSmall)
@@ -60,16 +61,26 @@ public struct CanvasView: View {
     @MainActor
     private func render() async {
         renderTask?.cancel()
+        // Snapshot main-actor-isolated state before entering the detached task
+        // so the renderer doesn't reach back across an isolation boundary.
+        let configSnapshot = document.config
+        let projectDirSnapshot = document.projectDirectory
         renderTask = Task.detached(priority: .userInitiated) {
             do {
                 let url = try LutinRenderer.renderBackground(
-                    config: document.config, projectDirectory: document.projectDirectory)
-                defer { try? FileManager.default.removeItem(at: url) }
+                    config: configSnapshot, projectDirectory: projectDirSnapshot)
+                // Force-decode now: CGImageSourceCreateImageAtIndex is lazy by
+                // default. If we let it defer until SwiftUI displays the image,
+                // the file may already be gone — which yields a valid CGImage
+                // handle backed by nothing and renders as empty white.
+                let options = [kCGImageSourceShouldCacheImmediately: true] as CFDictionary
                 guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-                      let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+                      let image = CGImageSourceCreateImageAtIndex(source, 0, options) else {
+                    try? FileManager.default.removeItem(at: url)
                     await MainActor.run { renderError = "Could not read rendered PNG" }
                     return
                 }
+                try? FileManager.default.removeItem(at: url)
                 await MainActor.run {
                     backgroundImage = image
                     renderError = nil
