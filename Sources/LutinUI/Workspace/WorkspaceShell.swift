@@ -43,6 +43,11 @@ public struct WorkspaceShell: View {
         .onChange(of: selectedEntryName) { _, name in
             loadDocument(named: name)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .lutinSave)) { _ in
+            try? document?.save()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .lutinUndo)) { _ in document?.undo() }
+        .onReceive(NotificationCenter.default.publisher(for: .lutinRedo)) { _ in document?.redo() }
     }
 
     private func loadDocument(named name: String?) {
@@ -76,6 +81,12 @@ private struct ProjectWorkspace: View {
         .background(Tokens.color(.canvasBackground))
         .inspector(isPresented: $inspectorVisible) {
             InspectorView(document: document, selection: selectionModel.selection)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .lutinDelete)) { _ in
+            try? selectionModel.delete(in: document)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .lutinDuplicate)) { _ in
+            try? selectionModel.duplicate(in: document)
         }
     }
 }

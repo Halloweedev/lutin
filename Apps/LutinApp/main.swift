@@ -9,5 +9,6 @@ struct LutinApp: App {
                 .frame(minWidth: 900, minHeight: 600)
         }
         .windowResizability(.contentMinSize)
+        .commands { LutinCommands() }
     }
 }
