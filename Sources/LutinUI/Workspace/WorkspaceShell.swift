@@ -31,6 +31,9 @@ public struct WorkspaceShell: View {
         .navigationSplitViewStyle(.balanced)
         .environment(registryStore)
         .environment(preferencesStore)
+        .onChange(of: preferencesStore.preferences.autosave) { _, newValue in
+            document?.autosaveEnabled = newValue
+        }
         .task {
             do {
                 try registryStore.reload()
@@ -50,6 +53,7 @@ public struct WorkspaceShell: View {
         let url = URL(fileURLWithPath: entry.configPath)
         do {
             document = try LutinProjectDocument(configURL: url)
+            document?.autosaveEnabled = preferencesStore.preferences.autosave
             loadError = nil
         } catch let error as LutinError {
             document = nil; loadError = error.message

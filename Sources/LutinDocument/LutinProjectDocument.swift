@@ -14,6 +14,11 @@ public final class LutinProjectDocument: Identifiable {
     @ObservationIgnored
     public let undoManager = UndoManager()
 
+    @ObservationIgnored
+    private var autosaveTimer: Timer?
+
+    public var autosaveEnabled: Bool = false
+
     public init(configURL: URL) throws {
         self.configURL = configURL.standardizedFileURL
         self.projectDirectory = configURL.deletingLastPathComponent().standardizedFileURL
@@ -63,6 +68,15 @@ public final class LutinProjectDocument: Identifiable {
         }
         isDirty = true
         registerUndo(previous: previous)
+        if autosaveEnabled { scheduleAutosave() }
+    }
+
+    public func scheduleAutosave(after delay: TimeInterval = 0.5) {
+        autosaveTimer?.invalidate()
+        autosaveTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            try? self.save()
+        }
     }
 
     public func save() throws {
