@@ -1,11 +1,13 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.0
 import PackageDescription
 
 let package = Package(
     name: "Lutin",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v15)],
     products: [
         .executable(name: "lutin", targets: ["LutinCLIExe"]),
+        .executable(name: "lutin-app", targets: ["LutinAppExe"]),
+        .executable(name: "lutin-app-packager", targets: ["LutinAppPackagerExe"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
@@ -28,7 +30,24 @@ let package = Package(
             "LutinSigning", "LutinNotarization", "LutinRelease",
             .product(name: "ArgumentParser", package: "swift-argument-parser"),
         ]),
+
+        // SP4 — GUI
+        .target(name: "LutinAppKit", dependencies: ["LutinCore"]),
+        .target(name: "LutinDocument", dependencies: [
+            "LutinCore", "LutinConfig", "LutinRegistry", "LutinRender",
+            "LutinRelease", "LutinSigning", "LutinNotarization",
+        ]),
+        .target(name: "LutinUI", dependencies: [
+            "LutinCore", "LutinConfig", "LutinDocument", "LutinAppKit", "LutinRender",
+        ], resources: [.process("Resources")]),
+
         .executableTarget(name: "LutinCLIExe", dependencies: ["LutinCLI"], path: "Apps/LutinCLI"),
+        .executableTarget(name: "LutinAppExe", dependencies: ["LutinUI"], path: "Apps/LutinApp",
+                          exclude: ["lutin.yml"]),
+        .executableTarget(name: "LutinAppPackagerExe", dependencies: [
+            "LutinCore", "LutinConfig", "LutinSigning",
+        ], path: "Apps/LutinAppPackager"),
+
         .target(name: "TestSupport", dependencies: ["LutinCore"], path: "Tests/TestSupport"),
         .testTarget(name: "LutinCoreTests", dependencies: ["LutinCore", "TestSupport"]),
         .testTarget(name: "LutinConfigTests", dependencies: ["LutinConfig", "LutinCore", "TestSupport"]),
@@ -42,5 +61,14 @@ let package = Package(
             "LutinRelease", "LutinConfig", "LutinCore", "LutinBuilder", "TestSupport"]),
         .testTarget(name: "LutinCLITests", dependencies: [
             "LutinCLI", "LutinRegistry", "LutinCore", "LutinBuilder", "LutinRelease", "TestSupport"]),
-    ]
+
+        // SP4 tests
+        .testTarget(name: "LutinDocumentTests", dependencies: [
+            "LutinDocument", "LutinCore", "LutinConfig", "LutinRegistry", "TestSupport"]),
+        .testTarget(name: "LutinUITests", dependencies: [
+            "LutinUI", "LutinDocument", "LutinCore", "LutinConfig", "TestSupport"]),
+        .testTarget(name: "LutinAppPackagerTests", dependencies: [
+            "LutinCore", "LutinConfig", "LutinSigning", "TestSupport"]),
+    ],
+    swiftLanguageModes: [.v5]
 )
