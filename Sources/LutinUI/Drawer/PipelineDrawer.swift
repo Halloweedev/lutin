@@ -19,7 +19,8 @@ public struct PipelineDrawer: View {
                 logBody
             }
         }
-        .background(Tokens.color(.surfaceElevated))
+        .background(Tokens.color(.surfaceElevated).opacity(0.85))
+        .lutinGlassBackground()
         .overlay(alignment: .top) { Rectangle().frame(height: 1).foregroundStyle(Tokens.color(.divider)) }
         .transition(.move(edge: .bottom).combined(with: .opacity))
         .sheet(item: $showError) { wrap in

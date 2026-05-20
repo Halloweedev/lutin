@@ -21,6 +21,7 @@ public struct InspectorView: View {
         }
         .formStyle(.grouped)
         .frame(width: 280)
+        .background(.regularMaterial)
     }
 
     private var projectSection: some View {

@@ -26,6 +26,8 @@ public struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
+        .lutinGlassBackground()
         .frame(minWidth: 180, idealWidth: 220)
         .task { try? registryStore.reload() }
     }
