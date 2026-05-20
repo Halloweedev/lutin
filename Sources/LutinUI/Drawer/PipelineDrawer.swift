@@ -1,9 +1,11 @@
 import SwiftUI
+import LutinCore
 import LutinDocument
 
 public struct PipelineDrawer: View {
     @Bindable var runner: PipelineRunner
     @State private var isExpanded: Bool = true
+    @State private var showError: IdentifiableLutinError?
 
     public init(runner: PipelineRunner) {
         self.runner = runner
@@ -20,6 +22,9 @@ public struct PipelineDrawer: View {
         .background(Tokens.color(.surfaceElevated))
         .overlay(alignment: .top) { Rectangle().frame(height: 1).foregroundStyle(Tokens.color(.divider)) }
         .transition(.move(edge: .bottom).combined(with: .opacity))
+        .sheet(item: $showError) { wrap in
+            ErrorSheet(error: wrap.error) { showError = nil }
+        }
     }
 
     private var header: some View {
@@ -30,6 +35,13 @@ public struct PipelineDrawer: View {
                 ProgressView(value: progress).controlSize(.small).frame(width: 100)
             }
             Spacer()
+            if case .failed(let error) = runner.state {
+                Button("View details") {
+                    showError = IdentifiableLutinError(error: error)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
             Button(isExpanded ? "Hide" : "Show") { isExpanded.toggle() }
                 .buttonStyle(.borderless)
                 .font(Typography.chromeSmall)
@@ -85,4 +97,9 @@ public struct PipelineDrawer: View {
         case .error:   return Tokens.color(.logError)
         }
     }
+}
+
+private struct IdentifiableLutinError: Identifiable, Equatable {
+    let id = UUID()
+    let error: LutinError
 }
