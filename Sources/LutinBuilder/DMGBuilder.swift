@@ -101,6 +101,16 @@ public enum DMGBuilder {
                              details: ["path": bg.path])
         }
 
+        // 1c. Detach any stale /Volumes/<volumeName> left over from a previous
+        // build or preview. macOS auto-renames a colliding mount to "<name> 1",
+        // which both confuses the DS_Store alias path (it hard-codes
+        // /Volumes/<volumeName>/.background/...) and breaks the copyItem
+        // step below ("…couldn't be copied because you don't have permission
+        // to access '<name> 1'"). Best-effort: ignore failures.
+        let stalePath = "/Volumes/" + request.volumeName
+        _ = try? runner.runAllowingFailure("/usr/bin/hdiutil",
+                                           ["detach", stalePath, "-force"])
+
         // 2. Create + mount a writable image. Size it generously from the app.
         let workDir = fm.temporaryDirectory
             .appendingPathComponent("lutin-build-\(UUID().uuidString)")

@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import LutinCore
 import LutinConfig
+import LutinBuilder
 import LutinRelease
 
 @Observable
@@ -61,6 +62,10 @@ public final class PipelineRunner {
         state = .running(stage: "Starting", progress: 0)
         log.removeAll()
         let runner = ShellCommandRunner()
+        // DMGBuilder detaches /Volumes/<volumeName> defensively before mounting
+        // its writable image, so we don't need to repeat that here. The preview
+        // mount-and-open step below is GUI-specific and not part of the shared
+        // pipeline (the CLI does the equivalent in CommandLogic.preview).
         do {
             let result = try await Task.detached(priority: .userInitiated) { () -> ReleasePipeline.Result in
                 try ReleasePipeline.run(config: config, projectDirectory: projectDirectory,
@@ -72,6 +77,25 @@ public final class PipelineRunner {
             }.value
             lastSummary = result.summary
             append(LogLine(kind: .success, text: "✓ Wrote \(result.dmgPath.path)"))
+
+            // Preview mode mirrors the CLI: mount the produced DMG and open
+            // its volume in Finder so the user gets the real Finder-rendered
+            // result without having to click Open in the drawer.
+            if mode == .preview {
+                do {
+                    let mount = try await Task.detached(priority: .userInitiated) { () -> URL in
+                        try DiskImage.mount(result.dmgPath, runner: runner).mountPoint
+                    }.value
+                    append(LogLine(kind: .stage, text: "Mounted at \(mount.path)"))
+                    _ = try? runner.runAllowingFailure("/usr/bin/open", [mount.path])
+                } catch let error as LutinError {
+                    append(LogLine(kind: .stderr,
+                                   text: "Preview mount failed: \(error.message)"))
+                } catch {
+                    append(LogLine(kind: .stderr,
+                                   text: "Preview mount failed: \(error.localizedDescription)"))
+                }
+            }
             state = .succeeded(dmgPath: result.dmgPath.path)
         } catch let error as LutinError {
             fail(error)
