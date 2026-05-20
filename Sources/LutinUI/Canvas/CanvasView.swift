@@ -20,13 +20,20 @@ public struct CanvasView: View {
 
     public var body: some View {
         GeometryReader { proxy in
+            // Canvas content is laid out at config-window dimensions (e.g. 680x420)
+            // so items, arrows, and background all use the same coordinate system
+            // as the rendered PNG. The whole stack is then scaled uniformly to fit
+            // the available pane — keeps WYSIWYG when the window resizes.
+            let configW = CGFloat(document.config.window?.width ?? 680)
+            let configH = CGFloat(document.config.window?.height ?? 420)
+            let scale = min(proxy.size.width / configW, proxy.size.height / configH)
+
             ZStack(alignment: .topLeading) {
                 if let backgroundImage {
                     Image(backgroundImage, scale: 2.0, label: Text("Background preview"))
                         .resizable()
                         .interpolation(.high)
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(width: configW, height: configH)
                 } else if let renderError {
                     Text("Render failed: \(renderError)")
                         .font(Typography.chromeSmall)
@@ -43,10 +50,16 @@ public struct CanvasView: View {
                     get: { selectionModel.selection },
                     set: { selectionModel.selection = $0 }))
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(width: configW, height: configH)
+            // Named coordinate space lives INSIDE the scaleEffect so drag
+            // gestures (connector handles, item drags) keep reporting in
+            // unscaled config-pixel coordinates — what intents expect.
+            .coordinateSpace(.named("canvas"))
+            .scaleEffect(scale, anchor: .topLeading)
+            .frame(width: configW * scale, height: configH * scale)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .background(Tokens.color(.canvasBackground))
             .contentShape(Rectangle())
-            .coordinateSpace(.named("canvas"))
             .onTapGesture { selectionModel.selection = .none }
             .focusable()
             .focusEffectDisabled()
