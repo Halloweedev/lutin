@@ -61,13 +61,18 @@ public struct WorkspaceShell: View {
 
 private struct ProjectWorkspace: View {
     let document: LutinProjectDocument
+    @State private var selectionModel = CanvasSelectionModel()
+    @State private var inspectorVisible: Bool = true
 
     var body: some View {
         VStack(spacing: 0) {
-            CanvasView(document: document)
+            CanvasView(document: document, selectionModel: selectionModel)
             Spacer(minLength: 0)
         }
         .background(Tokens.color(.canvasBackground))
+        .inspector(isPresented: $inspectorVisible) {
+            InspectorView(document: document, selection: selectionModel.selection)
+        }
     }
 }
 
