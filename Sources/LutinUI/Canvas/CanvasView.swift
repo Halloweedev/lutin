@@ -33,6 +33,8 @@ public struct CanvasView: View {
                 } else {
                     ProgressView().controlSize(.small)
                 }
+                ArrowLayer(document: document, selection: $selection,
+                           iconSize: document.config.window?.iconSize ?? 96)
                 ItemLayer(document: document, selection: $selection)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
