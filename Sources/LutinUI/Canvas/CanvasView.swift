@@ -11,7 +11,7 @@ public struct CanvasView: View {
     @State private var backgroundImage: CGImage?
     @State private var renderError: String?
     @State private var renderTask: Task<Void, Never>?
-    @State private var selection: CanvasSelection = .none
+    @State private var selectionModel = CanvasSelectionModel()
 
     public init(document: LutinProjectDocument) {
         self.document = document
@@ -33,15 +33,25 @@ public struct CanvasView: View {
                 } else {
                     ProgressView().controlSize(.small)
                 }
-                ArrowLayer(document: document, selection: $selection,
-                           iconSize: document.config.window?.iconSize ?? 96)
-                ItemLayer(document: document, selection: $selection)
+                ArrowLayer(document: document, selection: Binding(
+                    get: { selectionModel.selection },
+                    set: { selectionModel.selection = $0 }),
+                    iconSize: document.config.window?.iconSize ?? 96)
+                ItemLayer(document: document, selection: Binding(
+                    get: { selectionModel.selection },
+                    set: { selectionModel.selection = $0 }))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Tokens.color(.canvasBackground))
             .contentShape(Rectangle())
             .coordinateSpace(.named("canvas"))
-            .onTapGesture { selection = .none }
+            .onTapGesture { selectionModel.selection = .none }
+            .focusable()
+            .focusEffectDisabled()
+            .onKeyPress(.delete) {
+                try? selectionModel.delete(in: document)
+                return .handled
+            }
             .task(id: document.id) { await render() }
         }
     }
