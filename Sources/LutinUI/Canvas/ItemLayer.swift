@@ -5,6 +5,7 @@ import LutinDocument
 public struct ItemLayer: View {
     @Bindable var document: LutinProjectDocument
     @Binding var selection: CanvasSelection
+    @Environment(PreferencesStore.self) private var preferences
 
     public init(document: LutinProjectDocument, selection: Binding<CanvasSelection>) {
         self.document = document
@@ -17,6 +18,8 @@ public struct ItemLayer: View {
                 itemView(for: item)
                     .position(x: CGFloat(item.x), y: CGFloat(item.y))
                     .onTapGesture { selection = .item(id: item.id) }
+                    .draggableItem(document: document, id: item.id,
+                                   snapGrid: preferences.preferences.snapGridSize)
             }
         }
     }
