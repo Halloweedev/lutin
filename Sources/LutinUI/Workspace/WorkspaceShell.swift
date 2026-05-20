@@ -71,6 +71,8 @@ public struct WorkspaceShell: View {
 private struct ProjectWorkspace: View {
     let document: LutinProjectDocument
     @State private var selectionModel = CanvasSelectionModel()
+    @State private var pipelineRunner = PipelineRunner()
+    @State private var showingDoctor = false
     @State private var inspectorVisible: Bool = true
 
     var body: some View {
@@ -82,6 +84,8 @@ private struct ProjectWorkspace: View {
         .inspector(isPresented: $inspectorVisible) {
             InspectorView(document: document, selection: selectionModel.selection)
         }
+        .toolbar { ToolbarActions(document: document, runner: pipelineRunner, showingDoctor: $showingDoctor) }
+        .sheet(isPresented: $showingDoctor) { DoctorSheet(document: document) }
         .onReceive(NotificationCenter.default.publisher(for: .lutinDelete)) { _ in
             try? selectionModel.delete(in: document)
         }
@@ -108,4 +112,10 @@ struct EmptyState: View {
         }
         .padding(Tokens.spacing(.xl))
     }
+}
+
+// Stub — replaced by real DoctorSheet in Task 3.4.
+struct DoctorSheet: View {
+    let document: LutinProjectDocument
+    var body: some View { Text("Doctor — stub").padding() }
 }
