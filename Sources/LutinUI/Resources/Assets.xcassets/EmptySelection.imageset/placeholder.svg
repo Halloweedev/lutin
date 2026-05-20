@@ -1,1 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="currentColor" opacity="0.18"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect x="6" y="8" width="52" height="34" rx="6" stroke="currentColor" stroke-width="2"/>
+  <rect x="14" y="18" width="12" height="12" rx="2" fill="currentColor" opacity="0.4"/>
+  <line x1="30" y1="24" x2="50" y2="24" stroke="currentColor" stroke-width="2" opacity="0.4"/>
+  <polygon points="32,52 36,46 28,46" fill="currentColor" opacity="0.4"/>
+</svg>
