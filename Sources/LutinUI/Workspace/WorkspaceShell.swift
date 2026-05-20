@@ -89,9 +89,3 @@ struct EmptyState: View {
         .padding(Tokens.spacing(.xl))
     }
 }
-
-// TEMPORARY stub — delete when Task 1.9 lands.
-struct CanvasView: View {
-    let document: LutinProjectDocument
-    var body: some View { Text("Canvas — Phase 1 stub").foregroundStyle(.secondary) }
-}
