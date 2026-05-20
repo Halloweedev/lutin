@@ -24,7 +24,7 @@ See `docs/superpowers/specs/2026-05-20-lutin-subproject-4-app-design.md` for des
 ```sh
 swift build
 swift run lutin init MyApp
-swift run lutin list
+swift run lutin projects
 swift run lutin build         # in a project directory containing lutin.yml
 ```
 
