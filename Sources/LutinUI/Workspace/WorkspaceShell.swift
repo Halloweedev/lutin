@@ -92,6 +92,12 @@ private struct ProjectWorkspace: View {
         .onReceive(NotificationCenter.default.publisher(for: .lutinDuplicate)) { _ in
             try? selectionModel.duplicate(in: document)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if pipelineRunner.state != .idle {
+                PipelineDrawer(runner: pipelineRunner)
+            }
+        }
+        .animation(.spring(response: 0.42, dampingFraction: 0.86), value: pipelineRunner.state)
     }
 }
 
