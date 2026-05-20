@@ -119,9 +119,3 @@ struct EmptyState: View {
         .padding(Tokens.spacing(.xl))
     }
 }
-
-// Stub — replaced by real DoctorSheet in Task 3.4.
-struct DoctorSheet: View {
-    let document: LutinProjectDocument
-    var body: some View { Text("Doctor — stub").padding() }
-}

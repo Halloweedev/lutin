@@ -39,6 +39,7 @@ let package = Package(
         ]),
         .target(name: "LutinUI", dependencies: [
             "LutinCore", "LutinConfig", "LutinDocument", "LutinAppKit", "LutinRender", "LutinRelease",
+            "LutinSigning", "LutinNotarization",
         ], resources: [.process("Resources")]),
         .target(name: "LutinAppPackagerCore", dependencies: ["LutinCore", "LutinConfig", "LutinSigning"]),
 
