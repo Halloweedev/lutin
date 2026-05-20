@@ -1,6 +1,7 @@
 import SwiftUI
 import LutinCore
 import LutinDocument
+import LutinAppKit
 
 public struct PipelineDrawer: View {
     @Bindable var runner: PipelineRunner
@@ -36,6 +37,18 @@ public struct PipelineDrawer: View {
                 ProgressView(value: progress).controlSize(.small).frame(width: 100)
             }
             Spacer()
+            if case .succeeded(let path) = runner.state {
+                let url = URL(fileURLWithPath: path)
+                Button {
+                    AppKitBridges.revealInFinder(url)
+                } label: { Label("Reveal", systemImage: "magnifyingglass") }
+                .controlSize(.small)
+                Button {
+                    AppKitBridges.open(url)
+                } label: { Label("Open", systemImage: "externaldrive") }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
             if case .failed(let error) = runner.state {
                 Button("View details") {
                     showError = IdentifiableLutinError(error: error)

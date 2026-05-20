@@ -29,4 +29,11 @@ public enum AppKitBridges {
     public static func revealInFinder(_ url: URL) {
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
+
+    /// Opens a URL with the system default app — for `.dmg` this mounts and
+    /// reveals the disk image in Finder, for `.app` it launches the bundle.
+    /// No-ops silently if the URL can't be opened.
+    public static func open(_ url: URL) {
+        NSWorkspace.shared.open(url)
+    }
 }
