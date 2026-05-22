@@ -21,6 +21,9 @@ public enum DocumentIntent: Equatable {
     case setItemHidden(id: String, hidden: Bool)
     case setImageHidden(index: Int, hidden: Bool)
     case setItemID(old: String, new: String)
+    case addImageDecoration(path: String, x: Int, y: Int, width: Int)
+    case deleteImageDecoration(index: Int)
+    case moveImageDecoration(index: Int, x: Int, y: Int, width: Int)
 }
 
 public extension DocumentIntent {

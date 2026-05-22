@@ -185,6 +185,38 @@ public final class LutinProjectDocument: Identifiable {
             }
             commit(newConfig: newConfig, undoLabel: "Rename")
             return
+
+        case .addImageDecoration(let path, let x, let y, let width):
+            var newConfig = config
+            let deco = LutinConfig.Decoration(type: "image", path: path, x: x, y: y, width: width)
+            if newConfig.decorations == nil { newConfig.decorations = [] }
+            newConfig.decorations?.append(deco)
+            commit(newConfig: newConfig, undoLabel: "Add image")
+            return
+
+        case .deleteImageDecoration(let index):
+            var newConfig = config
+            guard let decos = newConfig.decorations, index >= 0, index < decos.count,
+                  decos[index].type == "image" else {
+                throw LutinError(code: "editor_image_not_found",
+                                 message: "Image decoration at index \(index) not found")
+            }
+            newConfig.decorations?.remove(at: index)
+            commit(newConfig: newConfig, undoLabel: "Delete image")
+            return
+
+        case .moveImageDecoration(let index, let x, let y, let width):
+            var newConfig = config
+            guard let decos = newConfig.decorations, index >= 0, index < decos.count,
+                  decos[index].type == "image" else {
+                throw LutinError(code: "editor_image_not_found",
+                                 message: "Image decoration at index \(index) not found")
+            }
+            newConfig.decorations?[index].x = x
+            newConfig.decorations?[index].y = y
+            newConfig.decorations?[index].width = width
+            commit(newConfig: newConfig, undoLabel: "Move image")
+            return
         }
         isDirty = true
         registerUndo(previous: previous)
