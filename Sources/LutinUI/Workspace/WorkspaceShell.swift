@@ -7,38 +7,56 @@ import LutinDocument
 public struct WorkspaceShell: View {
     @State private var registryStore = RegistryStore()
     @State private var preferencesStore = PreferencesStore()
+    @State private var editorStateStore = EditorStateStore()
     @State private var selectedEntryName: String?
     @State private var document: LutinProjectDocument?
     @State private var loadError: String?
+    @State private var showSwitcher = false
+    @State private var showingDoctor = false
 
     public init() {}
 
     public var body: some View {
-        NavigationSplitView {
-            SidebarView(registryStore: registryStore, selectedEntryName: $selectedEntryName)
-        } detail: {
-            Group {
-                if let document {
-                    ProjectWorkspace(document: document)
-                } else if let loadError {
-                    EmptyState(title: "Could not load project", message: loadError, icon: "EmptySelection")
-                } else {
-                    EmptyState(title: "Select a project", message: "Choose a project from the sidebar to begin.", icon: "EmptySelection")
-                }
+        Group {
+            if let document {
+                ProjectWorkspace(document: document,
+                                 editorState: editorStateStore.state(forConfigPath: document.configURL.path),
+                                 showingDoctor: $showingDoctor)
+            } else if let loadError {
+                EmptyState(title: "Could not load project", message: loadError, icon: "EmptySelection")
+            } else {
+                EmptyState(title: "No project open",
+                           message: "Press ⌘O or click the project name to open one.",
+                           icon: "EmptySelection")
             }
-            .frame(minWidth: 600, minHeight: 400)
         }
-        .navigationSplitViewStyle(.balanced)
+        .frame(minWidth: 900, minHeight: 600)
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button(action: { showSwitcher = true }) {
+                    HStack(spacing: 6) {
+                        Text("Lutin").foregroundStyle(Tokens.color(.textSecondary))
+                        Text("•").foregroundStyle(Tokens.color(.textTertiary))
+                        Text(currentProjectName).foregroundStyle(Tokens.color(.textPrimary))
+                        Image(systemName: "chevron.down").font(.system(size: 9))
+                            .foregroundStyle(Tokens.color(.textTertiary))
+                    }
+                    .font(Typography.chrome)
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut("o", modifiers: .command)
+            }
+        }
+        .sheet(isPresented: $showSwitcher) {
+            ProjectSwitcherModal(selectedEntryName: $selectedEntryName)
+                .environment(registryStore)
+        }
         .environment(registryStore)
         .environment(preferencesStore)
-        .onChange(of: preferencesStore.preferences.autosave) { _, newValue in
-            document?.autosaveEnabled = newValue
-        }
+        .environment(editorStateStore)
         .task {
-            do {
-                try registryStore.reload()
-                try preferencesStore.reload()
-            } catch { /* surfaced via lastError */ }
+            try? registryStore.reload()
+            try? preferencesStore.reload()
         }
         .onChange(of: selectedEntryName) { _, name in
             loadDocument(named: name)
@@ -48,6 +66,13 @@ public struct WorkspaceShell: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .lutinUndo)) { _ in document?.undo() }
         .onReceive(NotificationCenter.default.publisher(for: .lutinRedo)) { _ in document?.redo() }
+        .onReceive(NotificationCenter.default.publisher(for: .lutinOpenSwitcher)) { _ in
+            showSwitcher = true
+        }
+    }
+
+    private var currentProjectName: String {
+        selectedEntryName ?? "No project"
     }
 
     private func loadDocument(named name: String?) {
@@ -70,21 +95,31 @@ public struct WorkspaceShell: View {
 
 private struct ProjectWorkspace: View {
     let document: LutinProjectDocument
+    @Bindable var editorState: EditorState
+    @Binding var showingDoctor: Bool
     @State private var selectionModel = CanvasSelectionModel()
     @State private var pipelineRunner = PipelineRunner()
-    @State private var showingDoctor = false
-    @State private var inspectorVisible: Bool = true
 
     var body: some View {
-        VStack(spacing: 0) {
-            CanvasView(document: document, selectionModel: selectionModel)
-            Spacer(minLength: 0)
+        HStack(spacing: 0) {
+            EditorRail(selectedTab: $editorState.selectedTab,
+                       onOpenSwitcher: {
+                           NotificationCenter.default.post(name: .lutinOpenSwitcher, object: nil)
+                       })
+            SidePanel(width: $editorState.sidePanelWidth) {
+                TabPanelHost(document: document,
+                             editorState: editorState,
+                             selectionModel: selectionModel)
+            }
+            CanvasView(document: document,
+                       selectionModel: selectionModel,
+                       editorState: editorState)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Tokens.color(.canvasBackground))
         }
-        .background(Tokens.color(.canvasBackground))
-        .inspector(isPresented: $inspectorVisible) {
-            InspectorView(document: document, selection: selectionModel.single)
+        .toolbar {
+            ToolbarActions(document: document, runner: pipelineRunner, showingDoctor: $showingDoctor)
         }
-        .toolbar { ToolbarActions(document: document, runner: pipelineRunner, showingDoctor: $showingDoctor) }
         .sheet(isPresented: $showingDoctor) { DoctorSheet(document: document) }
         .onReceive(NotificationCenter.default.publisher(for: .lutinDelete)) { _ in
             try? selectionModel.delete(in: document)
@@ -101,11 +136,31 @@ private struct ProjectWorkspace: View {
     }
 }
 
+/// Per-tab body. Phase 2 ships placeholders so the shell compiles and tabs
+/// visibly switch — real content arrives in later phases.
+private struct TabPanelHost: View {
+    let document: LutinProjectDocument
+    @Bindable var editorState: EditorState
+    let selectionModel: CanvasSelectionModel
+
+    var body: some View {
+        switch editorState.selectedTab {
+        case .design:  Text("Design").font(Typography.chrome).padding()
+        case .window:  Text("Window").font(Typography.chrome).padding()
+        case .project: Text("Project").font(Typography.chrome).padding()
+        case .release: Text("Release").font(Typography.chrome).padding()
+        }
+    }
+}
+
+extension Notification.Name {
+    static let lutinOpenSwitcher = Notification.Name("lutinOpenSwitcher")
+}
+
 struct EmptyState: View {
     let title: String
     let message: String
     let icon: String
-
     var body: some View {
         VStack(spacing: Tokens.spacing(.md)) {
             Image(icon, bundle: .module)

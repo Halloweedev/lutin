@@ -9,13 +9,17 @@ import LutinDocument
 public struct CanvasView: View {
     @Bindable var document: LutinProjectDocument
     @Bindable var selectionModel: CanvasSelectionModel
+    @Bindable var editorState: EditorState
     @State private var backgroundImage: CGImage?
     @State private var renderError: String?
     @State private var renderTask: Task<Void, Never>?
 
-    public init(document: LutinProjectDocument, selectionModel: CanvasSelectionModel) {
+    public init(document: LutinProjectDocument,
+                selectionModel: CanvasSelectionModel,
+                editorState: EditorState) {
         self.document = document
         self.selectionModel = selectionModel
+        self.editorState = editorState
     }
 
     public var body: some View {
