@@ -156,7 +156,7 @@ private struct TabPanelHost: View {
             DesignTab(document: document, selectionModel: selectionModel)
         case .window:  WindowTab(document: document)
         case .project: ProjectTab(document: document)
-        case .release: Text("Release").font(Typography.chrome).padding()
+        case .release: ReleaseTab(document: document)
         }
     }
 }
