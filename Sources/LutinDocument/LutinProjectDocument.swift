@@ -296,6 +296,30 @@ public final class LutinProjectDocument: Identifiable {
             newConfig.output.volumeName = volumeName
             commit(newConfig: newConfig, undoLabel: "Output")
             return
+
+        case .setBackground(let bg):
+            var newConfig = config
+            newConfig.background = bg
+            commit(newConfig: newConfig, undoLabel: "Background")
+            return
+
+        case .setSigning(let s):
+            var newConfig = config
+            newConfig.signing = s
+            commit(newConfig: newConfig, undoLabel: "Signing")
+            return
+
+        case .setNotarization(let n):
+            var newConfig = config
+            newConfig.notarization = n
+            commit(newConfig: newConfig, undoLabel: "Notarization")
+            return
+
+        case .setSparkle(let sp):
+            var newConfig = config
+            newConfig.sparkle = sp
+            commit(newConfig: newConfig, undoLabel: "Sparkle")
+            return
         }
         isDirty = true
         registerUndo(previous: previous)

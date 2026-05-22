@@ -32,6 +32,10 @@ public enum DocumentIntent: Equatable {
     case setProjectMetadata(name: String, bundleId: String)
     case setApp(path: String)
     case setOutput(directory: String, dmgName: String, volumeName: String)
+    case setBackground(LutinConfig.BackgroundInfo)
+    case setSigning(LutinConfig.SigningInfo)
+    case setNotarization(LutinConfig.NotarizationInfo)
+    case setSparkle(LutinConfig.SparkleInfo)
 }
 
 public extension DocumentIntent {
