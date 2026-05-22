@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import LutinConfig
 import LutinDocument
 
@@ -25,7 +26,14 @@ public struct ArrowLayer: View {
                         .stroke(isSelected ? Tokens.color(.arrowSelected) : Tokens.color(.arrowDefault),
                                 style: StrokeStyle(lineWidth: 2, lineCap: .round))
                         .contentShape(ArrowShape(start: route.start, end: route.end).stroke(style: StrokeStyle(lineWidth: 16)))
-                        .onTapGesture { selection = [.arrow(from: from, to: to)] }
+                        .onTapGesture {
+                            let id = CanvasSelectionID.arrow(from: from, to: to)
+                            if NSEvent.modifierFlags.contains(.command) {
+                                selection.formSymmetricDifference([id])
+                            } else {
+                                selection = [id]
+                            }
+                        }
                     if let label = deco.label, !label.isEmpty {
                         Text(label)
                             .font(Typography.canvasLabel)

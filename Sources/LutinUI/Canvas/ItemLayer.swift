@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import LutinConfig
 import LutinDocument
 import LutinAppKit
@@ -21,7 +22,13 @@ public struct ItemLayer: View {
             ForEach(document.config.items ?? [], id: \.id) { item in
                 itemView(for: item)
                     .position(x: CGFloat(item.x), y: CGFloat(item.y))
-                    .onTapGesture { selection = [.item(id: item.id)] }
+                    .onTapGesture {
+                        if NSEvent.modifierFlags.contains(.command) {
+                            selection.formSymmetricDifference([CanvasSelectionID.item(id: item.id)])
+                        } else {
+                            selection = [CanvasSelectionID.item(id: item.id)]
+                        }
+                    }
                     .onHover { hovering in
                         hoveredID = hovering ? item.id : (hoveredID == item.id ? nil : hoveredID)
                     }
