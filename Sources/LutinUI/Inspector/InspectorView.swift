@@ -22,7 +22,7 @@ public struct InspectorView: View {
         }
         .formStyle(.grouped)
         .frame(width: 280)
-        .background(.regularMaterial)
+        .background(Tokens.color(.panelBackground))
     }
 
     private var projectSection: some View {

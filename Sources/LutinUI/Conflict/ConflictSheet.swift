@@ -69,8 +69,8 @@ private struct DiffView: View {
             }
             .padding(Tokens.spacing(.sm))
         }
-        .background(Tokens.color(.surface))
-        .clipShape(RoundedRectangle(cornerRadius: Tokens.radius(.surface)))
+        .background(Tokens.color(.sheetBackground))
+        .clipShape(SquareShape())
     }
 
     private func prefix(_ k: UnifiedDiff.Line.Kind) -> String {
