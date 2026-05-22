@@ -1,0 +1,8 @@
+[
+  {"kind": "setProjectMetadata", "name": "Lutin", "bundleId": "com.lutin.app"},
+  {"kind": "setWindow", "width": 720, "height": 460, "iconSize": 96},
+  {"kind": "moveMany", "deltas": [
+    {"kind": "item", "id": "app", "dx": 10, "dy": -5}
+  ]},
+  {"kind": "setItemHidden", "id": "applications", "hidden": false}
+]

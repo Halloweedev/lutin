@@ -374,7 +374,7 @@ public struct Lutin: ParsableCommand {
         abstract: "Design, build, and release beautiful DMGs for macOS apps.",
         subcommands: [Init.self, Projects.self, Add.self, Remove.self, Open.self,
                       Validate.self, Doctor.self, Build.self, Release.self, Preview.self,
-                      Notary.self])
+                      Notary.self, ApplyIntents.self])
     public init() {}
 }
 
