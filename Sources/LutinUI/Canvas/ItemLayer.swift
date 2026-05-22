@@ -22,9 +22,11 @@ public struct ItemLayer: View {
     }
 
     public var body: some View {
+        let outsiders = OffCanvasDetection.outsiders(in: document.config)
         ZStack(alignment: .topLeading) {
             ForEach(document.config.items ?? [], id: \.id) { item in
-                itemView(for: item)
+                let isOffCanvas = outsiders.contains(.item(id: item.id))
+                itemView(for: item, isOffCanvas: isOffCanvas)
                     .position(x: CGFloat(item.x), y: CGFloat(item.y))
                     .onTapGesture {
                         if NSEvent.modifierFlags.contains(.command) {
@@ -62,7 +64,7 @@ public struct ItemLayer: View {
         }
     }
 
-    private func itemView(for item: LutinConfig.Item) -> some View {
+    private func itemView(for item: LutinConfig.Item, isOffCanvas: Bool) -> some View {
         let isSelected: Bool = selectionModel.selection.contains(.item(id: item.id))
         let iconSize = CGFloat(document.config.window?.iconSize ?? 96)
         return ZStack {
@@ -97,6 +99,13 @@ public struct ItemLayer: View {
                 .strokeBorder(Tokens.color(.itemSelected), lineWidth: isSelected ? 2 : 0)
                 .frame(width: iconSize, height: iconSize)
         )
+        .opacity(isOffCanvas ? 0.5 : 1.0)
+        .overlay {
+            if isOffCanvas {
+                SquareShape().stroke(Tokens.color(.offCanvasOutline), lineWidth: Tokens.Size.hairline)
+                    .frame(width: iconSize, height: iconSize)
+            }
+        }
         .animation(.easeInOut(duration: 0.12), value: isSelected)
     }
 
