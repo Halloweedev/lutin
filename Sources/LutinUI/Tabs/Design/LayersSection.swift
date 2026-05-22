@@ -73,9 +73,8 @@ public struct LayersSection: View {
                 try document.apply(.setItemHidden(id: id, hidden: !row.hidden))
             case .image(let i):
                 try document.apply(.setImageHidden(index: i, hidden: !row.hidden))
-            case .arrow:
-                // Arrow hidden support arrives via setArrowHidden in Task 3.6.
-                break
+            case .arrow(let from, let to):
+                try document.apply(.setArrowHidden(from: from, to: to, hidden: !row.hidden))
             }
         } catch { /* surfaced upstream */ }
     }

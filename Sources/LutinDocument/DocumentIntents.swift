@@ -36,6 +36,7 @@ public enum DocumentIntent: Equatable {
     case setSigning(LutinConfig.SigningInfo)
     case setNotarization(LutinConfig.NotarizationInfo)
     case setSparkle(LutinConfig.SparkleInfo)
+    case setArrowHidden(from: String, to: String, hidden: Bool)
 }
 
 public extension DocumentIntent {

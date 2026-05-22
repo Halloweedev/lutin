@@ -320,6 +320,19 @@ public final class LutinProjectDocument: Identifiable {
             newConfig.sparkle = sp
             commit(newConfig: newConfig, undoLabel: "Sparkle")
             return
+
+        case .setArrowHidden(let from, let to, let hidden):
+            var newConfig = config
+            guard var decos = newConfig.decorations,
+                  let idx = decos.firstIndex(where: {
+                      $0.type == "arrow" && $0.from == from && $0.to == to }) else {
+                throw LutinError(code: "editor_arrow_not_found",
+                                 message: "Arrow \(from)→\(to) not found")
+            }
+            decos[idx].hidden = hidden ? true : nil
+            newConfig.decorations = decos
+            commit(newConfig: newConfig, undoLabel: hidden ? "Hide" : "Show")
+            return
         }
         isDirty = true
         registerUndo(previous: previous)
