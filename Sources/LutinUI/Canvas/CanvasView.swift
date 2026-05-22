@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreGraphics
 import ImageIO
+import AppKit
 import LutinCore
 import LutinConfig
 import LutinRender
@@ -25,72 +26,99 @@ public struct CanvasView: View {
 
     public var body: some View {
         GeometryReader { proxy in
-            // Canvas content is laid out at config-window dimensions (e.g. 680x420)
-            // so items, arrows, and background all use the same coordinate system
-            // as the rendered PNG. The whole stack is then scaled uniformly to fit
-            // the available pane — keeps WYSIWYG when the window resizes.
             let configW = CGFloat(document.config.window?.width ?? 680)
             let configH = CGFloat(document.config.window?.height ?? 420)
-            let scale = min(proxy.size.width / configW, proxy.size.height / configH)
+            let scale = CGFloat(editorState.zoomPercent) / 100.0
 
-            ZStack(alignment: .topLeading) {
-                if let backgroundImage {
-                    Image(backgroundImage, scale: 2.0, label: Text("Background preview"))
-                        .resizable()
-                        .interpolation(.high)
-                        .frame(width: configW, height: configH)
-                } else if let renderError {
-                    Text("Render failed: \(renderError)")
-                        .font(Typography.chromeSmall)
-                        .foregroundStyle(Tokens.color(.logError))
-                        .padding()
-                } else {
-                    ProgressView().controlSize(.small)
+            ScrollView([.horizontal, .vertical]) {
+                ZStack(alignment: .topLeading) {
+                    background(configW: configW, configH: configH)
+                    ArrowLayer(document: document,
+                               selection: Binding(
+                                   get: { selectionModel.selection },
+                                   set: { selectionModel.replace(with: $0) }),
+                               iconSize: document.config.window?.iconSize ?? 96)
+                    ImageDecorationLayer(document: document, selectionModel: selectionModel)
+                    ItemLayer(document: document,
+                              selection: Binding(
+                                  get: { selectionModel.selection },
+                                  set: { selectionModel.replace(with: $0) }))
                 }
-                ArrowLayer(document: document, selection: Binding(
-                    get: { selectionModel.selection },
-                    set: { selectionModel.replace(with: $0) }),
-                    iconSize: document.config.window?.iconSize ?? 96)
-                ItemLayer(document: document, selection: Binding(
-                    get: { selectionModel.selection },
-                    set: { selectionModel.replace(with: $0) }))
+                .frame(width: configW, height: configH)
+                .coordinateSpace(.named("canvas"))
+                .scaleEffect(scale, anchor: .topLeading)
+                .frame(width: configW * scale, height: configH * scale)
+                .background(Tokens.color(.canvasBackground))
+                .contentShape(Rectangle())
+                .onTapGesture { selectionModel.clear() }
+                .focusable()
+                .focusEffectDisabled()
+                .onKeyPress(.delete) {
+                    try? selectionModel.delete(in: document); return .handled
+                }
+                .onKeyPress(.leftArrow) { nudge(dx: -1, dy: 0); return .handled }
+                .onKeyPress(.rightArrow) { nudge(dx: 1, dy: 0); return .handled }
+                .onKeyPress(.upArrow) { nudge(dx: 0, dy: -1); return .handled }
+                .onKeyPress(.downArrow) { nudge(dx: 0, dy: 1); return .handled }
+                .simultaneousGesture(
+                    SpatialTapGesture(coordinateSpace: .named("canvas"))
+                        .onEnded { v in contextLocation = v.location }
+                )
+                .contextMenu {
+                    Button("Add App…") {
+                        CanvasFileDropDelegate.addLibrary(.app, at: contextLocation, document: document)
+                    }
+                    Button("Add Applications folder") {
+                        CanvasFileDropDelegate.addLibrary(.applications, at: contextLocation, document: document)
+                    }
+                    Button("Add Image…") {
+                        CanvasFileDropDelegate.addLibrary(.image, at: contextLocation, document: document)
+                    }
+                }
+                .onDrop(of: [LibraryItem.dragType, .fileURL],
+                        delegate: CanvasFileDropDelegate(document: document) { $0 })
+                .task(id: document.id) { await render() }
             }
-            .frame(width: configW, height: configH)
-            // Named coordinate space lives INSIDE the scaleEffect so drag
-            // gestures (connector handles, item drags) keep reporting in
-            // unscaled config-pixel coordinates — what intents expect.
-            .coordinateSpace(.named("canvas"))
-            .onDrop(of: [LibraryItem.dragType, .fileURL],
-                    delegate: CanvasFileDropDelegate(document: document) { $0 })
-            .simultaneousGesture(
-                SpatialTapGesture(coordinateSpace: .named("canvas"))
-                    .onEnded { v in contextLocation = v.location }
-            )
-            .contextMenu {
-                Button("Add App…") {
-                    CanvasFileDropDelegate.addLibrary(.app, at: contextLocation, document: document)
-                }
-                Button("Add Applications folder") {
-                    CanvasFileDropDelegate.addLibrary(.applications, at: contextLocation, document: document)
-                }
-                Button("Add Image…") {
-                    CanvasFileDropDelegate.addLibrary(.image, at: contextLocation, document: document)
-                }
+            .scrollIndicators(.hidden)
+            .overlay(alignment: .bottomTrailing) {
+                ZoomControlBar(zoomPercent: $editorState.zoomPercent,
+                               paneSize: proxy.size,
+                               canvasSize: CGSize(width: configW, height: configH))
+                    .padding(Tokens.spacing(.md))
             }
-            .scaleEffect(scale, anchor: .topLeading)
-            .frame(width: configW * scale, height: configH * scale)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .background(Tokens.color(.canvasBackground))
-            .contentShape(Rectangle())
-            .onTapGesture { selectionModel.clear() }
-            .focusable()
-            .focusEffectDisabled()
-            .onKeyPress(.delete) {
-                try? selectionModel.delete(in: document)
-                return .handled
-            }
-            .task(id: document.id) { await render() }
         }
+    }
+
+    @ViewBuilder
+    private func background(configW: CGFloat, configH: CGFloat) -> some View {
+        if let backgroundImage {
+            Image(backgroundImage, scale: 2.0, label: Text("Background preview"))
+                .resizable()
+                .interpolation(.high)
+                .frame(width: configW, height: configH)
+        } else if let renderError {
+            Text("Render failed: \(renderError)")
+                .font(Typography.chromeSmall)
+                .foregroundStyle(Tokens.color(.logError))
+                .padding()
+        } else {
+            ProgressView().controlSize(.small)
+        }
+    }
+
+    private func nudge(dx: Int, dy: Int) {
+        let mult = NSEvent.modifierFlags.contains(.shift) ? 10 : 1
+        let deltas: [DocumentIntent.MoveTarget] = selectionModel.moveableIDs.compactMap { id in
+            switch id {
+            case .item(let i): return .init(target: .item(id: i), dx: dx * mult, dy: dy * mult)
+            case .image(let i): return .init(target: .imageDecoration(index: i),
+                                              dx: dx * mult, dy: dy * mult)
+            case .arrow: return nil
+            }
+        }
+        guard !deltas.isEmpty else { return }
+        try? document.apply(.moveMany(deltas: deltas))
     }
 
     @MainActor
@@ -127,5 +155,33 @@ public struct CanvasView: View {
             }
         }
         _ = await renderTask?.value
+    }
+}
+
+private struct ZoomControlBar: View {
+    @Binding var zoomPercent: Int
+    let paneSize: CGSize
+    let canvasSize: CGSize
+
+    var body: some View {
+        HStack(spacing: Tokens.spacing(.xs)) {
+            Button(action: { zoomPercent = ZoomController.stepDown(from: zoomPercent) }) {
+                Image(systemName: "minus")
+            }.keyboardShortcut("-", modifiers: .command)
+            Text("\(zoomPercent)%")
+                .font(Typography.chromeSmall)
+                .frame(minWidth: 42)
+            Button(action: { zoomPercent = ZoomController.stepUp(from: zoomPercent) }) {
+                Image(systemName: "plus")
+            }.keyboardShortcut("+", modifiers: .command)
+            Button("Fit") {
+                zoomPercent = ZoomController.fitPercent(canvas: canvasSize, pane: paneSize)
+            }.keyboardShortcut("0", modifiers: .command)
+            Button("100%") { zoomPercent = 100 }.keyboardShortcut("1", modifiers: .command)
+        }
+        .buttonStyle(.plain)
+        .padding(Tokens.spacing(.sm))
+        .background(Tokens.color(.panelBackground))
+        .overlay(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))
     }
 }
