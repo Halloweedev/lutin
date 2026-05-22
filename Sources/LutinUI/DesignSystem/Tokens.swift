@@ -1,34 +1,158 @@
 import SwiftUI
+import AppKit
 
-/// One indirection between views and the asset catalog so renames are mechanical
-/// and dark/light contrast can be unit-tested. Views read `Tokens.color(.x)`.
+/// Design tokens. Every value resolves through the Asset Catalog so light
+/// and dark modes are first-class. No materials, no inline gradients, no
+/// translucency. Square corners by default — when a shape needs rounding
+/// (e.g. an OS-drawn app icon), the call site uses `RoundedRectangle`
+/// directly, not a token.
 public enum Tokens {
-    public enum ColorToken: String {
-        case brandAccent = "BrandAccent"
+    // MARK: - Token Keys (v2)
+
+    /// Flat token key set. rawValue is the asset catalog color name.
+    /// New keys use camelCase colorsets; legacy keys retain their existing
+    /// PascalCase colorset names so the asset catalog entries are unchanged.
+    public enum Key: String, CaseIterable, Sendable {
+        // Surfaces — new v2 (camelCase colorsets)
+        case panelBackground
+        case railBackground
+        case toolbarBackground
+        case sheetBackground
+
+        // Strokes — new v2 (camelCase colorsets)
+        case marqueeStroke
+        case offCanvasOutline
+
+        // Text — new v2 (camelCase colorsets)
+        case textPrimary
+        case textSecondary
+        case textTertiary
+
+        // Accent — new v2 (camelCase colorsets)
+        case brandAccentMuted
+
+        // ── Legacy keys — rawValue maps to existing PascalCase colorsets ─────
+
+        // Surfaces
+        case canvasBackground  = "CanvasBackground"
+        case surface           = "Surface"
+        case surfaceElevated   = "SurfaceElevated"
+
+        // Strokes / overlays
+        case divider           = "Divider"
+        case itemSelected      = "ItemSelected"
+        case alignmentGuide    = "AlignmentGuide"
+        case gridLine          = "GridLine"
+
+        // Accent
+        case brandAccent       = "BrandAccent"
         case brandAccentSubtle = "BrandAccentSubtle"
-        case surface = "Surface"
-        case surfaceElevated = "SurfaceElevated"
-        case divider = "Divider"
-        case canvasBackground = "CanvasBackground"
-        case itemSelected = "ItemSelected"
-        case arrowDefault = "ArrowDefault"
-        case arrowSelected = "ArrowSelected"
-        case alignmentGuide = "AlignmentGuide"
-        case gridLine = "GridLine"
-        case logStdout = "LogStdout"
-        case logStderr = "LogStderr"
-        case logProgress = "LogProgress"
-        case logSuccess = "LogSuccess"
-        case logError = "LogError"
+
+        // Arrows
+        case arrowDefault      = "ArrowDefault"
+        case arrowSelected     = "ArrowSelected"
+
+        // Log / status
+        case logError          = "LogError"
+        case logSuccess        = "LogSuccess"
+        case logProgress       = "LogProgress"
+        case logStdout         = "LogStdout"
+        case logStderr         = "LogStderr"
     }
 
-    public static func color(_ token: ColorToken) -> Color {
-        Color(token.rawValue, bundle: .module)
+    // MARK: - Color resolution
+
+    public static func color(_ key: Key) -> Color {
+        Color(key.rawValue, bundle: .module)
     }
+
+    /// Resolves a token to a concrete NSColor for the given appearance.
+    ///
+    /// In production (compiled `.car` catalog) this uses `NSColor(named:bundle:)`.
+    /// In SwiftPM test bundles (uncompiled `.xcassets` directory) it falls back
+    /// to parsing `Contents.json` directly, so the parity test works in both
+    /// environments.
+    public static func nsColor(_ key: Key, appearance: NSAppearance) -> NSColor {
+        let isDark = appearance.name == .darkAqua
+            || appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+
+        // Fast path: compiled asset catalog (app bundle / Xcode tests).
+        var namedColor: NSColor?
+        appearance.performAsCurrentDrawingAppearance {
+            namedColor = NSColor(named: key.rawValue, bundle: .module)
+        }
+        if let nc = namedColor,
+           let resolved = nc.usingColorSpace(.sRGB) {
+            return resolved
+        }
+
+        // Slow path: uncompiled xcassets directory (SwiftPM `swift test`).
+        return nsColorFromColorset(named: key.rawValue, dark: isDark)
+    }
+
+    // MARK: - Spacing (unchanged — existing tests rely on these raw values)
 
     public enum Spacing: CGFloat { case xs = 2, sm = 4, md = 8, lg = 16, xl = 24 }
     public static func spacing(_ s: Spacing) -> CGFloat { s.rawValue }
 
+    // MARK: - Radius (kept for backward compatibility)
+
     public enum Radius: CGFloat { case button = 8, surface = 12, window = 16 }
     public static func radius(_ r: Radius) -> CGFloat { r.rawValue }
+
+    // MARK: - Sizes (v2)
+
+    public enum Size {
+        public static let railWidth: CGFloat = 44
+        public static let sidePanelDefault: CGFloat = 280
+        public static let sidePanelMin: CGFloat = 240
+        public static let sidePanelMax: CGFloat = 360
+        public static let hairline: CGFloat = 1
+    }
+}
+
+// MARK: - Colorset JSON parsing (SwiftPM slow path)
+
+private func nsColorFromColorset(named name: String, dark: Bool) -> NSColor {
+    guard let url = colorsetURL(named: name) else { return .clear }
+    guard let data = try? Data(contentsOf: url.appendingPathComponent("Contents.json")),
+          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let colors = json["colors"] as? [[String: Any]] else { return .clear }
+
+    // The dark entry has an "appearances" array; the light entry does not.
+    var lightEntry: [String: Any]?
+    var darkEntry: [String: Any]?
+    for entry in colors {
+        let hasAppearances = (entry["appearances"] as? [[String: Any]])?.isEmpty == false
+        if hasAppearances { darkEntry = entry } else { lightEntry = entry }
+    }
+
+    let entry = dark ? (darkEntry ?? lightEntry) : lightEntry
+    return nsColor(fromEntry: entry) ?? .clear
+}
+
+private func colorsetURL(named name: String) -> URL? {
+    let bundle = Bundle.module
+    let colorsetName = "\(name).colorset"
+    // SwiftPM copies the whole .xcassets directory into the bundle.
+    // Try the nested path first, then a flat resource lookup.
+    if let url = bundle.url(forResource: colorsetName, withExtension: nil,
+                            subdirectory: "Assets.xcassets") {
+        return url
+    }
+    if let url = bundle.url(forResource: name, withExtension: "colorset",
+                            subdirectory: "Assets.xcassets") {
+        return url
+    }
+    return nil
+}
+
+private func nsColor(fromEntry entry: [String: Any]?) -> NSColor? {
+    guard let color = entry?["color"] as? [String: Any],
+          let components = color["components"] as? [String: Any] else { return nil }
+    let r = Double(components["red"] as? String ?? "") ?? 0
+    let g = Double(components["green"] as? String ?? "") ?? 0
+    let b = Double(components["blue"] as? String ?? "") ?? 0
+    let a = Double(components["alpha"] as? String ?? "") ?? 1
+    return NSColor(srgbRed: r, green: g, blue: b, alpha: a)
 }
