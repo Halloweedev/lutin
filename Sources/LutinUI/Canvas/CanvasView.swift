@@ -129,6 +129,12 @@ public struct CanvasView: View {
                                canvasSize: CGSize(width: configW, height: configH))
                     .padding(Tokens.spacing(.md))
             }
+            .overlay(alignment: .bottom) {
+                if selectionModel.moveableIDs.count >= 2 {
+                    AlignDistributeToolbar(document: document, selectionModel: selectionModel)
+                        .padding(.bottom, 60)
+                }
+            }
             .background(Tokens.color(.canvasBackground))
         }
     }
