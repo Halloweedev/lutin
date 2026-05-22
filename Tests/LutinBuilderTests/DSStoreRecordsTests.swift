@@ -30,8 +30,9 @@ final class DSStoreRecordsTests: XCTestCase {
 
     func testIcvpImageBackgroundCarriesAliasData() throws {
         let alias = Data([0xDE, 0xAD, 0xBE, 0xEF])
+        let bookmark = Data([0xCA, 0xFE, 0xBA, 0xBE])
         let blob = DSStoreRecords.icvpBlob(iconSize: 96, textSize: 13,
-                                           background: .image(alias: alias))
+                                           background: .image(alias: alias, bookmark: bookmark))
         let plist = try PropertyListSerialization.propertyList(
             from: blob, options: [], format: nil) as? [String: Any]
         XCTAssertEqual(plist?["backgroundType"] as? Int, 2)

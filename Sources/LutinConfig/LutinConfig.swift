@@ -76,12 +76,32 @@ public struct LutinConfig: Codable, Equatable {
         public var grid: Bool?
         public var noise: Double?
         public var cornerRadius: Int?
+        public var angle: Int?
         public init(type: String?, template: String?, path: String?, scale: Int?,
                     colorA: String?, colorB: String?, grid: Bool?, noise: Double?,
-                    cornerRadius: Int?) {
+                    cornerRadius: Int?, angle: Int? = nil) {
             self.type = type; self.template = template; self.path = path
             self.scale = scale; self.colorA = colorA; self.colorB = colorB
             self.grid = grid; self.noise = noise; self.cornerRadius = cornerRadius
+            self.angle = angle
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            if type != nil { try container.encode(type, forKey: .type) }
+            if template != nil { try container.encode(template, forKey: .template) }
+            if path != nil { try container.encode(path, forKey: .path) }
+            if scale != nil { try container.encode(scale, forKey: .scale) }
+            if colorA != nil { try container.encode(colorA, forKey: .colorA) }
+            if colorB != nil { try container.encode(colorB, forKey: .colorB) }
+            if grid != nil { try container.encode(grid, forKey: .grid) }
+            if noise != nil { try container.encode(noise, forKey: .noise) }
+            if cornerRadius != nil { try container.encode(cornerRadius, forKey: .cornerRadius) }
+            if angle != nil { try container.encode(angle, forKey: .angle) }
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case type, template, path, scale, colorA, colorB, grid, noise, cornerRadius, angle
         }
     }
 
@@ -91,12 +111,28 @@ public struct LutinConfig: Codable, Equatable {
         public var x: Int
         public var y: Int
         public var label: String?
-        public init(type: String, id: String, x: Int, y: Int, label: String?) {
+        public var hidden: Bool?
+        public init(type: String, id: String, x: Int, y: Int, label: String?, hidden: Bool? = nil) {
             self.type = type
             self.id = id
             self.x = x
             self.y = y
             self.label = label
+            self.hidden = hidden
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(type, forKey: .type)
+            try container.encode(id, forKey: .id)
+            try container.encode(x, forKey: .x)
+            try container.encode(y, forKey: .y)
+            if label != nil { try container.encode(label, forKey: .label) }
+            if hidden == true { try container.encode(true, forKey: .hidden) }
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case type, id, x, y, label, hidden
         }
     }
 
@@ -109,9 +145,10 @@ public struct LutinConfig: Codable, Equatable {
         public var x: Int?                     // image: position, window points
         public var y: Int?                     // image: position, window points
         public var width: Int?                 // image: drawn width, window points
+        public var hidden: Bool?
         public init(type: String, from: String? = nil, to: String? = nil,
                     label: String? = nil, path: String? = nil,
-                    x: Int? = nil, y: Int? = nil, width: Int? = nil) {
+                    x: Int? = nil, y: Int? = nil, width: Int? = nil, hidden: Bool? = nil) {
             self.type = type
             self.from = from
             self.to = to
@@ -120,6 +157,24 @@ public struct LutinConfig: Codable, Equatable {
             self.x = x
             self.y = y
             self.width = width
+            self.hidden = hidden
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(type, forKey: .type)
+            if from != nil { try container.encode(from, forKey: .from) }
+            if to != nil { try container.encode(to, forKey: .to) }
+            if label != nil { try container.encode(label, forKey: .label) }
+            if path != nil { try container.encode(path, forKey: .path) }
+            if x != nil { try container.encode(x, forKey: .x) }
+            if y != nil { try container.encode(y, forKey: .y) }
+            if width != nil { try container.encode(width, forKey: .width) }
+            if hidden == true { try container.encode(true, forKey: .hidden) }
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case type, from, to, label, path, x, y, width, hidden
         }
     }
 
