@@ -145,7 +145,8 @@ private struct TabPanelHost: View {
 
     var body: some View {
         switch editorState.selectedTab {
-        case .design:  Text("Design").font(Typography.chrome).padding()
+        case .design:
+            DesignTab(document: document, selectionModel: selectionModel)
         case .window:  Text("Window").font(Typography.chrome).padding()
         case .project: Text("Project").font(Typography.chrome).padding()
         case .release: Text("Release").font(Typography.chrome).padding()
