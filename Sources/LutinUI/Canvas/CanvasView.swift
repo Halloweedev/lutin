@@ -13,6 +13,7 @@ public struct CanvasView: View {
     @State private var backgroundImage: CGImage?
     @State private var renderError: String?
     @State private var renderTask: Task<Void, Never>?
+    @State private var contextLocation: CGPoint = .zero
 
     public init(document: LutinProjectDocument,
                 selectionModel: CanvasSelectionModel,
@@ -61,6 +62,21 @@ public struct CanvasView: View {
             .coordinateSpace(.named("canvas"))
             .onDrop(of: [LibraryItem.dragType, .fileURL],
                     delegate: CanvasFileDropDelegate(document: document) { $0 })
+            .simultaneousGesture(
+                SpatialTapGesture(coordinateSpace: .named("canvas"))
+                    .onEnded { v in contextLocation = v.location }
+            )
+            .contextMenu {
+                Button("Add App…") {
+                    CanvasFileDropDelegate.addLibrary(.app, at: contextLocation, document: document)
+                }
+                Button("Add Applications folder") {
+                    CanvasFileDropDelegate.addLibrary(.applications, at: contextLocation, document: document)
+                }
+                Button("Add Image…") {
+                    CanvasFileDropDelegate.addLibrary(.image, at: contextLocation, document: document)
+                }
+            }
             .scaleEffect(scale, anchor: .topLeading)
             .frame(width: configW * scale, height: configH * scale)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
