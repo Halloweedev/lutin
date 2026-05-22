@@ -30,6 +30,7 @@ public struct ItemDragController: ViewModifier {
     @Bindable var selectionModel: CanvasSelectionModel
     let myID: CanvasSelectionID
     let snapGrid: Int
+    let guideState: CanvasGuideState
 
     @State private var pendingDX: CGFloat = 0
     @State private var pendingDY: CGFloat = 0
@@ -45,9 +46,12 @@ public struct ItemDragController: ViewModifier {
                         }
                         pendingDX = v.translation.width
                         pendingDY = v.translation.height
+                        updateGuides(translation: v.translation)
                     }
                     .onEnded { v in
                         defer { pendingDX = 0; pendingDY = 0 }
+                        guideState.guideX = nil
+                        guideState.guideY = nil
                         let dx = Self.snap(Int(v.translation.width), gridSize: snapGrid)
                         let dy = Self.snap(Int(v.translation.height), gridSize: snapGrid)
                         guard dx != 0 || dy != 0 else { return }
@@ -57,6 +61,23 @@ public struct ItemDragController: ViewModifier {
                         try? document.apply(.moveMany(deltas: deltas))
                     }
             )
+    }
+
+    private func updateGuides(translation: CGSize) {
+        let candidatesX = (document.config.items ?? [])
+            .filter { item in !selectionModel.selection.contains(.item(id: item.id)) }
+            .map(\.x)
+        let candidatesY = (document.config.items ?? [])
+            .filter { item in !selectionModel.selection.contains(.item(id: item.id)) }
+            .map(\.y)
+        if let myItem = (document.config.items ?? []).first(where: { selectionModel.moveableIDs.contains(.item(id: $0.id)) }) {
+            let newX = myItem.x + Int(translation.width)
+            let newY = myItem.y + Int(translation.height)
+            let snapX = AlignmentGuides.snap(value: newX, candidates: candidatesX, threshold: 4)
+            let snapY = AlignmentGuides.snap(value: newY, candidates: candidatesY, threshold: 4)
+            guideState.guideX = snapX.target
+            guideState.guideY = snapY.target
+        }
     }
 
     public static func deltas(forSelection sel: Set<CanvasSelectionID>,
@@ -117,10 +138,12 @@ public extension View {
     func draggableItem(document: LutinProjectDocument,
                        selectionModel: CanvasSelectionModel,
                        id: CanvasSelectionID,
-                       snapGrid: Int) -> some View {
+                       snapGrid: Int,
+                       guideState: CanvasGuideState) -> some View {
         modifier(ItemDragController(document: document,
                                     selectionModel: selectionModel,
                                     myID: id,
-                                    snapGrid: snapGrid))
+                                    snapGrid: snapGrid,
+                                    guideState: guideState))
     }
 }

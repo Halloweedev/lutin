@@ -7,14 +7,18 @@ import LutinAppKit
 public struct ItemLayer: View {
     @Bindable var document: LutinProjectDocument
     @Bindable var selectionModel: CanvasSelectionModel
+    let guideState: CanvasGuideState
     @Environment(PreferencesStore.self) private var preferences
     @State private var hoveredID: String?
     @State private var connectorDrag: ConnectorDragState = .idle
     @State private var editingID: String?
 
-    public init(document: LutinProjectDocument, selectionModel: CanvasSelectionModel) {
+    public init(document: LutinProjectDocument,
+                selectionModel: CanvasSelectionModel,
+                guideState: CanvasGuideState) {
         self.document = document
         self.selectionModel = selectionModel
+        self.guideState = guideState
     }
 
     public var body: some View {
@@ -41,7 +45,8 @@ public struct ItemLayer: View {
                     .draggableItem(document: document,
                                    selectionModel: selectionModel,
                                    id: .item(id: item.id),
-                                   snapGrid: preferences.preferences.snapGridSize)
+                                   snapGrid: preferences.preferences.snapGridSize,
+                                   guideState: guideState)
             }
         }
         .onChange(of: connectorDrag) { _, newValue in

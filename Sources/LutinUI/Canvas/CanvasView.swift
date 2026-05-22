@@ -17,6 +17,7 @@ public struct CanvasView: View {
     @State private var contextLocation: CGPoint = .zero
     @State private var marqueeStart: CGPoint?
     @State private var marqueeCurrent: CGPoint?
+    @State private var guideState = CanvasGuideState()
 
     public init(document: LutinProjectDocument,
                 selectionModel: CanvasSelectionModel,
@@ -41,7 +42,21 @@ public struct CanvasView: View {
                                    set: { selectionModel.replace(with: $0) }),
                                iconSize: document.config.window?.iconSize ?? 96)
                     ImageDecorationLayer(document: document, selectionModel: selectionModel)
-                    ItemLayer(document: document, selectionModel: selectionModel)
+                    ItemLayer(document: document, selectionModel: selectionModel, guideState: guideState)
+                    if let gx = guideState.guideX {
+                        Rectangle()
+                            .fill(Tokens.color(.alignmentGuide))
+                            .frame(width: Tokens.Size.hairline, height: configH)
+                            .position(x: CGFloat(gx), y: configH / 2)
+                            .allowsHitTesting(false)
+                    }
+                    if let gy = guideState.guideY {
+                        Rectangle()
+                            .fill(Tokens.color(.alignmentGuide))
+                            .frame(width: configW, height: Tokens.Size.hairline)
+                            .position(x: configW / 2, y: CGFloat(gy))
+                            .allowsHitTesting(false)
+                    }
                 }
                 .frame(width: configW, height: configH)
                 .coordinateSpace(.named("canvas"))
