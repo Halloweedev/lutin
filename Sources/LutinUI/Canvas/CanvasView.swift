@@ -59,6 +59,8 @@ public struct CanvasView: View {
             // gestures (connector handles, item drags) keep reporting in
             // unscaled config-pixel coordinates — what intents expect.
             .coordinateSpace(.named("canvas"))
+            .onDrop(of: [LibraryItem.dragType, .fileURL],
+                    delegate: CanvasFileDropDelegate(document: document) { $0 })
             .scaleEffect(scale, anchor: .topLeading)
             .frame(width: configW * scale, height: configH * scale)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
