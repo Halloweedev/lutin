@@ -17,6 +17,7 @@ public enum DocumentIntent: Equatable {
     case setBackgroundTemplate(String)
     case setIconSize(Int)
     case moveMany(deltas: [MoveTarget])
+    case deleteSelection(targets: [DeleteTarget])
 }
 
 public extension DocumentIntent {
@@ -33,5 +34,11 @@ public extension DocumentIntent {
         public init(target: Kind, dx: Int, dy: Int) {
             self.target = target; self.dx = dx; self.dy = dy
         }
+    }
+
+    enum DeleteTarget: Equatable, Sendable {
+        case item(id: String)
+        case arrow(from: String, to: String)
+        case imageDecoration(index: Int)
     }
 }

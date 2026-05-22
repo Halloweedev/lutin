@@ -109,6 +109,37 @@ public final class LutinProjectDocument: Identifiable {
                 }
             }
             config = newConfig
+
+        case .deleteSelection(let targets):
+            guard !targets.isEmpty else { return }
+            var newConfig = config
+            // Delete image decorations by descending index so earlier indices stay valid.
+            let imageIndices = targets.compactMap { t -> Int? in
+                if case .imageDecoration(let i) = t { return i } else { return nil }
+            }.sorted(by: >)
+            for i in imageIndices {
+                guard let decos = newConfig.decorations, i >= 0, i < decos.count else { continue }
+                newConfig.decorations?.remove(at: i)
+            }
+            // Delete arrows directly named.
+            for case let .arrow(from, to) in targets {
+                newConfig.decorations?.removeAll {
+                    $0.type == "arrow" && $0.from == from && $0.to == to
+                }
+            }
+            // Delete items, and cascade any arrows that reference them.
+            let itemIDs = Set(targets.compactMap { t -> String? in
+                if case .item(let id) = t { return id } else { return nil }
+            })
+            if !itemIDs.isEmpty {
+                newConfig.items?.removeAll { itemIDs.contains($0.id) }
+                newConfig.decorations?.removeAll {
+                    $0.type == "arrow"
+                        && (itemIDs.contains($0.from ?? "") || itemIDs.contains($0.to ?? ""))
+                }
+            }
+            commit(newConfig: newConfig, undoLabel: "Delete")
+            return
         }
         isDirty = true
         registerUndo(previous: previous)
@@ -154,6 +185,15 @@ public final class LutinProjectDocument: Identifiable {
     public func redo() { undoManager.redo() }
 
     // MARK: - private
+
+    private func commit(newConfig: LutinConfig, undoLabel: String) {
+        let previous = config
+        config = newConfig
+        isDirty = true
+        undoManager.setActionName(undoLabel)
+        registerUndo(previous: previous)
+        if autosaveEnabled { scheduleAutosave() }
+    }
 
     private func mutateItem(id: String, _ mutate: (inout LutinConfig.Item) -> Void) {
         guard var items = config.items, let idx = items.firstIndex(where: { $0.id == id }) else { return }
