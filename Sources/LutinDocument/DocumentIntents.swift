@@ -18,6 +18,9 @@ public enum DocumentIntent: Equatable {
     case setIconSize(Int)
     case moveMany(deltas: [MoveTarget])
     case deleteSelection(targets: [DeleteTarget])
+    case setItemHidden(id: String, hidden: Bool)
+    case setImageHidden(index: Int, hidden: Bool)
+    case setItemID(old: String, new: String)
 }
 
 public extension DocumentIntent {

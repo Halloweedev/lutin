@@ -140,6 +140,51 @@ public final class LutinProjectDocument: Identifiable {
             }
             commit(newConfig: newConfig, undoLabel: "Delete")
             return
+
+        case .setItemHidden(let id, let hidden):
+            var newConfig = config
+            guard let idx = newConfig.items?.firstIndex(where: { $0.id == id }) else {
+                throw LutinError(code: "editor_item_not_found", message: "Item '\(id)' not found")
+            }
+            newConfig.items?[idx].hidden = hidden
+            commit(newConfig: newConfig, undoLabel: hidden ? "Hide" : "Show")
+            return
+
+        case .setImageHidden(let index, let hidden):
+            var newConfig = config
+            guard let decos = newConfig.decorations, index >= 0, index < decos.count,
+                  decos[index].type == "image" else {
+                throw LutinError(code: "editor_image_not_found",
+                                 message: "Image decoration at index \(index) not found")
+            }
+            newConfig.decorations?[index].hidden = hidden
+            commit(newConfig: newConfig, undoLabel: hidden ? "Hide" : "Show")
+            return
+
+        case .setItemID(let old, let new):
+            let trimmed = new.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else {
+                throw LutinError(code: "editor_invalid_id", message: "Item id cannot be empty")
+            }
+            var newConfig = config
+            guard let idx = newConfig.items?.firstIndex(where: { $0.id == old }) else {
+                throw LutinError(code: "editor_item_not_found", message: "Item '\(old)' not found")
+            }
+            if newConfig.items?.contains(where: { $0.id == trimmed && $0.id != old }) == true {
+                throw LutinError(code: "editor_id_collision",
+                                 message: "Item id '\(trimmed)' already exists")
+            }
+            newConfig.items?[idx].id = trimmed
+            // Cascade into arrows that referenced the old id.
+            if var decos = newConfig.decorations {
+                for i in decos.indices where decos[i].type == "arrow" {
+                    if decos[i].from == old { decos[i].from = trimmed }
+                    if decos[i].to == old { decos[i].to = trimmed }
+                }
+                newConfig.decorations = decos
+            }
+            commit(newConfig: newConfig, undoLabel: "Rename")
+            return
         }
         isDirty = true
         registerUndo(previous: previous)
