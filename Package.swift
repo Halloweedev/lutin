@@ -8,6 +8,7 @@ let package = Package(
         .executable(name: "lutin", targets: ["LutinCLIExe"]),
         .executable(name: "lutin-app", targets: ["LutinAppExe"]),
         .executable(name: "lutin-app-packager", targets: ["LutinAppPackagerExe"]),
+        .executable(name: "lutin-app-headless", targets: ["LutinAppHeadless"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
@@ -28,8 +29,24 @@ let package = Package(
         .target(name: "LutinCLI", dependencies: [
             "LutinCore", "LutinConfig", "LutinRegistry", "LutinBuilder",
             "LutinSigning", "LutinNotarization", "LutinRelease",
+            "LutinIntentBridge",
             .product(name: "ArgumentParser", package: "swift-argument-parser"),
         ]),
+        .target(
+            name: "LutinIntentBridge",
+            dependencies: ["LutinDocument", "LutinConfig"],
+            path: "Sources/LutinIntentBridge"
+        ),
+        .testTarget(
+            name: "LutinIntentBridgeTests",
+            dependencies: ["LutinIntentBridge", "LutinDocument", "LutinConfig"],
+            path: "Tests/LutinIntentBridgeTests"
+        ),
+        .executableTarget(
+            name: "LutinAppHeadless",
+            dependencies: ["LutinIntentBridge", "LutinDocument", "LutinConfig"],
+            path: "Apps/LutinAppHeadless"
+        ),
 
         // SP4 — GUI
         .target(name: "LutinAppKit", dependencies: ["LutinCore"]),
