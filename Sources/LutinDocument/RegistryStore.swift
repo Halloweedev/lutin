@@ -42,4 +42,20 @@ public final class RegistryStore {
         try registry.upsert(entry)
         try reload()
     }
+
+    /// Convenience: add a project from a `lutin.yml` URL. Derives the name
+    /// from the parent directory (matching the CLI `add` convention).
+    public func add(configURL: URL) throws {
+        let name = configURL.deletingLastPathComponent().lastPathComponent
+        let entry = RegistryEntry(
+            name: name,
+            configPath: configURL.path,
+            appPath: "",
+            lastDetectedVersion: nil,
+            lastReleaseStatus: nil,
+            createdDate: Date(),
+            lastOpenedDate: Date()
+        )
+        try upsert(entry)
+    }
 }
