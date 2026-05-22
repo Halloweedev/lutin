@@ -217,6 +217,48 @@ public final class LutinProjectDocument: Identifiable {
             newConfig.decorations?[index].width = width
             commit(newConfig: newConfig, undoLabel: "Move image")
             return
+
+        case .reorderItem(let id, let toIndex):
+            var newConfig = config
+            guard var items = newConfig.items,
+                  let fromIdx = items.firstIndex(where: { $0.id == id }) else {
+                throw LutinError(code: "editor_item_not_found", message: "Item '\(id)' not found")
+            }
+            let clamped = max(0, min(toIndex, items.count - 1))
+            let item = items.remove(at: fromIdx)
+            items.insert(item, at: clamped)
+            newConfig.items = items
+            commit(newConfig: newConfig, undoLabel: "Reorder")
+            return
+
+        case .reorderImageDecoration(let fromIndex, let toIndex):
+            var newConfig = config
+            guard var decos = newConfig.decorations,
+                  fromIndex >= 0, fromIndex < decos.count,
+                  decos[fromIndex].type == "image" else {
+                throw LutinError(code: "editor_image_not_found",
+                                 message: "Image decoration at index \(fromIndex) not found")
+            }
+            let clamped = max(0, min(toIndex, decos.count - 1))
+            let d = decos.remove(at: fromIndex)
+            decos.insert(d, at: clamped)
+            newConfig.decorations = decos
+            commit(newConfig: newConfig, undoLabel: "Reorder")
+            return
+
+        case .swapArrow(let from, let to):
+            var newConfig = config
+            guard var decos = newConfig.decorations,
+                  let idx = decos.firstIndex(where: {
+                      $0.type == "arrow" && $0.from == from && $0.to == to }) else {
+                throw LutinError(code: "editor_arrow_not_found",
+                                 message: "Arrow \(from)→\(to) not found")
+            }
+            decos[idx].from = to
+            decos[idx].to = from
+            newConfig.decorations = decos
+            commit(newConfig: newConfig, undoLabel: "Swap arrow")
+            return
         }
         isDirty = true
         registerUndo(previous: previous)

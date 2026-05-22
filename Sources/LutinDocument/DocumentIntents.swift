@@ -24,6 +24,9 @@ public enum DocumentIntent: Equatable {
     case addImageDecoration(path: String, x: Int, y: Int, width: Int)
     case deleteImageDecoration(index: Int)
     case moveImageDecoration(index: Int, x: Int, y: Int, width: Int)
+    case reorderItem(id: String, toIndex: Int)
+    case reorderImageDecoration(fromIndex: Int, toIndex: Int)
+    case swapArrow(from: String, to: String)
 }
 
 public extension DocumentIntent {
