@@ -23,8 +23,62 @@ public enum DragMath {
     }
 }
 
-/// View modifier wrapping a `DragGesture` that mutates the document on
-/// drag-end using `DocumentIntent.moveItem`. Snap grid comes from prefs.
+/// View modifier that handles dragging of a canvas element, committing a
+/// `moveMany` intent on drag-end for the full moveable selection.
+public struct ItemDragController: ViewModifier {
+    @Bindable var document: LutinProjectDocument
+    @Bindable var selectionModel: CanvasSelectionModel
+    let myID: CanvasSelectionID
+    let snapGrid: Int
+
+    @State private var pendingDX: CGFloat = 0
+    @State private var pendingDY: CGFloat = 0
+
+    public func body(content: Content) -> some View {
+        content
+            .offset(x: pendingDX, y: pendingDY)
+            .gesture(
+                DragGesture(coordinateSpace: .named("canvas"))
+                    .onChanged { v in
+                        if !selectionModel.selection.contains(myID) {
+                            selectionModel.select(myID)
+                        }
+                        pendingDX = v.translation.width
+                        pendingDY = v.translation.height
+                    }
+                    .onEnded { v in
+                        defer { pendingDX = 0; pendingDY = 0 }
+                        let dx = Self.snap(Int(v.translation.width), gridSize: snapGrid)
+                        let dy = Self.snap(Int(v.translation.height), gridSize: snapGrid)
+                        guard dx != 0 || dy != 0 else { return }
+                        let deltas = Self.deltas(forSelection: selectionModel.selection,
+                                                 dx: dx, dy: dy)
+                        guard !deltas.isEmpty else { return }
+                        try? document.apply(.moveMany(deltas: deltas))
+                    }
+            )
+    }
+
+    public static func deltas(forSelection sel: Set<CanvasSelectionID>,
+                              dx: Int, dy: Int) -> [DocumentIntent.MoveTarget] {
+        sel.compactMap { id in
+            switch id {
+            case .item(let i): return .init(target: .item(id: i), dx: dx, dy: dy)
+            case .image(let i): return .init(target: .imageDecoration(index: i), dx: dx, dy: dy)
+            case .arrow: return nil
+            }
+        }
+    }
+
+    public static func snap(_ value: Int, gridSize: Int) -> Int {
+        guard gridSize > 0 else { return value }
+        let r = Int((Double(value) / Double(gridSize)).rounded())
+        return r * gridSize
+    }
+}
+
+/// Legacy single-item modifier kept for any call sites that haven't migrated.
+/// New code should use `ItemDragController` via `draggableItem(document:selectionModel:id:snapGrid:)`.
 public struct ItemDragModifier: ViewModifier {
     @Bindable var document: LutinProjectDocument
     let itemID: String
@@ -58,7 +112,15 @@ public struct ItemDragModifier: ViewModifier {
 }
 
 public extension View {
-    func draggableItem(document: LutinProjectDocument, id: String, snapGrid: Int) -> some View {
-        modifier(ItemDragModifier(document: document, itemID: id, snapGrid: snapGrid))
+    /// Multi-select aware drag: commits a `moveMany` intent for the full
+    /// moveable selection when the drag ends.
+    func draggableItem(document: LutinProjectDocument,
+                       selectionModel: CanvasSelectionModel,
+                       id: CanvasSelectionID,
+                       snapGrid: Int) -> some View {
+        modifier(ItemDragController(document: document,
+                                    selectionModel: selectionModel,
+                                    myID: id,
+                                    snapGrid: snapGrid))
     }
 }

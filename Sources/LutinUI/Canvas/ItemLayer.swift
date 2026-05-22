@@ -6,15 +6,15 @@ import LutinAppKit
 
 public struct ItemLayer: View {
     @Bindable var document: LutinProjectDocument
-    @Binding var selection: Set<CanvasSelectionID>
+    @Bindable var selectionModel: CanvasSelectionModel
     @Environment(PreferencesStore.self) private var preferences
     @State private var hoveredID: String?
     @State private var connectorDrag: ConnectorDragState = .idle
     @State private var editingID: String?
 
-    public init(document: LutinProjectDocument, selection: Binding<Set<CanvasSelectionID>>) {
+    public init(document: LutinProjectDocument, selectionModel: CanvasSelectionModel) {
         self.document = document
-        self._selection = selection
+        self.selectionModel = selectionModel
     }
 
     public var body: some View {
@@ -24,9 +24,9 @@ public struct ItemLayer: View {
                     .position(x: CGFloat(item.x), y: CGFloat(item.y))
                     .onTapGesture {
                         if NSEvent.modifierFlags.contains(.command) {
-                            selection.formSymmetricDifference([CanvasSelectionID.item(id: item.id)])
+                            selectionModel.toggle(.item(id: item.id))
                         } else {
-                            selection = [CanvasSelectionID.item(id: item.id)]
+                            selectionModel.select(.item(id: item.id))
                         }
                     }
                     .onHover { hovering in
@@ -38,7 +38,9 @@ public struct ItemLayer: View {
                                              dragState: $connectorDrag)
                         }
                     }
-                    .draggableItem(document: document, id: item.id,
+                    .draggableItem(document: document,
+                                   selectionModel: selectionModel,
+                                   id: .item(id: item.id),
                                    snapGrid: preferences.preferences.snapGridSize)
             }
         }
@@ -56,7 +58,7 @@ public struct ItemLayer: View {
     }
 
     private func itemView(for item: LutinConfig.Item) -> some View {
-        let isSelected: Bool = selection.contains(.item(id: item.id))
+        let isSelected: Bool = selectionModel.selection.contains(.item(id: item.id))
         let iconSize = CGFloat(document.config.window?.iconSize ?? 96)
         return ZStack {
             iconArtwork(for: item, size: iconSize)

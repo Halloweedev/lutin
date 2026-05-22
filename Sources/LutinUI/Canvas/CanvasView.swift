@@ -41,10 +41,7 @@ public struct CanvasView: View {
                                    set: { selectionModel.replace(with: $0) }),
                                iconSize: document.config.window?.iconSize ?? 96)
                     ImageDecorationLayer(document: document, selectionModel: selectionModel)
-                    ItemLayer(document: document,
-                              selection: Binding(
-                                  get: { selectionModel.selection },
-                                  set: { selectionModel.replace(with: $0) }))
+                    ItemLayer(document: document, selectionModel: selectionModel)
                 }
                 .frame(width: configW, height: configH)
                 .coordinateSpace(.named("canvas"))
