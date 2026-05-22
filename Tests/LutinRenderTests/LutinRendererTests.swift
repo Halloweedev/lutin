@@ -33,7 +33,11 @@ final class LutinRendererTests: XCTestCase {
         return (img.width, img.height)
     }
 
-    func testRendersGeneratedBackgroundAtWindowTimesScale() throws {
+    // config.window.{width,height} is the content area — the canvas users
+    // design against. The renderer must emit a PNG at exactly that size
+    // (× scale for Retina) so Finder draws it 1:1. Growing the outer frame
+    // for chrome is the builder's job, not the renderer's.
+    func testRendersGeneratedBackgroundAtWindowDimsTimesScale() throws {
         let dir = FileManager.default.temporaryDirectory
         let url = try LutinRenderer.renderBackground(
             config: config(background: generated(), decorations: nil),

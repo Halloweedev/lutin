@@ -4,6 +4,12 @@ import LutinCore
 
 /// A resolved DMG window layout — the input to the `.DS_Store` encoder.
 /// Decoupled from `LutinConfig` so it is reusable (e.g. by the future GUI).
+///
+/// `windowWidth × windowHeight` here are the outer window frame dimensions
+/// written to `.DS_Store` `WindowBounds`. They include Finder chrome (title
+/// bar + Tahoe volume strip) added on top of the user-facing
+/// `config.window.width × config.window.height`, which is the *content area*
+/// and the size the background PNG fills.
 public struct DMGLayout: Equatable {
     public struct Point: Equatable {
         public let x: Int
@@ -52,9 +58,15 @@ public enum LayoutResolver {
             }
             placements[filename] = DMGLayout.Point(x: item.x, y: item.y)
         }
+        // config.window.width/height is the content area (the canvas users
+        // see and design backgrounds for). Grow it by the Finder chrome
+        // budget so the resulting WindowBounds frame leaves exactly that
+        // content area visible.
+        let contentWidth = w?.width ?? 680
+        let contentHeight = w?.height ?? 420
         return DMGLayout(
-            windowWidth: w?.width ?? 680,
-            windowHeight: w?.height ?? 420,
+            windowWidth: contentWidth,
+            windowHeight: contentHeight + FinderChrome.totalHeightPoints,
             iconSize: w?.iconSize ?? 96,
             textSize: w?.textSize ?? 13,
             showSidebar: w?.showSidebar ?? false,

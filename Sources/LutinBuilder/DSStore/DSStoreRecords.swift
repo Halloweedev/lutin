@@ -6,7 +6,12 @@ enum DSStoreRecords {
     enum Background {
         case none
         case color(red: Double, green: Double, blue: Double)
-        case image(alias: Data)
+        /// A background image. `alias` is the legacy Carbon alias embedded
+        /// in `icvp.backgroundImageAlias`; `bookmark` is the modern CFURL
+        /// bookmark written as the top-level `pBBk` record on the `.` entry.
+        /// macOS 14+/26 Finder reads `pBBk` preferentially — the alias is
+        /// legacy fallback and routinely ignored on its own.
+        case image(alias: Data, bookmark: Data)
     }
 
     /// The 16-byte `Iloc` (icon location) blob: x, y, then 8 fixed bytes.
@@ -28,14 +33,29 @@ enum DSStoreRecords {
             "ShowSidebar": showSidebar,
             "ShowToolbar": showToolbar,
             "ShowStatusBar": false,
-            "ShowPathbar": true,
+            // Install DMG windows don't want the pathbar — it just shows
+            // "Lutin > " at the bottom and eats content area. (On macOS 26
+            // Tahoe the volume-name strip at the bottom is shown anyway and
+            // is *not* controlled by this flag; LutinRenderer accounts for
+            // that strip via `finderBottomChromeHeightPoints`.)
+            "ShowPathbar": false,
             "ShowTabView": false,
             "SidebarWidth": 0,
+            // dmgbuild's reference set also writes these two. Their absence
+            // seems to leave Finder free to default-enable a preview/sidebar
+            // pane on some macOS versions, so include them explicitly.
+            "ContainerShowSidebar": false,
+            "PreviewPaneVisibility": false,
         ]
         return serializeBinaryPlist(dict, record: "bwsp")
     }
 
-    /// The `icvp` (icon view properties) blob — a binary plist.
+    /// The `icvp` (icon view properties) blob — a binary plist. Apple-blessed
+    /// key set mirrors what `dmgbuild` writes: notably `backgroundColor*` and
+    /// `scrollPosition*` are always present, even when `backgroundType=2`
+    /// (image). macOS 14+/26 Finder appears to silently discard an icvp that
+    /// omits these keys, which kills both `iconSize` and the background image
+    /// resolution even though everything else in the `.DS_Store` is read.
     static func icvpBlob(iconSize: Int, textSize: Int, background: Background) -> Data {
         var dict: [String: Any] = [
             "viewOptionsVersion": 1,
@@ -45,9 +65,14 @@ enum DSStoreRecords {
             "gridOffsetX": 0.0,
             "gridOffsetY": 0.0,
             "labelOnBottom": true,
-            "showIconPreview": true,
+            "showIconPreview": false,            // dmgbuild's default
             "showItemInfo": false,
             "arrangeBy": "none",
+            "backgroundColorRed": 1.0,
+            "backgroundColorGreen": 1.0,
+            "backgroundColorBlue": 1.0,
+            "scrollPositionX": 0.0,
+            "scrollPositionY": 0.0,
         ]
         switch background {
         case .none:
@@ -57,7 +82,7 @@ enum DSStoreRecords {
             dict["backgroundColorRed"] = r
             dict["backgroundColorGreen"] = g
             dict["backgroundColorBlue"] = b
-        case .image(let alias):
+        case .image(let alias, _):
             dict["backgroundType"] = 2
             dict["backgroundImageAlias"] = alias
         }

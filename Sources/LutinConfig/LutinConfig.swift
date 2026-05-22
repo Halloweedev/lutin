@@ -36,8 +36,20 @@ public struct LutinConfig: Codable, Equatable {
     }
 
     /// All fields optional in raw form; `Templates.merge` fills the gaps.
+    ///
+    /// **Sizing contract.** `width` and `height` are the **content area** of
+    /// the Finder DMG window in points — i.e. the canvas a user designs a
+    /// background for. A user-supplied background PNG should be exactly
+    /// `width × height` (or `width*scale × height*scale` pixels for Retina,
+    /// where `scale` comes from `background.scale`, default `2`). Lutin
+    /// renders the background at that size 1:1 and grows the outer
+    /// `WindowBounds` written to `.DS_Store` to leave that content area
+    /// visible after Finder's title bar and bottom chrome are accounted for
+    /// (see `LutinCore.FinderChrome`).
     public struct WindowInfo: Codable, Equatable {
+        /// Content area width in points. Background PNG renders at this width.
         public var width: Int?
+        /// Content area height in points. Background PNG renders at this height.
         public var height: Int?
         public var iconSize: Int?
         public var textSize: Int?

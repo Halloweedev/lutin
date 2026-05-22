@@ -135,17 +135,38 @@ public enum DMGBuilder {
             at: mount.mountPoint.appendingPathComponent("Applications"),
             withDestinationURL: URL(fileURLWithPath: "/Applications"))
 
-        // 4. Embed the background image into a hidden .background folder.
+        // 4. Embed the background image as a hidden file at the volume root.
+        // The convention every DMG-creation tool follows (dmgbuild, create-dmg,
+        // appdmg) is `/<.>background.<ext>` — a single hidden file directly at
+        // the volume root, NOT a subfolder. macOS 14+/26 Finder appears to
+        // special-case this path: even with a byte-correct `.DS_Store` +
+        // bookmark pointing at a subfolder, the background image is silently
+        // dropped. Matching the convention solves it.
         var background: DSStoreRecords.Background = .none
         if let bg = request.backgroundImage {
-            let bgDir = mount.mountPoint.appendingPathComponent(".background")
-            try fm.createDirectory(at: bgDir, withIntermediateDirectories: true)
-            try fm.copyItem(at: bg, to: bgDir.appendingPathComponent("background.png"))
-            let alias = AliasRecord.encode(
-                volumeName: request.volumeName,
-                fileName: "background.png",
-                posixPath: "/Volumes/\(request.volumeName)/.background/background.png")
-            background = .image(alias: alias)
+            let ext = bg.pathExtension.isEmpty ? "png" : bg.pathExtension
+            let bgDest = mount.mountPoint
+                .appendingPathComponent(".background." + ext)
+            try fm.copyItem(at: bg, to: bgDest)
+            // Build the alias bytes (legacy `icvp.backgroundImageAlias`) and
+            // the modern CFURL bookmark bytes (top-level `pBBk` record).
+            // Both are derived from the *real* file we just wrote into the
+            // mounted volume; the bookmark in particular is what current
+            // Finder reads to resolve the background.
+            let inputs = AliasInputsResolver.resolve(
+                fileURL: bgDest,
+                mountPoint: mount.mountPoint,
+                volumeName: request.volumeName)
+            let alias = AliasRecord.encode(inputs)
+            // Generate the modern CFURL bookmark ourselves — Foundation's
+            // `URL.bookmarkData(...)` doesn't expose the "removable disk
+            // image" variant Finder requires for DMG backgrounds (its output
+            // stores absolute `/Volumes/...` paths instead of volume-relative
+            // ones, and is silently ignored). BookmarkRecord.encode mirrors
+            // what `mac_alias.Bookmark.for_file` writes.
+            let bookmark = try BookmarkRecord.encode(
+                fileURL: bgDest, mountPoint: mount.mountPoint)
+            background = .image(alias: alias, bookmark: bookmark)
         }
 
         // 4b. Apply the volume icon, if one was provided and exists.

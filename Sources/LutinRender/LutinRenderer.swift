@@ -7,6 +7,12 @@ import LutinConfig
 /// The public entry point for rendering. Maps a `LutinConfig` onto the renderer
 /// primitives, produces the finished `.background/background.png` content, and
 /// returns the URL of the written PNG in a temporary work file.
+///
+/// Contract: `config.window.width × config.window.height` is the **content
+/// area** — i.e. the canvas a user designs a background for, and the size the
+/// rendered PNG fills 1:1 in the Finder window. Growing the outer window to
+/// accommodate Finder chrome (title bar, Tahoe volume-name strip) is the
+/// builder's job, not ours; see `LutinCore.FinderChrome`.
 public enum LutinRenderer {
     /// Renders the background (and bakes decorations) for `config`.
     ///
@@ -27,6 +33,10 @@ public enum LutinRenderer {
         let iconSize = window?.iconSize ?? 96
         let bg = config.background
         let scale = max(1, bg?.scale ?? 2)
+
+        // window.width × window.height is the design canvas — render the PNG
+        // at exactly that size. Growing the .DS_Store WindowBounds to
+        // accommodate Finder chrome happens in LayoutResolver.
 
         let kind: BackgroundSpec.Kind = (bg?.type == "image") ? .image : .generated
         var imageURL: URL?
@@ -57,7 +67,10 @@ public enum LutinRenderer {
 
         let outURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("lutin-render-\(UUID().uuidString).png")
-        try RenderContext.writePNG(final, to: outURL)
+        // 72 DPI × scale tells Finder to map the @Nx pixel grid back onto the
+        // configured window size; without this the PNG defaults to 72 DPI and
+        // the background renders at scale× the window dimensions.
+        try RenderContext.writePNG(final, to: outURL, dpi: 72 * CGFloat(scale))
         return outURL
     }
 
@@ -100,16 +113,19 @@ public enum LutinRenderer {
         return result
     }
 
-    /// Emits a non-fatal warning if a user image's pixel size differs from the
-    /// recommended `window × scale`.
+    /// Emits a non-fatal warning if a user-supplied background image's pixel
+    /// size differs from the content area × scale. The contract is restated
+    /// in the message so YAML editors see why the size matters.
     private static func warnIfWrongSize(_ url: URL, expectedW: Int, expectedH: Int,
                                         onOutput: ((String) -> Void)?) {
         guard let onOutput,
               let src = CGImageSourceCreateWithURL(url as CFURL, nil),
               let image = CGImageSourceCreateImageAtIndex(src, 0, nil) else { return }
         if image.width != expectedW || image.height != expectedH {
-            onOutput("Warning: background image is \(image.width)x\(image.height)px; "
-                   + "recommended is \(expectedW)x\(expectedH)px. It will be scaled to fit.")
+            onOutput("Warning: background image is \(image.width)x\(image.height) px, "
+                   + "but window.width × window.height × scale is "
+                   + "\(expectedW)x\(expectedH) px. Lutin will scale your image "
+                   + "to fit; for a 1:1 render, export it at \(expectedW)x\(expectedH) px.")
         }
     }
 }

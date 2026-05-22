@@ -106,10 +106,16 @@ struct BuddyAllocator {
     static func assemble(dsdbHeaderBlock: Data, leafNodeBlock: Data) -> Data {
         var alloc = Allocator()
 
-        // Block 0 is the allocator's own root/info block. Reserve its slot now
-        // so it keeps block number 0; it is sized and allocated last because
-        // its size depends on the offset list and free lists it must store.
-        alloc.offsets = [0]
+        // Block 0 is the allocator's own root/info block. dmgbuild / the
+        // reference ds_store implementation places it at the fixed offset
+        // 0x800 with width 11 (a 2048-byte slot). Finder relies on that fixed
+        // placement — an info block parked anywhere else makes Finder reject
+        // the entire `.DS_Store`. Init's `free[11] = []` already removed
+        // 0x800 from circulation; we just have to claim it. The size will be
+        // reconfirmed by the loop below once we know how many offsets and
+        // free-list entries the info block must record.
+        let rootBlockAddr = 0x800 | 11        // offset 0x800, width 11
+        alloc.offsets = [rootBlockAddr]
 
         // Block 1: DSDB superblock. Block 2: the B-tree leaf node.
         // INVARIANT: block 2 = leaf node; must match DSStoreEncoder's leafBlockNumber = 2.
@@ -182,7 +188,7 @@ struct BuddyAllocator {
         writeBlock(1, dsdbHeaderBlock)
         writeBlock(2, leafNodeBlock)
 
-        // -- 32-byte outer header (needs the root block address) --
+        // -- 36-byte outer header (needs the root block address) --
         let rootAddr = alloc.offsets[0]
         let rootFileOffset = rootAddr & ~0x1F     // allocator offset (no +4 skew)
         let rootSize = 1 << (rootAddr & 0x1F)
@@ -192,7 +198,18 @@ struct BuddyAllocator {
         header.appendUInt32(UInt32(rootFileOffset))   // root block offset
         header.appendUInt32(UInt32(rootSize))         // root block size
         header.appendUInt32(UInt32(rootFileOffset))   // copy of offset
-        header.appendBytes(Data(count: 16))           // 16 bytes padding → 36-byte header
+        // The trailing 16 bytes look like padding but are a *required* magic
+        // sequence — the dmgbuild/ds_store reference implementation writes
+        // these exact bytes for every newly-created file, and Finder on
+        // macOS 14+/26 silently rejects the entire `.DS_Store` (background
+        // alias, Iloc positions, everything) when they are zero. We learned
+        // this the hard way diffing against a known-working DMG.
+        header.appendBytes(Data([
+            0x00, 0x00, 0x10, 0x0C,
+            0x00, 0x00, 0x00, 0x87,
+            0x00, 0x00, 0x20, 0x0B,
+            0x00, 0x00, 0x00, 0x00,
+        ]))
         file.replaceSubrange(0..<36, with: header.data)
 
         return file

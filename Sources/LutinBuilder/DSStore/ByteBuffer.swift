@@ -22,6 +22,12 @@ struct ByteBuffer {
         data.append(UInt8(truncatingIfNeeded: value))
     }
 
+    mutating func appendUInt64(_ value: UInt64) {
+        for shift in stride(from: 56, through: 0, by: -8) {
+            data.append(UInt8(truncatingIfNeeded: value >> shift))
+        }
+    }
+
     mutating func appendBytes(_ bytes: Data) {
         data.append(bytes)
     }

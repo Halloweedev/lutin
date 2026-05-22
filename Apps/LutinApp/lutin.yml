@@ -1,6 +1,14 @@
 # Dogfood config: this file describes how `lutin` itself packages Lutin.app
-# into a DMG. The release-app.sh script feeds this to `lutin build` after
+# into a DMG. The release-app.sh script feeds this to `lutin build` (or
+# `lutin release` for the full signed + notarized + stapled pipeline) after
 # LutinAppPackager produces ./build/Lutin.app.
+#
+# IMPORTANT (macOS 14+/26): Finder silently refuses to apply a .DS_Store
+# layout (background image, icon positions, iconSize) to any DMG that
+# Gatekeeper rejects. The signing + notarization + staple steps below are
+# load-bearing for the background decoration to actually render on user
+# machines — without them, the DMG still installs fine but opens with a
+# plain white background and default-sized icons.
 project:
   name: Lutin
   bundleId: com.lutin.app
@@ -10,6 +18,13 @@ output:
   directory: ../../release
   dmgName: Lutin-${version}.dmg
   volumeName: Lutin
+# window.width × window.height is the *content area* (the canvas a background
+# fills, not the outer window frame). For a custom background image, export
+# it at width*scale × height*scale pixels (default scale = 2 for Retina).
+# Lutin grows the outer WindowBounds internally to leave the chrome alone.
+# window:
+#   width: 680
+#   height: 420
 background:
   template: blueprint
 items:
@@ -29,8 +44,10 @@ decorations:
   to: applications
   label: Drag to install
 signing:
-  enabled: false
-  identity: ""
+  enabled: true
+  identity: "Developer ID Application: Nicolas Demanez (GJFYJDKWX9)"
+  signDmg: true
 notarization:
-  enabled: false
-  profile: ""
+  enabled: true
+  profile: barry-notarize     # reuses an existing notarytool credential
+  staple: true

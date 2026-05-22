@@ -71,7 +71,8 @@ public enum ReleasePipeline {
             return (urlPath.hasPrefix(tmpDir) &&
                     url.lastPathComponent.hasPrefix("lutin-render-")) ? url : nil
         }
-        let volumeIcon = resolveVolumeIcon(projectDirectory: projectDirectory)
+        let volumeIcon = resolveVolumeIcon(projectDirectory: projectDirectory,
+                                           appBundle: appURL)
         let request = BuildRequest(
             appBundle: appURL, outputDirectory: outDir, dmgName: dmgName,
             volumeName: volumeName, layout: layout, backgroundImage: background,
@@ -162,11 +163,24 @@ public enum ReleasePipeline {
             ? convention : nil
     }
 
-    /// Resolves the volume icon via the `assets/VolumeIcon.icns` convention.
-    public static func resolveVolumeIcon(projectDirectory: URL) -> URL? {
+    /// Resolves the volume icon. Looks first at the explicit
+    /// `assets/VolumeIcon.icns` convention; if that's absent, falls back to
+    /// the app's own `AppIcon.icns` inside the bundle (compiled by `actool`
+    /// during packaging). This means a project with a properly-assembled
+    /// `.app` automatically gets a volume icon — which in turn triggers
+    /// `SetFile -a C` on the volume root (kHasCustomIcon flag) inside
+    /// `DMGBuilder`. That flag matters for macOS 14+/26 Finder's decision
+    /// to honor a `.DS_Store` layout.
+    public static func resolveVolumeIcon(projectDirectory: URL,
+                                         appBundle: URL? = nil) -> URL? {
+        let fm = FileManager.default
         let convention = projectDirectory
             .appendingPathComponent("assets/VolumeIcon.icns")
-        return FileManager.default.fileExists(atPath: convention.path)
-            ? convention : nil
+        if fm.fileExists(atPath: convention.path) { return convention }
+        if let app = appBundle {
+            let appIcon = app.appendingPathComponent("Contents/Resources/AppIcon.icns")
+            if fm.fileExists(atPath: appIcon.path) { return appIcon }
+        }
+        return nil
     }
 }

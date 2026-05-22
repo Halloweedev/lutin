@@ -38,8 +38,18 @@ final class RenderContext {
     }
 
     /// Encodes a `CGImage` to a PNG file.
+    ///
+    /// - Parameters:
+    ///   - image: the bitmap to encode.
+    ///   - url: destination path.
+    ///   - dpi: DPI to record in the PNG metadata. Finder reads this to map
+    ///     pixel dimensions back to window points: a 1360×840 px PNG at 144 DPI
+    ///     is interpreted as 680×420 pt (the @2× Retina case). A `nil`
+    ///     properties dict on `CGImageDestinationAddImage` defaults to 72 DPI,
+    ///     which would make Finder render the background at twice the window
+    ///     size.  Callers rendering at `scale: N` should pass `72 * N`.
     /// - Throws: `LutinError(code: "render_failed")` on an encoding failure.
-    static func writePNG(_ image: CGImage, to url: URL) throws {
+    static func writePNG(_ image: CGImage, to url: URL, dpi: CGFloat = 72) throws {
         let type: CFString
         #if canImport(UniformTypeIdentifiers)
         type = UTType.png.identifier as CFString
@@ -51,7 +61,11 @@ final class RenderContext {
             throw LutinError(code: "render_failed",
                              message: "Could not create a PNG file at \(url.path).")
         }
-        CGImageDestinationAddImage(dest, image, nil)
+        let properties: CFDictionary = [
+            kCGImagePropertyDPIWidth as String: dpi,
+            kCGImagePropertyDPIHeight as String: dpi,
+        ] as CFDictionary
+        CGImageDestinationAddImage(dest, image, properties)
         guard CGImageDestinationFinalize(dest) else {
             throw LutinError(code: "render_failed",
                              message: "Could not encode the rendered PNG at \(url.path).")

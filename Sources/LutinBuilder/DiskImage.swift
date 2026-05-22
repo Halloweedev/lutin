@@ -18,10 +18,17 @@ public enum DiskImage {
             try FileManager.default.removeItem(at: url)
         }
         do {
-            // -layout NONE suppresses the Apple Partition Map; the writable DMG is an intermediate artifact.
+            // `hdiutil create` defaults to `-layout SPUD` (Single Partition,
+            // Apple Partition Map). We rely on the default explicitly because
+            // macOS 14+/26 Finder declines to apply a `.DS_Store` layout
+            // (background image, icon positions) to DMGs without a partition
+            // map — even when the DMG is Developer-ID-signed AND notarized
+            // AND stapled. dmgbuild / Barry's DMGs all use SPUD; we matched
+            // them byte-for-byte on `.DS_Store` and still lost until we
+            // stopped passing `-layout NONE` here.
             _ = try runner.run(hdiutil, [
                 "create", "-size", "\(megabytes)m", "-fs", "HFS+",
-                "-volname", volumeName, "-layout", "NONE", url.path,
+                "-volname", volumeName, url.path,
             ])
         } catch let error as LutinError {
             throw LutinError(code: "create_failed",

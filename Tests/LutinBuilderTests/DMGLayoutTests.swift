@@ -1,5 +1,6 @@
 import XCTest
 import LutinConfig
+import LutinCore
 @testable import LutinBuilder
 
 final class DMGLayoutTests: XCTestCase {
@@ -21,8 +22,11 @@ final class DMGLayoutTests: XCTestCase {
         ]
         let layout = try LayoutResolver.resolve(config: config(items: items),
                                                 appFileName: "Barry.app")
+        // config.window.height (420) is the content area; the layout's outer
+        // frame grows by FinderChrome.totalHeightPoints so WindowBounds leaves
+        // exactly 420 pt of content area for the background.
         XCTAssertEqual(layout.windowWidth, 680)
-        XCTAssertEqual(layout.windowHeight, 420)
+        XCTAssertEqual(layout.windowHeight, 420 + FinderChrome.totalHeightPoints)
         XCTAssertEqual(layout.iconSize, 96)
         XCTAssertEqual(layout.placements["Barry.app"]?.x, 180)
         XCTAssertEqual(layout.placements["Applications"]?.x, 500)
