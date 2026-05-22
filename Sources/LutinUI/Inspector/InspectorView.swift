@@ -4,9 +4,9 @@ import LutinDocument
 
 public struct InspectorView: View {
     @Bindable var document: LutinProjectDocument
-    let selection: CanvasSelection
+    let selection: CanvasSelectionID?
 
-    public init(document: LutinProjectDocument, selection: CanvasSelection) {
+    public init(document: LutinProjectDocument, selection: CanvasSelectionID?) {
         self.document = document
         self.selection = selection
     }
@@ -15,8 +15,9 @@ public struct InspectorView: View {
         Form {
             switch selection {
             case .none: projectSection
-            case .item(let id): itemSection(id: id)
-            case .arrow(let from, let to): arrowSection(from: from, to: to)
+            case .some(.item(let id)): itemSection(id: id)
+            case .some(.arrow(let from, let to)): arrowSection(from: from, to: to)
+            case .some(.image): Text("Image overlay selected")
             }
         }
         .formStyle(.grouped)

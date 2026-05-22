@@ -5,13 +5,13 @@ import LutinAppKit
 
 public struct ItemLayer: View {
     @Bindable var document: LutinProjectDocument
-    @Binding var selection: CanvasSelection
+    @Binding var selection: Set<CanvasSelectionID>
     @Environment(PreferencesStore.self) private var preferences
     @State private var hoveredID: String?
     @State private var connectorDrag: ConnectorDragState = .idle
     @State private var editingID: String?
 
-    public init(document: LutinProjectDocument, selection: Binding<CanvasSelection>) {
+    public init(document: LutinProjectDocument, selection: Binding<Set<CanvasSelectionID>>) {
         self.document = document
         self._selection = selection
     }
@@ -21,7 +21,7 @@ public struct ItemLayer: View {
             ForEach(document.config.items ?? [], id: \.id) { item in
                 itemView(for: item)
                     .position(x: CGFloat(item.x), y: CGFloat(item.y))
-                    .onTapGesture { selection = .item(id: item.id) }
+                    .onTapGesture { selection = [.item(id: item.id)] }
                     .onHover { hovering in
                         hoveredID = hovering ? item.id : (hoveredID == item.id ? nil : hoveredID)
                     }
@@ -49,7 +49,7 @@ public struct ItemLayer: View {
     }
 
     private func itemView(for item: LutinConfig.Item) -> some View {
-        let isSelected: Bool = (selection == .item(id: item.id))
+        let isSelected: Bool = selection.contains(.item(id: item.id))
         let iconSize = CGFloat(document.config.window?.iconSize ?? 96)
         return ZStack {
             iconArtwork(for: item, size: iconSize)
@@ -120,10 +120,4 @@ public struct ItemLayer: View {
             return nil
         }
     }
-}
-
-public enum CanvasSelection: Equatable {
-    case none
-    case item(id: String)
-    case arrow(from: String, to: String)
 }

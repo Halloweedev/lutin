@@ -4,10 +4,10 @@ import LutinDocument
 
 public struct ArrowLayer: View {
     @Bindable var document: LutinProjectDocument
-    @Binding var selection: CanvasSelection
+    @Binding var selection: Set<CanvasSelectionID>
     let iconSize: Int
 
-    public init(document: LutinProjectDocument, selection: Binding<CanvasSelection>, iconSize: Int) {
+    public init(document: LutinProjectDocument, selection: Binding<Set<CanvasSelectionID>>, iconSize: Int) {
         self.document = document
         self._selection = selection
         self.iconSize = iconSize
@@ -20,12 +20,12 @@ public struct ArrowLayer: View {
             ForEach(Array(arrows.enumerated()), id: \.offset) { _, deco in
                 if let from = deco.from, let to = deco.to,
                    let route = ArrowRouting.route(from: from, to: to, items: items, iconSize: iconSize) {
-                    let isSelected = (selection == .arrow(from: from, to: to))
+                    let isSelected = selection.contains(.arrow(from: from, to: to))
                     ArrowShape(start: route.start, end: route.end)
                         .stroke(isSelected ? Tokens.color(.arrowSelected) : Tokens.color(.arrowDefault),
                                 style: StrokeStyle(lineWidth: 2, lineCap: .round))
                         .contentShape(ArrowShape(start: route.start, end: route.end).stroke(style: StrokeStyle(lineWidth: 16)))
-                        .onTapGesture { selection = .arrow(from: from, to: to) }
+                        .onTapGesture { selection = [.arrow(from: from, to: to)] }
                     if let label = deco.label, !label.isEmpty {
                         Text(label)
                             .font(Typography.canvasLabel)

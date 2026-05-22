@@ -44,11 +44,11 @@ public struct CanvasView: View {
                 }
                 ArrowLayer(document: document, selection: Binding(
                     get: { selectionModel.selection },
-                    set: { selectionModel.selection = $0 }),
+                    set: { selectionModel.replace(with: $0) }),
                     iconSize: document.config.window?.iconSize ?? 96)
                 ItemLayer(document: document, selection: Binding(
                     get: { selectionModel.selection },
-                    set: { selectionModel.selection = $0 }))
+                    set: { selectionModel.replace(with: $0) }))
             }
             .frame(width: configW, height: configH)
             // Named coordinate space lives INSIDE the scaleEffect so drag
@@ -60,7 +60,7 @@ public struct CanvasView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .background(Tokens.color(.canvasBackground))
             .contentShape(Rectangle())
-            .onTapGesture { selectionModel.selection = .none }
+            .onTapGesture { selectionModel.clear() }
             .focusable()
             .focusEffectDisabled()
             .onKeyPress(.delete) {

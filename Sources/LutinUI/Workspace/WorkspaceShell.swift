@@ -82,7 +82,7 @@ private struct ProjectWorkspace: View {
         }
         .background(Tokens.color(.canvasBackground))
         .inspector(isPresented: $inspectorVisible) {
-            InspectorView(document: document, selection: selectionModel.selection)
+            InspectorView(document: document, selection: selectionModel.single)
         }
         .toolbar { ToolbarActions(document: document, runner: pipelineRunner, showingDoctor: $showingDoctor) }
         .sheet(isPresented: $showingDoctor) { DoctorSheet(document: document) }

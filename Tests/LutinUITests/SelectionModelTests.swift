@@ -26,7 +26,7 @@ final class SelectionModelTests: XCTestCase {
     func testDeleteItemSelectionAlsoRemovesArrowsReferencingIt() throws {
         let doc = try tempBarry()
         let model = CanvasSelectionModel()
-        model.selection = .item(id: "app")
+        model.select(.item(id: "app"))
         try model.delete(in: doc)
         XCTAssertFalse(doc.config.items?.contains(where: { $0.id == "app" }) ?? false)
         XCTAssertFalse(doc.config.decorations?.contains(where: { $0.from == "app" || $0.to == "app" }) ?? false)
@@ -35,7 +35,7 @@ final class SelectionModelTests: XCTestCase {
     func testDuplicateItemAddsNewUniqueId() throws {
         let doc = try tempBarry()
         let model = CanvasSelectionModel()
-        model.selection = .item(id: "app")
+        model.select(.item(id: "app"))
         try model.duplicate(in: doc)
         let appIDs = (doc.config.items ?? []).filter { $0.type == "app" }.map(\.id)
         XCTAssertEqual(appIDs.count, 2)
