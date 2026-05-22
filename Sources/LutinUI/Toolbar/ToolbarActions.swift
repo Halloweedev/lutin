@@ -15,6 +15,16 @@ public struct ToolbarActions: ToolbarContent {
     }
 
     public var body: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            Menu {
+                Button("Add App…") { addLibrary(.app) }
+                Button("Add Applications folder") { addLibrary(.applications) }
+                Button("Add Image…") { addLibrary(.image) }
+            } label: {
+                Image(systemName: "plus")
+            }
+            .help("Add to canvas")
+        }
         ToolbarItemGroup(placement: .principal) {
             Button {
                 Task { await runner.run(mode: .build,
@@ -46,6 +56,14 @@ public struct ToolbarActions: ToolbarContent {
 
             Button { showingDoctor = true } label: { Label("Doctor", systemImage: "stethoscope") }
         }
+    }
+
+    private func addLibrary(_ item: LibraryItem) {
+        let cx = CGFloat(document.config.window?.width ?? 680)
+        let cy = CGFloat(document.config.window?.height ?? 420)
+        CanvasFileDropDelegate.addLibrary(item,
+                                          at: CGPoint(x: cx / 2, y: cy / 2),
+                                          document: document)
     }
 
     private var isRunning: Bool {
