@@ -15,6 +15,8 @@ public struct CanvasView: View {
     @State private var renderError: String?
     @State private var renderTask: Task<Void, Never>?
     @State private var contextLocation: CGPoint = .zero
+    @State private var marqueeStart: CGPoint?
+    @State private var marqueeCurrent: CGPoint?
 
     public init(document: LutinProjectDocument,
                 selectionModel: CanvasSelectionModel,
@@ -51,6 +53,35 @@ public struct CanvasView: View {
                 .background(Tokens.color(.canvasBackground))
                 .contentShape(Rectangle())
                 .onTapGesture { selectionModel.clear() }
+                .gesture(
+                    DragGesture(minimumDistance: 4, coordinateSpace: .named("canvas"))
+                        .onChanged { v in
+                            if marqueeStart == nil { marqueeStart = v.startLocation }
+                            marqueeCurrent = v.location
+                        }
+                        .onEnded { v in
+                            if let start = marqueeStart, let end = marqueeCurrent {
+                                let rect = CGRect(x: min(start.x, end.x),
+                                                  y: min(start.y, end.y),
+                                                  width: abs(end.x - start.x),
+                                                  height: abs(end.y - start.y))
+                                let hits = MarqueeSelection.hits(in: document.config, rect: rect)
+                                if NSEvent.modifierFlags.contains(.command) {
+                                    selectionModel.replace(with: selectionModel.selection.union(hits))
+                                } else {
+                                    selectionModel.replace(with: hits)
+                                }
+                            }
+                            marqueeStart = nil; marqueeCurrent = nil
+                        }
+                )
+                .overlay {
+                    if let start = marqueeStart, let end = marqueeCurrent {
+                        MarqueeOverlay(rect: CGRect(
+                            x: min(start.x, end.x), y: min(start.y, end.y),
+                            width: abs(end.x - start.x), height: abs(end.y - start.y)))
+                    }
+                }
                 .focusable()
                 .focusEffectDisabled()
                 .onKeyPress(.delete) {
