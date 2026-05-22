@@ -74,6 +74,41 @@ public final class LutinProjectDocument: Identifiable {
             } else {
                 config.window?.iconSize = clamped
             }
+        case .moveMany(let deltas):
+            guard !deltas.isEmpty else { return }
+            // Pre-validate all deltas before mutating
+            for delta in deltas {
+                switch delta.target {
+                case .item(let id):
+                    guard config.items?.contains(where: { $0.id == id }) ?? false else {
+                        throw LutinError(code: "editor_item_not_found",
+                                         message: "Item '\(id)' not found")
+                    }
+                case .imageDecoration(let i):
+                    guard let decos = config.decorations, i >= 0, i < decos.count,
+                          decos[i].type == "image" else {
+                        throw LutinError(code: "editor_image_not_found",
+                                         message: "Image decoration at index \(i) not found")
+                    }
+                }
+            }
+            // Apply all deltas
+            var newConfig = config
+            for delta in deltas {
+                switch delta.target {
+                case .item(let id):
+                    guard let idx = newConfig.items?.firstIndex(where: { $0.id == id }) else { continue }
+                    newConfig.items?[idx].x += delta.dx
+                    newConfig.items?[idx].y += delta.dy
+                case .imageDecoration(let i):
+                    if var decos = newConfig.decorations {
+                        decos[i].x = (decos[i].x ?? 0) + delta.dx
+                        decos[i].y = (decos[i].y ?? 0) + delta.dy
+                        newConfig.decorations = decos
+                    }
+                }
+            }
+            config = newConfig
         }
         isDirty = true
         registerUndo(previous: previous)

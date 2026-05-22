@@ -16,4 +16,22 @@ public enum DocumentIntent: Equatable {
     case setOutputDirectory(String)
     case setBackgroundTemplate(String)
     case setIconSize(Int)
+    case moveMany(deltas: [MoveTarget])
+}
+
+public extension DocumentIntent {
+    /// A single move delta applied as part of a `moveMany` batch.
+    /// Arrows have no own (x, y); they are never valid targets.
+    struct MoveTarget: Equatable, Sendable {
+        public enum Kind: Equatable, Sendable {
+            case item(id: String)
+            case imageDecoration(index: Int)
+        }
+        public var target: Kind
+        public var dx: Int
+        public var dy: Int
+        public init(target: Kind, dx: Int, dy: Int) {
+            self.target = target; self.dx = dx; self.dy = dy
+        }
+    }
 }
