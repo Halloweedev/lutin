@@ -48,17 +48,30 @@ public final class CanvasSelectionModel {
         clear()
     }
 
-    /// Duplicate selected items (arrows/images handled in later tasks).
+    /// Duplicate selected items and image decorations (arrows skipped).
     public func duplicate(in document: LutinProjectDocument) throws {
         guard !selection.isEmpty else { return }
         for id in selection {
-            if case .item(let existingID) = id,
-               let existing = document.config.items?.first(where: { $0.id == existingID }) {
+            switch id {
+            case .item(let existingID):
+                guard let existing = document.config.items?.first(where: { $0.id == existingID }) else { continue }
                 var copy = existing
-                copy.id = "\(existingID)-copy"
+                let existingIDs = Set((document.config.items ?? []).map(\.id))
+                copy.id = CanvasFileDropDelegate.uniqueID("\(existingID)-copy", existing: existingIDs)
                 copy.x += 16; copy.y += 16
                 try document.apply(.addItem(copy))
+            case .image(let index):
+                guard let d = document.config.decorations?[safe: index] else { continue }
+                try document.apply(.addImageDecoration(path: d.path ?? "",
+                                                       x: (d.x ?? 0) + 16,
+                                                       y: (d.y ?? 0) + 16,
+                                                       width: d.width ?? 100))
+            case .arrow: continue
             }
         }
     }
+}
+
+private extension Array {
+    subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
 }

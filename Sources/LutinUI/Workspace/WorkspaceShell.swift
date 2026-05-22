@@ -127,6 +127,13 @@ private struct ProjectWorkspace: View {
         .onReceive(NotificationCenter.default.publisher(for: .lutinDuplicate)) { _ in
             try? selectionModel.duplicate(in: document)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .lutinSelectAll)) { _ in
+            let all = LayersOrdering.rows(from: document.config).map(\.id)
+            selectionModel.replace(with: all)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .lutinClearSelection)) { _ in
+            selectionModel.clear()
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if pipelineRunner.state != .idle {
                 PipelineDrawer(runner: pipelineRunner)
