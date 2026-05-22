@@ -259,6 +259,43 @@ public final class LutinProjectDocument: Identifiable {
             newConfig.decorations = decos
             commit(newConfig: newConfig, undoLabel: "Swap arrow")
             return
+
+        case .setWindow(let w, let h, let icon, let text, let toolbar, let sidebar):
+            var newConfig = config
+            if newConfig.window == nil {
+                newConfig.window = LutinConfig.WindowInfo(
+                    width: nil, height: nil, iconSize: nil, textSize: nil,
+                    showToolbar: nil, showSidebar: nil)
+            }
+            if let w { newConfig.window?.width = w }
+            if let h { newConfig.window?.height = h }
+            if let icon { newConfig.window?.iconSize = icon }
+            if let text { newConfig.window?.textSize = text }
+            if let toolbar { newConfig.window?.showToolbar = toolbar }
+            if let sidebar { newConfig.window?.showSidebar = sidebar }
+            commit(newConfig: newConfig, undoLabel: "Window")
+            return
+
+        case .setProjectMetadata(let name, let bundleId):
+            var newConfig = config
+            newConfig.project.name = name
+            newConfig.project.bundleId = bundleId
+            commit(newConfig: newConfig, undoLabel: "Project")
+            return
+
+        case .setApp(let path):
+            var newConfig = config
+            newConfig.app.path = path
+            commit(newConfig: newConfig, undoLabel: "App path")
+            return
+
+        case .setOutput(let dir, let dmgName, let volumeName):
+            var newConfig = config
+            newConfig.output.directory = dir
+            newConfig.output.dmgName = dmgName
+            newConfig.output.volumeName = volumeName
+            commit(newConfig: newConfig, undoLabel: "Output")
+            return
         }
         isDirty = true
         registerUndo(previous: previous)

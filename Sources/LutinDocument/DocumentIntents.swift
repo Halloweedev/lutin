@@ -27,6 +27,11 @@ public enum DocumentIntent: Equatable {
     case reorderItem(id: String, toIndex: Int)
     case reorderImageDecoration(fromIndex: Int, toIndex: Int)
     case swapArrow(from: String, to: String)
+    case setWindow(width: Int?, height: Int?, iconSize: Int?,
+                   textSize: Int?, showToolbar: Bool?, showSidebar: Bool?)
+    case setProjectMetadata(name: String, bundleId: String)
+    case setApp(path: String)
+    case setOutput(directory: String, dmgName: String, volumeName: String)
 }
 
 public extension DocumentIntent {
