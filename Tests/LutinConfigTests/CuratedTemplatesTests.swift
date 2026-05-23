@@ -13,7 +13,7 @@ final class CuratedTemplatesTests: XCTestCase {
     func testWarmTemplateExists() throws {
         let template = try Templates.named("warm")
         XCTAssertEqual(template.background.type, "solid")
-        XCTAssertEqual(template.background.colorA, "#FBEFE6")
+        XCTAssertEqual(template.background.colorA, "#FFFFFF")
     }
 
     func testBlueprintAndMinimalStillExist() throws {

@@ -30,12 +30,16 @@ public struct Template {
 
 public enum Templates {
     private static let all: [String: Template] = [
+        // Starter presets vary only by window dimensions now — the background
+        // is white across the board. Users pick a color in the Background
+        // editor; the renamed/legacy template names still resolve so existing
+        // projects' lutin.yml `template: blueprint` lines keep loading.
         "blueprint": Template(
             name: "blueprint",
             window: .init(width: 680, height: 420, iconSize: 96,
                           textSize: 13, showToolbar: false, showSidebar: false),
             background: .init(type: "solid", template: "", scale: 2,
-                              colorA: "#EEF4FF", colorB: "#EEF4FF", grid: false,
+                              colorA: "#FFFFFF", colorB: "#FFFFFF", grid: false,
                               noise: 0.0, cornerRadius: 0)
         ),
         "minimal": Template(
@@ -59,7 +63,7 @@ public enum Templates {
             window: .init(width: 640, height: 400, iconSize: 96,
                           textSize: 13, showToolbar: false, showSidebar: false),
             background: .init(type: "solid", template: "", scale: 2,
-                              colorA: "#FBEFE6", colorB: "#FBEFE6", grid: false,
+                              colorA: "#FFFFFF", colorB: "#FFFFFF", grid: false,
                               noise: 0.0, cornerRadius: 0)
         ),
     ]
