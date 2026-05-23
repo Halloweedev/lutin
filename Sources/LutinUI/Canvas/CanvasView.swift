@@ -120,13 +120,13 @@ public struct CanvasView: View {
                         .onEnded { v in contextLocation = v.location }
                 )
                 .contextMenu {
-                    Button("Add App…") {
+                    Button("Add App…") { // allow-menu-button
                         CanvasFileDropDelegate.addLibrary(.app, at: contextLocation, document: document)
                     }
-                    Button("Add Applications folder") {
+                    Button("Add Applications folder") { // allow-menu-button
                         CanvasFileDropDelegate.addLibrary(.applications, at: contextLocation, document: document)
                     }
-                    Button("Add Image…") {
+                    Button("Add Image…") { // allow-menu-button
                         CanvasFileDropDelegate.addLibrary(.image, at: contextLocation, document: document)
                     }
                 }
@@ -302,21 +302,24 @@ private struct ZoomControlBar: View {
 
     var body: some View {
         HStack(spacing: Tokens.spacing(.xs)) {
-            Button(action: { zoomPercent = ZoomController.stepDown(from: zoomPercent) }) {
-                Image(systemName: "minus")
-            }.keyboardShortcut("-", modifiers: .command)
+            LutinIconButton(systemName: "minus", accessibilityLabel: "Zoom out") {
+                zoomPercent = ZoomController.stepDown(from: zoomPercent)
+            }
+            .keyboardShortcut("-", modifiers: .command)
             Text("\(zoomPercent)%")
                 .font(Typography.chromeSmall)
                 .frame(minWidth: 42)
-            Button(action: { zoomPercent = ZoomController.stepUp(from: zoomPercent) }) {
-                Image(systemName: "plus")
-            }.keyboardShortcut("+", modifiers: .command)
-            Button("Fit") {
+            LutinIconButton(systemName: "plus", accessibilityLabel: "Zoom in") {
+                zoomPercent = ZoomController.stepUp(from: zoomPercent)
+            }
+            .keyboardShortcut("+", modifiers: .command)
+            LutinButton("Fit") {
                 zoomPercent = ZoomController.fitPercent(canvas: canvasSize, pane: paneSize)
-            }.keyboardShortcut("0", modifiers: .command)
-            Button("100%") { zoomPercent = 100 }.keyboardShortcut("1", modifiers: .command)
+            }
+            .keyboardShortcut("0", modifiers: .command)
+            LutinButton("100%") { zoomPercent = 100 }
+            .keyboardShortcut("1", modifiers: .command)
         }
-        .buttonStyle(.plain)
         .padding(Tokens.spacing(.sm))
         .background(Tokens.color(.panelBackground))
         .overlay(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))

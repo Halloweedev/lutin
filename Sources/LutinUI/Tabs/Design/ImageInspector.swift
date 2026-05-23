@@ -21,7 +21,7 @@ public struct ImageInspector: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(6)
                             .background(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))
-                        Button("Choose…", action: pickFile)
+                        LutinButton("Choose…", action: pickFile)
                     }
                 }
                 HStack(spacing: Tokens.spacing(.sm)) {

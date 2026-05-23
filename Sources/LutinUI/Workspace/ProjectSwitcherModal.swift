@@ -52,7 +52,7 @@ public struct ProjectSwitcherModal: View {
                 }
             }
             Divider().frame(height: Tokens.Size.hairline).background(Tokens.color(.divider))
-            Button(action: addNewProject) {
+            LutinButton(role: .secondary, action: addNewProject) {
                 HStack(spacing: Tokens.spacing(.sm)) {
                     Image(systemName: "plus.square")
                         .font(.system(size: 16, weight: .regular))
@@ -72,9 +72,8 @@ public struct ProjectSwitcherModal: View {
                 .padding(Tokens.spacing(.md))
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
             Divider().frame(height: Tokens.Size.hairline).background(Tokens.color(.divider))
-            Button(action: linkExistingProject) {
+            LutinButton(role: .secondary, action: linkExistingProject) {
                 HStack(spacing: Tokens.spacing(.sm)) {
                     Image(systemName: "link")
                         .font(.system(size: 14, weight: .regular))
@@ -88,7 +87,6 @@ public struct ProjectSwitcherModal: View {
                 .padding(.vertical, Tokens.spacing(.sm))
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
         }
         .frame(width: 480, height: 360)
         .background(Tokens.color(.sheetBackground))

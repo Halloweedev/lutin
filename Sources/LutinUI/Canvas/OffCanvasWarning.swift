@@ -37,7 +37,8 @@ public struct OffCanvasStatusStrip: View {
     public var body: some View {
         let outsiders = OffCanvasDetection.outsiders(in: document.config)
         if !outsiders.isEmpty {
-            Button(action: { selectionModel.replace(with: [outsiders[0]]) }) {
+            LutinButton(role: .secondary,
+                        action: { selectionModel.replace(with: [outsiders[0]]) }) {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(Tokens.color(.offCanvasOutline))
@@ -51,7 +52,6 @@ public struct OffCanvasStatusStrip: View {
                 .padding(Tokens.spacing(.sm))
                 .background(Tokens.color(.panelBackground))
             }
-            .buttonStyle(.plain)
         }
     }
 }

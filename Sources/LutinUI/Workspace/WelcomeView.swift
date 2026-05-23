@@ -107,7 +107,7 @@ public struct WelcomeView: View {
 
     private func ctaRow(icon: String, title: String, subtitle: String,
                         shortcut: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        LutinButton(role: .secondary, action: action) {
             HStack(spacing: Tokens.spacing(.md)) {
                 Image(systemName: icon)
                     .font(.system(size: 20, weight: .regular))
@@ -127,7 +127,6 @@ public struct WelcomeView: View {
             .padding(.vertical, Tokens.spacing(.md))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -163,7 +162,7 @@ public struct WelcomeView: View {
     }
 
     private func recentRow(entry: RegistryEntry) -> some View {
-        Button(action: { onSelectRecent(entry.name) }) {
+        LutinButton(role: .secondary, action: { onSelectRecent(entry.name) }) {
             HStack(spacing: Tokens.spacing(.sm)) {
                 ZStack {
                     SquareShape()
@@ -190,6 +189,5 @@ public struct WelcomeView: View {
             .padding(.vertical, Tokens.spacing(.sm))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
     }
 }

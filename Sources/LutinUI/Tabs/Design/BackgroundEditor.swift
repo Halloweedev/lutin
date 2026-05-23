@@ -36,7 +36,8 @@ public struct BackgroundEditor: View {
     private var variantSegments: some View {
         HStack(spacing: 0) {
             ForEach(Variant.allCases) { v in
-                Button(action: { selectVariant(v) }) {
+                LutinButton(role: currentVariant == v ? .primary : .secondary,
+                            action: { selectVariant(v) }) {
                     Text(v.title)
                         .font(Typography.chromeSmall)
                         .frame(maxWidth: .infinity)
@@ -48,7 +49,6 @@ public struct BackgroundEditor: View {
                                     ? Tokens.color(.brandAccent)
                                     : Tokens.color(.canvasBackground))
                 }
-                .buttonStyle(.plain)
                 if v != Variant.allCases.last {
                     Rectangle()
                         .fill(Tokens.color(.divider))

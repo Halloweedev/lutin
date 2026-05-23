@@ -91,7 +91,7 @@ public struct CreateProjectSheet: View {
     }
 
     private var appPickerRow: some View {
-        Button(action: pickApp) {
+        LutinButton(role: .secondary, action: pickApp) {
             HStack(spacing: Tokens.spacing(.md)) {
                 Image(systemName: appPath.isEmpty ? "app.dashed" : "app.fill")
                     .font(.system(size: 22, weight: .regular))
@@ -119,7 +119,6 @@ public struct CreateProjectSheet: View {
                                           lineWidth: Tokens.Size.hairline))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -169,9 +168,9 @@ public struct CreateProjectSheet: View {
     private var buttons: some View {
         HStack {
             Spacer()
-            Button("Cancel") { dismiss() }
+            LutinButton("Cancel") { dismiss() }
                 .keyboardShortcut(.cancelAction)
-            Button("Create", action: create)
+            LutinButton("Create", role: .primary, action: create)
                 .keyboardShortcut(.defaultAction)
                 .disabled(!isValid)
         }

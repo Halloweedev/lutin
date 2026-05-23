@@ -17,44 +17,45 @@ public struct ToolbarActions: ToolbarContent {
     public var body: some ToolbarContent {
         ToolbarItem(placement: .primaryAction) {
             Menu {
-                Button("Add App…") { addLibrary(.app) }
-                Button("Add Applications folder") { addLibrary(.applications) }
-                Button("Add Image…") { addLibrary(.image) }
+                Button("Add App…") { addLibrary(.app) } // allow-menu-button
+                Button("Add Applications folder") { addLibrary(.applications) } // allow-menu-button
+                Button("Add Image…") { addLibrary(.image) } // allow-menu-button
             } label: {
                 Image(systemName: "plus")
             }
             .help("Add to canvas")
         }
         ToolbarItemGroup(placement: .principal) {
-            Button {
+            LutinIconButton(systemName: "play.fill", accessibilityLabel: "Build") {
                 Task { await runner.run(mode: .build,
                                          config: document.config,
                                          projectDirectory: document.projectDirectory) }
-            } label: { Label("Build", systemImage: "play.fill") }
-                .disabled(isRunning)
-                .tint(successPulse ? Tokens.color(.logSuccess) : nil)
-                .onChange(of: runner.state) { _, newValue in
-                    if case .succeeded = newValue {
-                        successPulse = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { successPulse = false }
-                    }
+            }
+            .disabled(isRunning)
+            .onChange(of: runner.state) { _, newValue in
+                if case .succeeded = newValue {
+                    successPulse = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { successPulse = false }
                 }
+            }
 
-            Button {
+            LutinIconButton(systemName: "eye.fill", accessibilityLabel: "Preview") {
                 Task { await runner.run(mode: .preview,
                                          config: document.config,
                                          projectDirectory: document.projectDirectory) }
-            } label: { Label("Preview", systemImage: "eye.fill") }
-                .disabled(isRunning)
+            }
+            .disabled(isRunning)
 
-            Button {
+            LutinIconButton(systemName: "shippingbox.fill", accessibilityLabel: "Release") {
                 Task { await runner.run(mode: .release,
                                          config: document.config,
                                          projectDirectory: document.projectDirectory) }
-            } label: { Label("Release", systemImage: "shippingbox.fill") }
-                .disabled(isRunning)
+            }
+            .disabled(isRunning)
 
-            Button { showingDoctor = true } label: { Label("Doctor", systemImage: "stethoscope") }
+            LutinIconButton(systemName: "stethoscope", accessibilityLabel: "Doctor") {
+                showingDoctor = true
+            }
         }
     }
 

@@ -64,8 +64,8 @@ public struct InspectorSection: View {
             Text("\(selectionModel.selection.count) selected")
                 .font(Typography.chrome)
                 .foregroundStyle(Tokens.color(.textPrimary))
-            Button("Hide all") { hideAll(true) }
-            Button("Show all") { hideAll(false) }
+            LutinButton("Hide all") { hideAll(true) }
+            LutinButton("Show all") { hideAll(false) }
         }
     }
 

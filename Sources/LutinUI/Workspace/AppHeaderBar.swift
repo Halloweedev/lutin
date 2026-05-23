@@ -32,7 +32,7 @@ public struct AppHeaderBar: View {
             // lights + their margin).
             Spacer().frame(width: 72)
 
-            Button(action: onTitleTap) {
+            LutinButton(role: .secondary, action: onTitleTap) {
                 HStack(spacing: 6) {
                     Text(title)
                         .font(.system(size: 15, weight: .semibold))
@@ -49,21 +49,14 @@ public struct AppHeaderBar: View {
                 .padding(.vertical, 4)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
             .keyboardShortcut("o", modifiers: .command)
 
             Spacer()
 
-            Button(action: { sidePanelHidden.toggle() }) {
-                Image(systemName: sidePanelHidden
-                      ? "sidebar.left"
-                      : "chevron.left.2")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Tokens.color(.textSecondary))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
+            LutinIconButton(systemName: sidePanelHidden ? "sidebar.left" : "chevron.left.2",
+                            accessibilityLabel: sidePanelHidden ? "Show side panel" : "Hide side panel") {
+                sidePanelHidden.toggle()
             }
-            .buttonStyle(.plain)
             .help(sidePanelHidden ? "Show side panel" : "Hide side panel")
         }
         .padding(.horizontal, Tokens.spacing(.md))

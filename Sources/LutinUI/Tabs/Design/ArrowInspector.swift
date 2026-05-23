@@ -21,10 +21,9 @@ public struct ArrowInspector: View {
                         .padding(.horizontal, 6).padding(.vertical, 3)
                         .background(Tokens.color(.brandAccentMuted))
                 }
-                Button(action: swap) {
-                    Image(systemName: "arrow.left.arrow.right")
-                }
-                .buttonStyle(.plain)
+                LutinIconButton(systemName: "arrow.left.arrow.right",
+                                accessibilityLabel: "Swap arrow direction",
+                                action: swap)
                 LabeledField(label: "To") {
                     Text(to).font(Typography.chromeSmall)
                         .padding(.horizontal, 6).padding(.vertical, 3)

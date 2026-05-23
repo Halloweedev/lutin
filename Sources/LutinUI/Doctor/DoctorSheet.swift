@@ -19,8 +19,8 @@ public struct DoctorSheet: View {
             HStack {
                 Text("Doctor").font(.title2.weight(.semibold))
                 Spacer()
-                Button("Re-run") { Task { await runChecks() } }.disabled(running)
-                Button("Done") { dismiss() }
+                LutinButton("Re-run") { Task { await runChecks() } }.disabled(running)
+                LutinButton("Done", role: .primary) { dismiss() }
             }
             if results.isEmpty && !running {
                 EmptyState(title: "Run checks to begin",

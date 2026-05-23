@@ -38,26 +38,19 @@ public struct PipelineDrawer: View {
             Spacer()
             if case .succeeded(let path) = runner.state {
                 let url = URL(fileURLWithPath: path)
-                Button {
+                LutinIconButton(systemName: "magnifyingglass", accessibilityLabel: "Reveal in Finder") {
                     AppKitBridges.revealInFinder(url)
-                } label: { Label("Reveal", systemImage: "magnifyingglass") }
-                .controlSize(.small)
-                Button {
+                }
+                LutinIconButton(systemName: "externaldrive", accessibilityLabel: "Open") {
                     AppKitBridges.open(url)
-                } label: { Label("Open", systemImage: "externaldrive") }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
+                }
             }
             if case .failed(let error) = runner.state {
-                Button("View details") {
+                LutinButton("View details") {
                     showError = IdentifiableLutinError(error: error)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
             }
-            Button(isExpanded ? "Hide" : "Show") { isExpanded.toggle() }
-                .buttonStyle(.borderless)
-                .font(Typography.chromeSmall)
+            LutinButton(isExpanded ? "Hide" : "Show") { isExpanded.toggle() }
         }
         .padding(.horizontal, Tokens.spacing(.lg))
         .padding(.vertical, Tokens.spacing(.sm))

@@ -26,16 +26,16 @@ public struct ConflictSheet: View {
             }
 
             HStack {
-                Button("Show diff") {
+                LutinButton("Show diff") {
                     if diff == nil { diff = try? resolver.computeDiff() }
                     showingDiff.toggle()
                 }
                 Spacer()
-                Button("Take disk") {
+                LutinButton("Take disk") {
                     try? resolver.takeDisk()
                     onResolved()
                 }
-                Button("Keep mine") {
+                LutinButton("Keep mine", role: .primary) {
                     try? resolver.keepMine()
                     onResolved()
                 }

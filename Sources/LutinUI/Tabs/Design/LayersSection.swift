@@ -42,12 +42,8 @@ public struct LayersSection: View {
                 .strikethrough(row.hidden, color: Tokens.color(.textTertiary))
                 .lineLimit(1)
             Spacer()
-            Button(action: { toggleHidden(row) }) {
-                Image(systemName: row.hidden ? "eye.slash" : "eye")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Tokens.color(.textSecondary))
-            }
-            .buttonStyle(.plain)
+            LutinIconButton(systemName: row.hidden ? "eye.slash" : "eye",
+                            accessibilityLabel: "Toggle layer visibility") { toggleHidden(row) }
         }
         .padding(.horizontal, Tokens.spacing(.md))
         .padding(.vertical, 4)

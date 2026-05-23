@@ -38,13 +38,13 @@ public struct ErrorSheet: View {
                 }
             }
             HStack {
-                Button("Copy as JSON") {
+                LutinButton("Copy as JSON") {
                     let json = (try? JSONEncoder().encode(error)).flatMap { String(data: $0, encoding: .utf8) } ?? ""
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(json, forType: .string)
                 }
                 Spacer()
-                Button("Dismiss") { onDismiss() }
+                LutinButton("Dismiss", role: .primary) { onDismiss() }
                     .keyboardShortcut(.defaultAction)
             }
         }

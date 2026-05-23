@@ -4,24 +4,24 @@ public struct LutinCommands: Commands {
     public init() {}
     public var body: some Commands {
         CommandGroup(replacing: .saveItem) {
-            Button("Save") { NotificationCenter.default.post(name: .lutinSave, object: nil) }
+            Button("Save") { NotificationCenter.default.post(name: .lutinSave, object: nil) } // allow-menu-button
                 .keyboardShortcut("s", modifiers: .command)
         }
         CommandGroup(replacing: .undoRedo) {
-            Button("Undo") { NotificationCenter.default.post(name: .lutinUndo, object: nil) }
+            Button("Undo") { NotificationCenter.default.post(name: .lutinUndo, object: nil) } // allow-menu-button
                 .keyboardShortcut("z", modifiers: .command)
-            Button("Redo") { NotificationCenter.default.post(name: .lutinRedo, object: nil) }
+            Button("Redo") { NotificationCenter.default.post(name: .lutinRedo, object: nil) } // allow-menu-button
                 .keyboardShortcut("z", modifiers: [.command, .shift])
         }
         CommandMenu("Item") {
-            Button("Select All") { NotificationCenter.default.post(name: .lutinSelectAll, object: nil) }
+            Button("Select All") { NotificationCenter.default.post(name: .lutinSelectAll, object: nil) } // allow-menu-button
                 .keyboardShortcut("a", modifiers: .command)
-            Button("Deselect All") { NotificationCenter.default.post(name: .lutinClearSelection, object: nil) }
+            Button("Deselect All") { NotificationCenter.default.post(name: .lutinClearSelection, object: nil) } // allow-menu-button
                 .keyboardShortcut("d", modifiers: [.command, .shift])
             Divider()
-            Button("Duplicate") { NotificationCenter.default.post(name: .lutinDuplicate, object: nil) }
+            Button("Duplicate") { NotificationCenter.default.post(name: .lutinDuplicate, object: nil) } // allow-menu-button
                 .keyboardShortcut("d", modifiers: .command)
-            Button("Delete") { NotificationCenter.default.post(name: .lutinDelete, object: nil) }
+            Button("Delete") { NotificationCenter.default.post(name: .lutinDelete, object: nil) } // allow-menu-button
                 .keyboardShortcut(.delete, modifiers: [])
         }
     }

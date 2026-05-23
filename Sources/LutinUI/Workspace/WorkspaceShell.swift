@@ -49,7 +49,7 @@ public struct WorkspaceShell: View {
         .background {
             // Hidden button to wire ⌘N globally without claiming a visible
             // toolbar slot — same pattern other commands use.
-            Button("New project") { showCreateNew = true }
+            LutinButton("New project", role: .primary) { showCreateNew = true }
                 .keyboardShortcut("n", modifiers: .command)
                 .opacity(0)
                 .frame(width: 0, height: 0)

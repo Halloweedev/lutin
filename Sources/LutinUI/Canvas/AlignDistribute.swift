@@ -82,20 +82,27 @@ public struct AlignDistributeToolbar: View {
 
     public var body: some View {
         HStack(spacing: Tokens.spacing(.xs)) {
-            Button(action: { run(.left) }) { Image(systemName: "align.horizontal.left") }
-            Button(action: { run(.centerHorizontal) }) { Image(systemName: "align.horizontal.center") }
-            Button(action: { run(.right) }) { Image(systemName: "align.horizontal.right") }
+            LutinIconButton(systemName: "align.horizontal.left",
+                            accessibilityLabel: "Align left edges") { run(.left) }
+            LutinIconButton(systemName: "align.horizontal.center",
+                            accessibilityLabel: "Align horizontal centers") { run(.centerHorizontal) }
+            LutinIconButton(systemName: "align.horizontal.right",
+                            accessibilityLabel: "Align right edges") { run(.right) }
             Divider().frame(height: 12)
-            Button(action: { run(.top) }) { Image(systemName: "align.vertical.top") }
-            Button(action: { run(.middleVertical) }) { Image(systemName: "align.vertical.center") }
-            Button(action: { run(.bottom) }) { Image(systemName: "align.vertical.bottom") }
+            LutinIconButton(systemName: "align.vertical.top",
+                            accessibilityLabel: "Align top edges") { run(.top) }
+            LutinIconButton(systemName: "align.vertical.center",
+                            accessibilityLabel: "Align vertical centers") { run(.middleVertical) }
+            LutinIconButton(systemName: "align.vertical.bottom",
+                            accessibilityLabel: "Align bottom edges") { run(.bottom) }
             if elements.count >= 3 {
                 Divider().frame(height: 12)
-                Button(action: { distribute(.horizontal) }) { Image(systemName: "distribute.horizontal") }
-                Button(action: { distribute(.vertical) }) { Image(systemName: "distribute.vertical") }
+                LutinIconButton(systemName: "distribute.horizontal",
+                                accessibilityLabel: "Distribute horizontally") { distribute(.horizontal) }
+                LutinIconButton(systemName: "distribute.vertical",
+                                accessibilityLabel: "Distribute vertically") { distribute(.vertical) }
             }
         }
-        .buttonStyle(.plain)
         .padding(Tokens.spacing(.sm))
         .background(Tokens.color(.panelBackground))
         .overlay(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))

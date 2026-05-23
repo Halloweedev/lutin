@@ -174,7 +174,7 @@ public struct PathPickerRow: View {
                 .background(SquareShape().fill(Tokens.color(.canvasBackground)))
                 .overlay(SquareShape().stroke(Tokens.color(.divider),
                                               lineWidth: Tokens.Size.hairline))
-            Button("Choose…", action: onPick)
+            LutinButton("Choose…", action: onPick)
         }
     }
 }
