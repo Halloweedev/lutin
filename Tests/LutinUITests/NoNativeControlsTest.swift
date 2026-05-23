@@ -18,7 +18,8 @@ final class NoNativeControlsTest: XCTestCase {
     private static let bannedPrimitives: [String] = [
         "Button",
         "TextField",
-        // "Toggle", "Stepper", "Picker", "Slider"
+        "Toggle",
+        // "Stepper", "Picker", "Slider"
         // Filled in as each migration task lands.
     ]
 
