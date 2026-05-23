@@ -7,54 +7,62 @@ public struct ProjectTab: View {
     public init(document: LutinProjectDocument) { self.document = document }
 
     public var body: some View {
-        Form {
-            Section {
-                TextField("Project name", text: Binding(
-                    get: { document.config.project.name },
-                    set: { try? document.apply(.setProjectMetadata(name: $0,
-                                                                    bundleId: document.config.project.bundleId)) }))
-                TextField("Bundle identifier", text: Binding(
-                    get: { document.config.project.bundleId },
-                    set: { try? document.apply(.setProjectMetadata(name: document.config.project.name,
-                                                                    bundleId: $0)) }))
-                HStack {
-                    Text("App path")
-                    Spacer()
-                    Text(document.config.app.path).lineLimit(1).truncationMode(.middle)
-                        .foregroundStyle(Tokens.color(.textSecondary))
-                    Button("Choose…", action: pickApp)
+        TabBody {
+            SettingsSection("Identity") {
+                SettingsField("Project name") {
+                    SettingsTextField("", text: Binding(
+                        get: { document.config.project.name },
+                        set: { try? document.apply(.setProjectMetadata(
+                            name: $0,
+                            bundleId: document.config.project.bundleId)) }))
                 }
-            } header: { Text("Identity").font(Typography.chromeSmall) }
+                SettingsField("Bundle identifier",
+                              helper: "Reverse-DNS, e.g. com.example.myapp") {
+                    SettingsTextField("com.example.myapp", text: Binding(
+                        get: { document.config.project.bundleId },
+                        set: { try? document.apply(.setProjectMetadata(
+                            name: document.config.project.name,
+                            bundleId: $0)) }))
+                }
+                SettingsField("App bundle (.app)") {
+                    PathPickerRow(value: document.config.app.path,
+                                  placeholder: "No .app chosen",
+                                  onPick: pickApp)
+                }
+            }
 
-            Section {
-                HStack {
-                    Text("Directory")
-                    Spacer()
-                    Text(document.config.output.directory).lineLimit(1).truncationMode(.middle)
-                        .foregroundStyle(Tokens.color(.textSecondary))
-                    Button("Choose…", action: pickOutputDir)
+            SettingsSection("Output",
+                            footer: "DMG name tokens: ${version} and ${build} are filled at build time.") {
+                SettingsField("Directory") {
+                    PathPickerRow(value: document.config.output.directory,
+                                  placeholder: "Pick a folder",
+                                  onPick: pickOutputDir)
                 }
-                TextField("DMG name", text: Binding(
-                    get: { document.config.output.dmgName },
-                    set: { try? document.apply(.setOutput(directory: document.config.output.directory,
-                                                          dmgName: $0,
-                                                          volumeName: document.config.output.volumeName)) }))
-                Text("Tokens: ${version}, ${build}")
-                    .font(Typography.chromeSmall).foregroundStyle(Tokens.color(.textTertiary))
-                TextField("Volume name", text: Binding(
-                    get: { document.config.output.volumeName },
-                    set: { try? document.apply(.setOutput(directory: document.config.output.directory,
-                                                          dmgName: document.config.output.dmgName,
-                                                          volumeName: $0)) }))
-            } header: { Text("Output").font(Typography.chromeSmall) }
+                SettingsField("DMG name") {
+                    SettingsTextField("MyApp-${version}.dmg", text: Binding(
+                        get: { document.config.output.dmgName },
+                        set: { try? document.apply(.setOutput(
+                            directory: document.config.output.directory,
+                            dmgName: $0,
+                            volumeName: document.config.output.volumeName)) }))
+                }
+                SettingsField("Volume name",
+                              helper: "Title shown in Finder when the DMG mounts.") {
+                    SettingsTextField("MyApp", text: Binding(
+                        get: { document.config.output.volumeName },
+                        set: { try? document.apply(.setOutput(
+                            directory: document.config.output.directory,
+                            dmgName: document.config.output.dmgName,
+                            volumeName: $0)) }))
+                }
+            }
         }
-        .formStyle(.grouped)
-        .background(Tokens.color(.panelBackground))
     }
 
     private func pickApp() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.applicationBundle]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         try? document.apply(.setApp(path: url.path))
     }

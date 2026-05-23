@@ -8,34 +8,49 @@ public struct WindowTab: View {
     public init(document: LutinProjectDocument) { self.document = document }
 
     public var body: some View {
-        Form {
-            Section {
-                Stepper("Width: \(window.width ?? 680) pt",
-                        value: widthBinding, in: 320...2048, step: 10)
-                Stepper("Height: \(window.height ?? 420) pt",
-                        value: heightBinding, in: 240...1536, step: 10)
-                Text("\(window.width ?? 680) × \(window.height ?? 420) pt — DMG window opens at this size")
-                    .font(Typography.chromeSmall)
-                    .foregroundStyle(Tokens.color(.textTertiary))
-            } header: { Text("Dimensions").font(Typography.chromeSmall) }
+        TabBody {
+            SettingsSection("Dimensions",
+                            footer: "Window opens at this size when the DMG mounts.") {
+                SettingsField("Width") {
+                    Stepper(value: widthBinding, in: 320...2048, step: 10) {
+                        Text("\(window.width ?? 680) pt").font(Typography.chromeSmall)
+                    }
+                }
+                SettingsField("Height") {
+                    Stepper(value: heightBinding, in: 240...1536, step: 10) {
+                        Text("\(window.height ?? 420) pt").font(Typography.chromeSmall)
+                    }
+                }
+            }
 
-            Section {
-                Stepper("Icon size: \(window.iconSize ?? 96) pt",
-                        value: iconSizeBinding, in: 32...256, step: 8)
-                Stepper("Text size: \(window.textSize ?? 12) pt",
-                        value: textSizeBinding, in: 8...32, step: 1)
-                Toggle("Show toolbar", isOn: showToolbarBinding)
-                Toggle("Show sidebar", isOn: showSidebarBinding)
-            } header: { Text("Chrome").font(Typography.chromeSmall) }
+            SettingsSection("Icons & Labels") {
+                SettingsField("Icon size") {
+                    Stepper(value: iconSizeBinding, in: 32...256, step: 8) {
+                        Text("\(window.iconSize ?? 96) pt").font(Typography.chromeSmall)
+                    }
+                }
+                SettingsField("Text size") {
+                    Stepper(value: textSizeBinding, in: 8...32, step: 1) {
+                        Text("\(window.textSize ?? 12) pt").font(Typography.chromeSmall)
+                    }
+                }
+            }
+
+            SettingsSection("Chrome") {
+                SettingsField("Show toolbar") {
+                    Toggle("", isOn: showToolbarBinding).labelsHidden()
+                }
+                SettingsField("Show sidebar") {
+                    Toggle("", isOn: showSidebarBinding).labelsHidden()
+                }
+            }
         }
-        .formStyle(.grouped)
-        .background(Tokens.color(.panelBackground))
     }
 
     private var window: LutinConfig.WindowInfo { document.config.window ?? defaultWindow }
     private var defaultWindow: LutinConfig.WindowInfo {
-        LutinConfig.WindowInfo(width: nil, height: nil, iconSize: nil, textSize: nil,
-                               showToolbar: nil, showSidebar: nil)
+        LutinConfig.WindowInfo(width: nil, height: nil, iconSize: nil,
+                               textSize: nil, showToolbar: nil, showSidebar: nil)
     }
 
     private var widthBinding: Binding<Int> {
