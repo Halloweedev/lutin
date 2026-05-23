@@ -16,7 +16,14 @@ public struct ArrowLayer: View {
 
     public var body: some View {
         let items = document.config.items ?? []
-        let arrows = (document.config.decorations ?? []).filter { $0.type == "arrow" }
+        let hiddenIDs = Set(items.filter { $0.hidden ?? false }.map(\.id))
+        let arrows = (document.config.decorations ?? []).filter {
+            guard $0.type == "arrow" else { return false }
+            // Hide arrows whose source or destination item is hidden.
+            if let from = $0.from, hiddenIDs.contains(from) { return false }
+            if let to = $0.to, hiddenIDs.contains(to) { return false }
+            return true
+        }
         ZStack {
             ForEach(Array(arrows.enumerated()), id: \.offset) { _, deco in
                 if let from = deco.from, let to = deco.to,
