@@ -51,6 +51,7 @@ public struct EditorRail: View {
         LutinIconButton(systemName: "shippingbox.fill",
                         accessibilityLabel: "Open project switcher",
                         action: onOpenSwitcher)
+        .frame(height: 28)
         .help("Projects… (⌘O)")
     }
 
@@ -61,12 +62,13 @@ public struct EditorRail: View {
         HStack(spacing: 0) {
             Rectangle()
                 .fill(isSelected ? Tokens.color(.brandAccent) : Color.clear)
-                .frame(width: 3)
+                .frame(width: 3, height: 28)
             LutinIconButton(systemName: systemImage,
                             accessibilityLabel: tooltip,
                             action: action)
                 .frame(maxWidth: .infinity)
         }
+        .frame(height: 28)
         .help(tooltip)
     }
 
