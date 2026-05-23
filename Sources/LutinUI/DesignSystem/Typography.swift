@@ -8,4 +8,5 @@ public enum Typography {
     public static let canvasLabel = Font.system(.caption2)
     public static let logLine = Font.system(.callout, design: .monospaced)
     public static let drawerStage = Font.system(.callout).weight(.medium)
+    public static let controlLabel = Font.system(size: 13, weight: .medium)
 }

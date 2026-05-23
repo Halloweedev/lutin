@@ -27,6 +27,7 @@ public enum Tokens {
         case textPrimary
         case textSecondary
         case textTertiary
+        case textOnAccent
 
         // Accent — new v2 (camelCase colorsets)
         case brandAccentMuted
