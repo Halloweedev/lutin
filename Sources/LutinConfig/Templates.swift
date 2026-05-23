@@ -29,39 +29,38 @@ public struct Template {
 }
 
 public enum Templates {
-    /// Sub-project 1 ships one usable template; the renderer adds the rest in SP3.
     private static let all: [String: Template] = [
         "blueprint": Template(
             name: "blueprint",
             window: .init(width: 680, height: 420, iconSize: 96,
                           textSize: 13, showToolbar: false, showSidebar: false),
-            background: .init(type: "generated", template: "blueprint", scale: 2,
-                              colorA: "#EEF4FF", colorB: "#DDE8FF", grid: true,
-                              noise: 0.035, cornerRadius: 28)
+            background: .init(type: "solid", template: "", scale: 2,
+                              colorA: "#EEF4FF", colorB: "#EEF4FF", grid: false,
+                              noise: 0.0, cornerRadius: 0)
         ),
         "minimal": Template(
             name: "minimal",
             window: .init(width: 600, height: 400, iconSize: 96,
                           textSize: 13, showToolbar: false, showSidebar: false),
-            background: .init(type: "generated", template: "minimal", scale: 2,
-                              colorA: "#FFFFFF", colorB: "#F2F2F2", grid: false,
-                              noise: 0.0, cornerRadius: 24)
+            background: .init(type: "solid", template: "", scale: 2,
+                              colorA: "#FFFFFF", colorB: "#FFFFFF", grid: false,
+                              noise: 0.0, cornerRadius: 0)
         ),
         "dark": Template(
             name: "dark",
             window: .init(width: 680, height: 420, iconSize: 96,
                           textSize: 13, showToolbar: false, showSidebar: false),
-            background: .init(type: "generated", template: "dark", scale: 2,
-                              colorA: "#2A2D3A", colorB: "#1C1E26", grid: true,
-                              noise: 0.03, cornerRadius: 28)
+            background: .init(type: "solid", template: "", scale: 2,
+                              colorA: "#1C1E26", colorB: "#1C1E26", grid: false,
+                              noise: 0.0, cornerRadius: 0)
         ),
         "warm": Template(
             name: "warm",
             window: .init(width: 640, height: 400, iconSize: 96,
                           textSize: 13, showToolbar: false, showSidebar: false),
-            background: .init(type: "generated", template: "warm", scale: 2,
-                              colorA: "#FBEFE6", colorB: "#F3DCC9", grid: false,
-                              noise: 0.02, cornerRadius: 26)
+            background: .init(type: "solid", template: "", scale: 2,
+                              colorA: "#FBEFE6", colorB: "#FBEFE6", grid: false,
+                              noise: 0.0, cornerRadius: 0)
         ),
     ]
 
@@ -80,9 +79,11 @@ public enum Templates {
 
     /// Fills missing `window`/`background` fields from the named template.
     /// The template name is `config.background?.template`, defaulting to `blueprint`.
+    /// An empty or absent `template` field both fall back to `defaultTemplateName`.
     public static func applyDefaults(to config: LutinConfig) throws -> LutinConfig {
         var result = config
-        let template = try named(config.background?.template ?? defaultTemplateName)
+        let templateName = config.background?.template.flatMap { $0.isEmpty ? nil : $0 } ?? defaultTemplateName
+        let template = try named(templateName)
         let w = template.window
         let b = template.background
 
