@@ -33,18 +33,16 @@ public struct ItemInspector: View {
                 }
                 HStack(spacing: Tokens.spacing(.sm)) {
                     LabeledField(label: "x") {
-                        TextField("", value: Binding(  // allow-menu-button: numeric value:format: — needs LutinNumericField (not yet built)
+                        LutinNumericField("", value: Binding(
                             get: { item.x },
                             set: { try? document.apply(.moveItem(id: itemID, x: $0, y: item.y)) }),
-                            format: .number).textFieldStyle(.plain).padding(6)
-                            .background(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))
+                            format: .number)
                     }
                     LabeledField(label: "y") {
-                        TextField("", value: Binding(  // allow-menu-button: numeric value:format: — needs LutinNumericField (not yet built)
+                        LutinNumericField("", value: Binding(
                             get: { item.y },
                             set: { try? document.apply(.moveItem(id: itemID, x: item.x, y: $0)) }),
-                            format: .number).textFieldStyle(.plain).padding(6)
-                            .background(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))
+                            format: .number)
                     }
                 }
                 LabeledField(label: "Label") {

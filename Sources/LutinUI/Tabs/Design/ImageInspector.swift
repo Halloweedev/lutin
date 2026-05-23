@@ -26,34 +26,31 @@ public struct ImageInspector: View {
                 }
                 HStack(spacing: Tokens.spacing(.sm)) {
                     LabeledField(label: "x") {
-                        TextField("", value: Binding(  // allow-menu-button: numeric value:format: — needs LutinNumericField (not yet built)
+                        LutinNumericField("", value: Binding(
                             get: { deco.x ?? 0 },
                             set: { try? document.apply(.moveImageDecoration(index: index,
                                                                             x: $0,
                                                                             y: deco.y ?? 0,
                                                                             width: deco.width ?? 100)) }),
-                            format: .number).textFieldStyle(.plain).padding(6)
-                            .background(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))
+                            format: .number)
                     }
                     LabeledField(label: "y") {
-                        TextField("", value: Binding(  // allow-menu-button: numeric value:format: — needs LutinNumericField (not yet built)
+                        LutinNumericField("", value: Binding(
                             get: { deco.y ?? 0 },
                             set: { try? document.apply(.moveImageDecoration(index: index,
                                                                             x: deco.x ?? 0,
                                                                             y: $0,
                                                                             width: deco.width ?? 100)) }),
-                            format: .number).textFieldStyle(.plain).padding(6)
-                            .background(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))
+                            format: .number)
                     }
                     LabeledField(label: "w") {
-                        TextField("", value: Binding(  // allow-menu-button: numeric value:format: — needs LutinNumericField (not yet built)
+                        LutinNumericField("", value: Binding(
                             get: { deco.width ?? 100 },
                             set: { try? document.apply(.moveImageDecoration(index: index,
                                                                             x: deco.x ?? 0,
                                                                             y: deco.y ?? 0,
                                                                             width: $0)) }),
-                            format: .number).textFieldStyle(.plain).padding(6)
-                            .background(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))
+                            format: .number)
                     }
                 }
                 Toggle("Hidden", isOn: Binding(
