@@ -2,16 +2,20 @@ import SwiftUI
 import AppKit
 import LutinDocument
 
-/// Modal sheet for creating a brand-new project. Writes `lutin.yml` under
-/// `~/Lutin/<slug>/` via `ProjectBootstrap.create(...)` and hands the
-/// resulting URL back to the workspace via `onCreate`.
+/// Modal sheet for creating a brand-new project. Picking a `.app` is the
+/// first/primary action — the bundle's `Info.plist` populates the other
+/// fields. Writes `lutin.yml` under `~/Lutin/<slug>/` via
+/// `ProjectBootstrap.create(...)` and hands the resulting URL back to the
+/// workspace via `onCreate`.
 public struct CreateProjectSheet: View {
     @Environment(\.dismiss) private var dismiss
     let onCreate: (URL, String) -> Void
 
+    @State private var appPath: String = ""
+    @State private var appVersion: String?
+    @State private var appBuild: String?
     @State private var projectName: String = ""
     @State private var bundleId: String = ""
-    @State private var appPath: String = ""
     @State private var windowWidth: Int = 680
     @State private var windowHeight: Int = 420
     @State private var error: String?
@@ -28,7 +32,7 @@ public struct CreateProjectSheet: View {
             Divider().frame(height: Tokens.Size.hairline).background(Tokens.color(.divider))
             buttons
         }
-        .frame(width: 520)
+        .frame(width: 540)
         .background(Tokens.color(.sheetBackground))
     }
 
@@ -46,65 +50,28 @@ public struct CreateProjectSheet: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: Tokens.spacing(.md)) {
-            labeled("Project name") {
-                TextField("", text: Binding(
-                    get: { projectName },
-                    set: { v in
-                        projectName = v
-                        // Auto-suggest bundle id only while user hasn't
-                        // diverged from the default reverse-DNS shape.
-                        if bundleId.isEmpty || bundleId.hasPrefix("com.example.") {
-                            bundleId = ProjectBootstrap.suggestedBundleId(for: v)
-                        }
-                    }))
-                    .textFieldStyle(.plain)
-                    .padding(6)
-                    .background(SquareShape().stroke(Tokens.color(.divider),
-                                                     lineWidth: Tokens.Size.hairline))
-            }
-            labeled("Bundle identifier") {
-                TextField("com.example.appname", text: $bundleId)
-                    .textFieldStyle(.plain)
-                    .padding(6)
-                    .background(SquareShape().stroke(Tokens.color(.divider),
-                                                     lineWidth: Tokens.Size.hairline))
-            }
-            labeled("App bundle (.app)") {
-                HStack {
-                    Text(appPath.isEmpty ? "Not chosen" : appPath)
-                        .font(Typography.chromeSmall)
-                        .foregroundStyle(appPath.isEmpty
-                                         ? Tokens.color(.textTertiary)
-                                         : Tokens.color(.textPrimary))
-                        .lineLimit(1).truncationMode(.middle)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            // 1. The .app bundle — the source of truth for everything else.
+            appPickerRow
+            if !appPath.isEmpty {
+                // 2. Auto-filled metadata. Editable for the rare case the
+                //    user wants to deviate from what's in Info.plist.
+                labeled("Project name") {
+                    TextField("", text: $projectName)
+                        .textFieldStyle(.plain)
                         .padding(6)
                         .background(SquareShape().stroke(Tokens.color(.divider),
                                                          lineWidth: Tokens.Size.hairline))
-                    Button("Choose…", action: pickApp)
                 }
-            }
-            HStack(spacing: Tokens.spacing(.md)) {
-                labeled("Window width") {
-                    Stepper(value: $windowWidth, in: 320...2048, step: 10) {
-                        Text("\(windowWidth) pt").font(Typography.chromeSmall)
-                    }
+                labeled("Bundle identifier") {
+                    TextField("com.example.appname", text: $bundleId)
+                        .textFieldStyle(.plain)
+                        .padding(6)
+                        .background(SquareShape().stroke(Tokens.color(.divider),
+                                                         lineWidth: Tokens.Size.hairline))
                 }
-                labeled("Window height") {
-                    Stepper(value: $windowHeight, in: 240...1536, step: 10) {
-                        Text("\(windowHeight) pt").font(Typography.chromeSmall)
-                    }
-                }
-            }
-            HStack(spacing: 4) {
-                Image(systemName: "folder")
-                    .foregroundStyle(Tokens.color(.textTertiary))
-                Text("Project lives at:")
-                    .font(Typography.chromeSmall)
-                    .foregroundStyle(Tokens.color(.textSecondary))
-                Text(projectLocationPreview)
-                    .font(Typography.chromeSmall)
-                    .foregroundStyle(Tokens.color(.textPrimary))
+                versionRow
+                windowSizeRow
+                locationRow
             }
             if let error {
                 Text(error)
@@ -113,6 +80,82 @@ public struct CreateProjectSheet: View {
             }
         }
         .padding(Tokens.spacing(.md))
+    }
+
+    private var appPickerRow: some View {
+        Button(action: pickApp) {
+            HStack(spacing: Tokens.spacing(.md)) {
+                Image(systemName: appPath.isEmpty ? "app.dashed" : "app.fill")
+                    .font(.system(size: 22, weight: .regular))
+                    .foregroundStyle(Tokens.color(.brandAccent))
+                    .frame(width: 32)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(appPath.isEmpty ? "Choose a .app to package" : "Selected .app")
+                        .font(Typography.chrome)
+                        .foregroundStyle(Tokens.color(.textPrimary))
+                    Text(appPath.isEmpty
+                         ? "We'll read its bundle id, name, and version from Info.plist"
+                         : appPath)
+                        .font(Typography.chromeSmall)
+                        .foregroundStyle(Tokens.color(.textSecondary))
+                        .lineLimit(1).truncationMode(.middle)
+                }
+                Spacer()
+                Text(appPath.isEmpty ? "Choose…" : "Change…")
+                    .font(Typography.chromeSmall)
+                    .foregroundStyle(Tokens.color(.brandAccent))
+            }
+            .padding(Tokens.spacing(.md))
+            .background(Tokens.color(.panelBackground))
+            .overlay(SquareShape().stroke(Tokens.color(.divider),
+                                          lineWidth: Tokens.Size.hairline))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var versionRow: some View {
+        if appVersion != nil || appBuild != nil {
+            HStack(spacing: 4) {
+                Image(systemName: "tag")
+                    .foregroundStyle(Tokens.color(.textTertiary))
+                Text("Detected version:")
+                    .font(Typography.chromeSmall)
+                    .foregroundStyle(Tokens.color(.textSecondary))
+                Text((appVersion ?? "—") + (appBuild.map { " (\($0))" } ?? ""))
+                    .font(Typography.chromeSmall)
+                    .foregroundStyle(Tokens.color(.textPrimary))
+            }
+        }
+    }
+
+    private var windowSizeRow: some View {
+        HStack(spacing: Tokens.spacing(.md)) {
+            labeled("Window width") {
+                Stepper(value: $windowWidth, in: 320...2048, step: 10) {
+                    Text("\(windowWidth) pt").font(Typography.chromeSmall)
+                }
+            }
+            labeled("Window height") {
+                Stepper(value: $windowHeight, in: 240...1536, step: 10) {
+                    Text("\(windowHeight) pt").font(Typography.chromeSmall)
+                }
+            }
+        }
+    }
+
+    private var locationRow: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "folder")
+                .foregroundStyle(Tokens.color(.textTertiary))
+            Text("Project lives at:")
+                .font(Typography.chromeSmall)
+                .foregroundStyle(Tokens.color(.textSecondary))
+            Text(projectLocationPreview)
+                .font(Typography.chromeSmall)
+                .foregroundStyle(Tokens.color(.textPrimary))
+        }
     }
 
     private var buttons: some View {
@@ -151,12 +194,26 @@ public struct CreateProjectSheet: View {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.applicationBundle]
         panel.allowsMultipleSelection = false
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         appPath = url.path
-        // Auto-fill name + bundle id from the picked .app if empty.
-        if projectName.isEmpty {
-            projectName = url.deletingPathExtension().lastPathComponent
-            bundleId = ProjectBootstrap.suggestedBundleId(for: projectName)
+        // Read the Info.plist. On success, overwrite name + bundleId from
+        // the real values. On failure, fall back to filename slug + suggested
+        // bundle id and surface a soft warning.
+        do {
+            let meta = try AppBundleInfo.read(url)
+            projectName = meta.displayName
+            bundleId = meta.bundleIdentifier
+            appVersion = meta.shortVersion
+            appBuild = meta.build
+            error = nil
+        } catch {
+            let fallback = url.deletingPathExtension().lastPathComponent
+            projectName = fallback
+            bundleId = ProjectBootstrap.suggestedBundleId(for: fallback)
+            appVersion = nil
+            appBuild = nil
+            self.error = "Couldn't read Info.plist (\(String(describing: error))). Using filename fallback."
         }
     }
 
