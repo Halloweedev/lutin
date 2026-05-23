@@ -25,6 +25,7 @@ public struct WorkspaceShell: View {
             Group {
                 if let document {
                     ProjectWorkspace(document: document,
+                                     projectName: currentProjectName,
                                      editorState: editorStateStore.state(forConfigPath: document.configURL.path),
                                      showingDoctor: $showingDoctor,
                                      sidePanelHidden: $sidePanelHidden)
@@ -89,6 +90,10 @@ public struct WorkspaceShell: View {
         }
     }
 
+    private var currentProjectName: String {
+        selectedEntryName ?? "No project"
+    }
+
     private func loadDocument(named name: String?) {
         guard let name,
               let entry = registryStore.entries.first(where: { $0.entry.name == name })?.entry else {
@@ -109,6 +114,7 @@ public struct WorkspaceShell: View {
 
 private struct ProjectWorkspace: View {
     let document: LutinProjectDocument
+    let projectName: String
     @Bindable var editorState: EditorState
     @Binding var showingDoctor: Bool
     @Binding var sidePanelHidden: Bool
@@ -124,6 +130,38 @@ private struct ProjectWorkspace: View {
             if !sidePanelHidden {
                 SidePanel(width: $editorState.sidePanelWidth) {
                     VStack(spacing: 0) {
+                        // Project switcher + collapse control
+                        HStack(spacing: Tokens.spacing(.sm)) {
+                            LutinButton(role: .secondary, action: {
+                                NotificationCenter.default.post(name: .lutinOpenSwitcher, object: nil)
+                            }) {
+                                HStack(spacing: 6) {
+                                    Text(projectName)
+                                        .font(Typography.controlLabel)
+                                        .foregroundStyle(Tokens.color(.textPrimary))
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundStyle(Tokens.color(.textTertiary))
+                                }
+                                .padding(.horizontal, Tokens.spacing(.sm))
+                                .padding(.vertical, Tokens.spacing(.xs))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            LutinIconButton(systemName: "chevron.left.2",
+                                            accessibilityLabel: "Hide sidebar",
+                                            action: { sidePanelHidden = true })
+                        }
+                        .padding(.horizontal, Tokens.spacing(.sm))
+                        .padding(.vertical, Tokens.spacing(.xs))
+                        .background(Tokens.color(.panelBackground))
+                        .overlay(alignment: .bottom) {
+                            Rectangle()
+                                .fill(Tokens.color(.divider))
+                                .frame(height: Tokens.Size.hairline)
+                        }
+
                         PanelHeader(editorState.selectedTab.title)
                         TabPanelHost(document: document,
                                      editorState: editorState,
