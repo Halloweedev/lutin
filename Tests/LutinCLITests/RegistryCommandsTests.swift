@@ -14,7 +14,7 @@ final class RegistryCommandsTests: XCTestCase {
 
         let result = try CommandLogic.initProject(
             directory: projectDir, appPath: appURL.path,
-            template: "blueprint", registry: registry, dryRun: false)
+            template: "minimal", registry: registry, dryRun: false)
 
         XCTAssertEqual(result.projectName, "Barry")
         XCTAssertEqual(result.bundleId, "com.anotheragence.barry")
@@ -32,7 +32,7 @@ final class RegistryCommandsTests: XCTestCase {
 
         _ = try CommandLogic.initProject(
             directory: projectDir, appPath: appURL.path,
-            template: "blueprint", registry: registry, dryRun: true)
+            template: "minimal", registry: registry, dryRun: true)
 
         XCTAssertFalse(FileManager.default.fileExists(
             atPath: projectDir.appendingPathComponent("lutin.yml").path))

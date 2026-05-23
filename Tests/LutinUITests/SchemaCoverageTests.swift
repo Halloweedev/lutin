@@ -11,7 +11,7 @@ final class SchemaCoverageTests: XCTestCase {
                                     outputDir: "o", dmgName: "x.dmg", volumeName: "X")
         cfg.window = LutinConfig.WindowInfo(width: 680, height: 420, iconSize: 96,
                                             textSize: 12, showToolbar: true, showSidebar: false)
-        cfg.background = LutinConfig.BackgroundInfo(type: "template", template: "blueprint",
+        cfg.background = LutinConfig.BackgroundInfo(type: "solid", template: "legacy",
                                                     path: "./bg.png", scale: 2,
                                                     colorA: "#fff", colorB: "#000",
                                                     grid: true, noise: 0.1,

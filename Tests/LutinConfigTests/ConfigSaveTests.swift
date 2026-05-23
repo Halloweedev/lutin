@@ -9,7 +9,7 @@ final class ConfigSaveTests: XCTestCase {
             app: .init(path: "./Barry.app"),
             output: .init(directory: "./release", dmgName: "Barry-${version}.dmg", volumeName: "Barry"),
             window: nil, background: LutinConfig.BackgroundInfo(
-                type: nil, template: "blueprint", path: nil, scale: nil, colorA: nil,
+                type: nil, template: "legacy-unknown-name", path: nil, scale: nil, colorA: nil,
                 colorB: nil, grid: nil, noise: nil, cornerRadius: nil),
             items: nil, decorations: nil, signing: nil, notarization: nil, sparkle: nil
         )
@@ -26,6 +26,7 @@ final class ConfigSaveTests: XCTestCase {
         let reloaded = try LutinConfig.load(from: url)
         XCTAssertEqual(reloaded.project.name, "Barry")
         XCTAssertEqual(reloaded.output.dmgName, "Barry-${version}.dmg")
-        XCTAssertEqual(reloaded.background?.template, "blueprint")
+        // Arbitrary template strings round-trip unchanged (they are legacy no-ops).
+        XCTAssertEqual(reloaded.background?.template, "legacy-unknown-name")
     }
 }

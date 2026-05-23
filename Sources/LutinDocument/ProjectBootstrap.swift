@@ -14,7 +14,7 @@ public enum ProjectBootstrap {
         public let windowHeight: Int
 
         public init(projectName: String, bundleId: String, appPath: String,
-                    windowWidth: Int = 680, windowHeight: Int = 420) {
+                    windowWidth: Int = 600, windowHeight: Int = 400) {
             self.projectName = projectName
             self.bundleId = bundleId
             self.appPath = appPath
@@ -80,11 +80,11 @@ public enum ProjectBootstrap {
             showToolbar: nil,
             showSidebar: nil)
         let background = LutinConfig.BackgroundInfo(
-            type: "template",
-            template: "blueprint",
+            type: "solid",
+            template: "minimal",
             path: nil,
             scale: 2,
-            colorA: nil,
+            colorA: "#FFFFFF",
             colorB: nil,
             grid: nil,
             noise: nil,

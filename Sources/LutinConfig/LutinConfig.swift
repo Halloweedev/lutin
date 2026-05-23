@@ -71,9 +71,9 @@ public struct LutinConfig: Codable, Equatable {
         /// Legacy value `"generated"` is decoded and treated as `"solid"` by
         /// both the renderer and the UI — no pattern or grid is applied.
         public var type: String?
-        /// **Legacy / no-op.** Previously selected a named pattern (e.g.
-        /// `"blueprint"`). Retained for round-trip decode/encode of old project
-        /// files; the renderer ignores it. New projects set this to `""`.
+        /// **Legacy / no-op.** Previously selected a named preset by name.
+        /// Retained for round-trip decode/encode of old project files; the
+        /// renderer ignores it. New projects set this to `""`.
         public var template: String?
         public var path: String?
         public var scale: Int?
@@ -81,7 +81,7 @@ public struct LutinConfig: Codable, Equatable {
         public var colorB: String?
         /// **Reserved for future image-overlay support.** The renderer does not
         /// currently honour this field for `solid` or `gradient` backgrounds.
-        /// It was previously used to draw a blueprint-style grid — that
+        /// It was previously used to draw a decorative grid overlay — that
         /// behaviour has been removed.
         public var grid: Bool?
         public var noise: Double?

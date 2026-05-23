@@ -10,7 +10,7 @@ final class ConfigLoadTests: XCTestCase {
         XCTAssertEqual(config.project.bundleId, "com.anotheragence.barry")
         XCTAssertEqual(config.app.path, "./Barry.app")
         XCTAssertEqual(config.output.dmgName, "Barry-${version}.dmg")
-        XCTAssertEqual(config.background?.template, "blueprint")
+        XCTAssertNil(config.background?.template)    // fixture now uses explicit solid, no template name
         XCTAssertNil(config.window)              // not present in fixture
     }
 

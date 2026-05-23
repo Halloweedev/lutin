@@ -5,10 +5,10 @@ import LutinCore
 
 final class TemplatesTests: XCTestCase {
     func testKnownTemplateLookup() throws {
-        let blueprint = try Templates.named("blueprint")
-        XCTAssertEqual(blueprint.window.width, 680)
-        XCTAssertEqual(blueprint.background.type, "solid")
-        XCTAssertEqual(blueprint.background.colorA, "#FFFFFF")
+        let minimal = try Templates.named("minimal")
+        XCTAssertEqual(minimal.window.width, 600)
+        XCTAssertEqual(minimal.background.type, "solid")
+        XCTAssertEqual(minimal.background.colorA, "#FFFFFF")
     }
 
     func testUnknownTemplateThrows() {
@@ -21,9 +21,9 @@ final class TemplatesTests: XCTestCase {
         var config = try LutinConfig.load(from: Fixtures.barryConfig)
         XCTAssertNil(config.window)
         config = try Templates.applyDefaults(to: config)
-        XCTAssertEqual(config.window?.width, 680)            // from blueprint
-        XCTAssertEqual(config.background?.colorA, "#FFFFFF") // from blueprint (now ships white)
-        XCTAssertEqual(config.background?.type, "solid")     // blueprint now ships solid
+        XCTAssertEqual(config.window?.width, 600)            // from minimal (default)
+        XCTAssertEqual(config.background?.colorA, "#FFFFFF") // from minimal
+        XCTAssertEqual(config.background?.type, "solid")     // from minimal
     }
 
     func testExplicitValuesWinOverTemplate() throws {
@@ -32,6 +32,18 @@ final class TemplatesTests: XCTestCase {
                                                textSize: nil, showToolbar: nil, showSidebar: nil)
         config = try Templates.applyDefaults(to: config)
         XCTAssertEqual(config.window?.width, 900)            // explicit kept
-        XCTAssertEqual(config.window?.height, 420)           // filled from blueprint
+        XCTAssertEqual(config.window?.height, 400)           // filled from minimal
+    }
+
+    func testLegacyTemplateNameFallsBackToDefault() throws {
+        // A config with the removed "blueprint" template name should still
+        // load successfully — applyDefaults falls back to defaultTemplateName.
+        var config = try LutinConfig.load(from: Fixtures.barryConfig)
+        config.background = LutinConfig.BackgroundInfo(
+            type: "solid", template: "blueprint", path: nil, scale: nil,
+            colorA: nil, colorB: nil, grid: nil, noise: nil, cornerRadius: nil)
+        // Must not throw, and must fill window from minimal.
+        XCTAssertNoThrow(config = try Templates.applyDefaults(to: config))
+        XCTAssertEqual(config.window?.width, 600)  // minimal's width
     }
 }

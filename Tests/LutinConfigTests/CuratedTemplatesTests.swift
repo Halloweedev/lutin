@@ -16,12 +16,18 @@ final class CuratedTemplatesTests: XCTestCase {
         XCTAssertEqual(template.background.colorA, "#FFFFFF")
     }
 
-    func testBlueprintAndMinimalStillExist() throws {
-        XCTAssertNoThrow(try Templates.named("blueprint"))
+    func testMinimalAndWarmStillExist() throws {
         XCTAssertNoThrow(try Templates.named("minimal"))
+        XCTAssertNoThrow(try Templates.named("warm"))
     }
 
     func testUnknownTemplateStillThrows() {
         XCTAssertThrowsError(try Templates.named("nope"))
+    }
+
+    func testBlueprintNameNoLongerResolves() {
+        XCTAssertThrowsError(try Templates.named("blueprint")) { error in
+            XCTAssertEqual((error as? LutinError)?.code, "unknown_template")
+        }
     }
 }

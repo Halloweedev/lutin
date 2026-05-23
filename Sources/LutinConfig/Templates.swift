@@ -31,17 +31,7 @@ public struct Template {
 public enum Templates {
     private static let all: [String: Template] = [
         // Starter presets vary only by window dimensions now — the background
-        // is white across the board. Users pick a color in the Background
-        // editor; the renamed/legacy template names still resolve so existing
-        // projects' lutin.yml `template: blueprint` lines keep loading.
-        "blueprint": Template(
-            name: "blueprint",
-            window: .init(width: 680, height: 420, iconSize: 96,
-                          textSize: 13, showToolbar: false, showSidebar: false),
-            background: .init(type: "solid", template: "", scale: 2,
-                              colorA: "#FFFFFF", colorB: "#FFFFFF", grid: false,
-                              noise: 0.0, cornerRadius: 0)
-        ),
+        // is white across the board. Users pick a color in the Background editor.
         "minimal": Template(
             name: "minimal",
             window: .init(width: 600, height: 400, iconSize: 96,
@@ -68,7 +58,7 @@ public enum Templates {
         ),
     ]
 
-    public static let defaultTemplateName = "blueprint"
+    public static let defaultTemplateName = "minimal"
 
     public static func named(_ name: String) throws -> Template {
         guard let template = all[name] else {
@@ -82,12 +72,19 @@ public enum Templates {
     }
 
     /// Fills missing `window`/`background` fields from the named template.
-    /// The template name is `config.background?.template`, defaulting to `blueprint`.
+    /// The template name is `config.background?.template`, defaulting to `minimal`.
     /// An empty or absent `template` field both fall back to `defaultTemplateName`.
+    /// An unrecognised legacy template name also silently falls back to `defaultTemplateName`
+    /// so old project files remain loadable.
     public static func applyDefaults(to config: LutinConfig) throws -> LutinConfig {
         var result = config
         let templateName = config.background?.template.flatMap { $0.isEmpty ? nil : $0 } ?? defaultTemplateName
-        let template = try named(templateName)
+        let template: Template
+        do {
+            template = try named(templateName)
+        } catch {
+            template = try named(defaultTemplateName)
+        }
         let w = template.window
         let b = template.background
 

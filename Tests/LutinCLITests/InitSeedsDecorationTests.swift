@@ -12,7 +12,7 @@ final class InitSeedsDecorationTests: XCTestCase {
         let registry = Registry(storeURL: dir.appendingPathComponent("registry.json"))
 
         _ = try CommandLogic.initProject(directory: dir, appPath: nil,
-                                         template: "blueprint", registry: registry,
+                                         template: "minimal", registry: registry,
                                          dryRun: false)
 
         let config = try LutinConfig.load(from: dir.appendingPathComponent("lutin.yml"))
@@ -30,7 +30,7 @@ final class InitSeedsDecorationTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: dir) }
         let registry = Registry(storeURL: dir.appendingPathComponent("registry.json"))
         _ = try CommandLogic.initProject(directory: dir, appPath: nil,
-                                         template: "blueprint", registry: registry,
+                                         template: "minimal", registry: registry,
                                          dryRun: false)
         let config = try LutinConfig.load(from: dir.appendingPathComponent("lutin.yml"))
         XCTAssertTrue(ConfigValidator.validate(config).isEmpty)

@@ -26,7 +26,9 @@ output:
 #   width: 680
 #   height: 420
 background:
-  template: blueprint
+  type: solid
+  colorA: '#FFFFFF'
+  scale: 2
 items:
 - type: app
   id: app

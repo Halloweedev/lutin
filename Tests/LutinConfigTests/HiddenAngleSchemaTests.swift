@@ -110,7 +110,7 @@ final class HiddenAngleSchemaTests: XCTestCase {
     }
 
     func testBackgroundInfoFullyPopulatedRoundTrips() throws {
-        let bg = LutinConfig.BackgroundInfo(type: "gradient", template: "blueprint", path: "./bg.png",
+        let bg = LutinConfig.BackgroundInfo(type: "gradient", template: "legacy", path: "./bg.png",
                                             scale: 2, colorA: "#ff0000", colorB: "#00ff00",
                                             grid: true, noise: 0.25, cornerRadius: 12, angle: 90)
 
@@ -120,7 +120,7 @@ final class HiddenAngleSchemaTests: XCTestCase {
 
         let decoded = try YAMLDecoder().decode(LutinConfig.BackgroundInfo.self, from: yaml)
         XCTAssertEqual(decoded.type, "gradient")
-        XCTAssertEqual(decoded.template, "blueprint")
+        XCTAssertEqual(decoded.template, "legacy")
         XCTAssertEqual(decoded.path, "./bg.png")
         XCTAssertEqual(decoded.scale, 2)
         XCTAssertEqual(decoded.colorA, "#ff0000")

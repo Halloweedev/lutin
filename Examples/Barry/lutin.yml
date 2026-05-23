@@ -11,4 +11,6 @@ output:
   volumeName: Barry
 
 background:
-  template: blueprint
+  type: solid
+  colorA: '#FFFFFF'
+  scale: 2
