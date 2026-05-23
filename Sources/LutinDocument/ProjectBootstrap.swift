@@ -100,12 +100,10 @@ public enum ProjectBootstrap {
             x: (inputs.windowWidth * 2) / 3,
             y: inputs.windowHeight / 2,
             label: "Applications")
-        let arrow = LutinConfig.Decoration(
-            type: "arrow",
-            from: "app",
-            to: "applications",
-            label: "Drag to install")
 
+        // Seeded layout is just the two items. Arrows are decorative and
+        // most projects don't need one — the user can drag-to-connect
+        // from the canvas if they want.
         return LutinConfig(
             project: project,
             app: app,
@@ -113,7 +111,7 @@ public enum ProjectBootstrap {
             window: window,
             background: background,
             items: [appItem, applicationsItem],
-            decorations: [arrow],
+            decorations: nil,
             signing: nil,
             notarization: nil,
             sparkle: nil)

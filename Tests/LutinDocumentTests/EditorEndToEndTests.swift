@@ -60,6 +60,8 @@ final class EditorEndToEndTests: XCTestCase {
         try doc.apply(.moveItem(id: "app", x: 250, y: 250))
         try doc.apply(.renameItemLabel(id: "app", label: "E2E App"))
         try doc.apply(.setItemHidden(id: "applications", hidden: true))
+        // Add an arrow explicitly — the starter config no longer seeds one.
+        try doc.apply(.addArrow(from: "app", to: "applications", label: nil))
         try doc.apply(.setItemID(old: "applications", new: "apps"))
         // The arrow that referenced "applications" should now point at "apps".
         let arrow = doc.config.decorations?.first(where: { $0.type == "arrow" })
@@ -156,7 +158,10 @@ final class EditorEndToEndTests: XCTestCase {
     func testDeleteSelectionCascadesArrows() throws {
         let (_, doc) = try bootstrap()
         XCTAssertEqual(doc.config.items?.count, 2)
-        XCTAssertEqual(doc.config.decorations?.count, 1) // the seeded arrow
+        // Starter no longer seeds an arrow — add one explicitly to test
+        // the cascade.
+        try doc.apply(.addArrow(from: "app", to: "applications", label: nil))
+        XCTAssertEqual(doc.config.decorations?.count, 1)
 
         // Deleting "app" should remove the arrow that referenced it.
         try doc.apply(.deleteSelection(targets: [.item(id: "app")]))

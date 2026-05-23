@@ -34,11 +34,8 @@ final class ProjectBootstrapTests: XCTestCase {
         XCTAssertEqual(cfg.items?.count, 2)
         XCTAssertEqual(cfg.items?.first?.id, "app")
         XCTAssertEqual(cfg.items?.last?.id, "applications")
-        XCTAssertEqual(cfg.decorations?.count, 1)
-        XCTAssertEqual(cfg.decorations?.first?.type, "arrow")
-        XCTAssertEqual(cfg.decorations?.first?.from, "app")
-        XCTAssertEqual(cfg.decorations?.first?.to, "applications")
-        XCTAssertEqual(cfg.decorations?.first?.label, "Drag to install")
+        XCTAssertNil(cfg.decorations,
+                     "starter config seeds two items only — no default arrow")
     }
 
     func testProjectDirectoryRejectsEmptyName() throws {
