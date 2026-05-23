@@ -130,7 +130,10 @@ public struct CanvasView: View {
                 }
                 .onDrop(of: [LibraryItem.dragType, .fileURL],
                         delegate: CanvasFileDropDelegate(document: document) { $0 })
-                .task(id: document.id) { await render() }
+                // Re-render whenever the background or window dimensions
+                // change. document.id is stable across edits, so we hash
+                // the render-relevant fields into a fingerprint string.
+                .task(id: renderFingerprint) { await render() }
             }
             .scrollIndicators(.hidden)
             .overlay(alignment: .bottomTrailing) {
@@ -208,6 +211,32 @@ public struct CanvasView: View {
             .background(
                 Capsule().fill(Tokens.color(.alignmentGuide))
             )
+    }
+
+    /// Stable string fingerprint of every config field the renderer
+    /// consumes. Changing any of these re-fires the canvas's background
+    /// render task; pure item/arrow moves don't.
+    private var renderFingerprint: String {
+        let bg = document.config.background
+        let win = document.config.window
+        return [
+            String(describing: bg?.type),
+            String(describing: bg?.template),
+            String(describing: bg?.path),
+            String(describing: bg?.scale),
+            String(describing: bg?.colorA),
+            String(describing: bg?.colorB),
+            String(describing: bg?.angle),
+            String(describing: bg?.grid),
+            String(describing: bg?.noise),
+            String(describing: bg?.cornerRadius),
+            String(describing: win?.width),
+            String(describing: win?.height),
+            // app.path participates because Finder-chrome rendering may
+            // reflect the icon (e.g. for a future preview that bakes
+            // icons into the background).
+            document.config.app.path,
+        ].joined(separator: "|")
     }
 
     private func nudge(dx: Int, dy: Int) {

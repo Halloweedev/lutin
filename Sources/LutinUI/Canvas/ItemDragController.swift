@@ -66,37 +66,58 @@ public struct ItemDragController: ViewModifier {
     }
 
     private func updateGuides(translation: CGSize) {
+        // Snap candidates exclude the currently-selected set (an item can't
+        // snap to itself or to others moving with it).
         let candidatesX = (document.config.items ?? [])
             .filter { item in !selectionModel.selection.contains(.item(id: item.id)) }
             .map(\.x)
         let candidatesY = (document.config.items ?? [])
             .filter { item in !selectionModel.selection.contains(.item(id: item.id)) }
             .map(\.y)
-        if let myItem = (document.config.items ?? []).first(where: { selectionModel.moveableIDs.contains(.item(id: $0.id)) }) {
-            let newX = myItem.x + Int(translation.width)
-            let newY = myItem.y + Int(translation.height)
-            let snapX = AlignmentGuides.snap(value: newX, candidates: candidatesX, threshold: 4)
-            let snapY = AlignmentGuides.snap(value: newY, candidates: candidatesY, threshold: 4)
-            guideState.guideX = snapX.target
-            guideState.guideY = snapY.target
+        // Snap relative to the dragged element's current position, not the
+        // first moveable in the document. For multi-drag this means the
+        // element under the cursor drives the guides — what the user
+        // expects. For image overlays, look up by index in decorations.
+        guard let (originX, originY) = currentOrigin() else { return }
+        let newX = originX + Int(translation.width)
+        let newY = originY + Int(translation.height)
+        let snapX = AlignmentGuides.snap(value: newX, candidates: candidatesX, threshold: 4)
+        let snapY = AlignmentGuides.snap(value: newY, candidates: candidatesY, threshold: 4)
+        guideState.guideX = snapX.target
+        guideState.guideY = snapY.target
 
-            // Equal-spacing pills: only when the snap is the midpoint of two
-            // candidates. Use the unselected-items' x/y as siblings; pick the
-            // closest two flanking the snapped value.
-            if let mid = AlignmentGuides.equalSpacing(value: newX, others: candidatesX, threshold: 4) {
-                let (a, b) = closestFlanking(value: mid.snapped, in: candidatesX)
-                guideState.equalSpacingX = .init(leftOrTop: a, rightOrBottom: b,
-                                                  midpoint: mid.snapped, distance: mid.distance)
-            } else {
-                guideState.equalSpacingX = nil
-            }
-            if let mid = AlignmentGuides.equalSpacing(value: newY, others: candidatesY, threshold: 4) {
-                let (a, b) = closestFlanking(value: mid.snapped, in: candidatesY)
-                guideState.equalSpacingY = .init(leftOrTop: a, rightOrBottom: b,
-                                                  midpoint: mid.snapped, distance: mid.distance)
-            } else {
-                guideState.equalSpacingY = nil
-            }
+        // Equal-spacing pills: only when the snap is the midpoint of two
+        // candidates. Use the unselected-items' x/y as siblings; pick the
+        // closest two flanking the snapped value.
+        if let mid = AlignmentGuides.equalSpacing(value: newX, others: candidatesX, threshold: 4) {
+            let (a, b) = closestFlanking(value: mid.snapped, in: candidatesX)
+            guideState.equalSpacingX = .init(leftOrTop: a, rightOrBottom: b,
+                                             midpoint: mid.snapped, distance: mid.distance)
+        } else {
+            guideState.equalSpacingX = nil
+        }
+        if let mid = AlignmentGuides.equalSpacing(value: newY, others: candidatesY, threshold: 4) {
+            let (a, b) = closestFlanking(value: mid.snapped, in: candidatesY)
+            guideState.equalSpacingY = .init(leftOrTop: a, rightOrBottom: b,
+                                             midpoint: mid.snapped, distance: mid.distance)
+        } else {
+            guideState.equalSpacingY = nil
+        }
+    }
+
+    /// The dragged element's current (x, y) in window-points. For items
+    /// looked up by id; for image decorations by index.
+    private func currentOrigin() -> (Int, Int)? {
+        switch myID {
+        case .item(let id):
+            guard let item = (document.config.items ?? []).first(where: { $0.id == id }) else { return nil }
+            return (item.x, item.y)
+        case .image(let idx):
+            guard let decos = document.config.decorations,
+                  idx >= 0, idx < decos.count else { return nil }
+            return (decos[idx].x ?? 0, decos[idx].y ?? 0)
+        case .arrow:
+            return nil
         }
     }
 
