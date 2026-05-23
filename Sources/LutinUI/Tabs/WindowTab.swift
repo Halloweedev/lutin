@@ -48,9 +48,6 @@ public struct WindowTab: View {
                 SettingsRow(icon: "macwindow.on.rectangle", "Show toolbar") {
                     LutinToggle("", isOn: showToolbarBinding)
                 }
-                SettingsRow(icon: "sidebar.left", "Show sidebar") {
-                    LutinToggle("", isOn: showSidebarBinding)
-                }
             }
         }
     }
