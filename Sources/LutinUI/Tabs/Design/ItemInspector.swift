@@ -50,7 +50,7 @@ public struct ItemInspector: View {
                         get: { item.label ?? "" },
                         set: { try? document.apply(.renameItemLabel(id: itemID, label: $0.isEmpty ? nil : $0)) }))
                 }
-                Toggle("Hidden", isOn: Binding(
+                LutinToggle("Hidden", isOn: Binding(
                     get: { item.hidden ?? false },
                     set: { try? document.apply(.setItemHidden(id: itemID, hidden: $0)) }))
             } else {

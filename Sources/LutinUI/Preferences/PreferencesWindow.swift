@@ -22,14 +22,14 @@ public struct PreferencesWindow: View {
 
     private var generalTab: some View {
         Form {
-            Toggle("Autosave", isOn: Binding(
+            LutinToggle("Autosave", isOn: Binding(
                 get: { store.preferences.autosave },
                 set: { v in try? store.update { $0.autosave = v } }))
             Stepper("Snap grid: \(store.preferences.snapGridSize) pt",
                 value: Binding(get: { store.preferences.snapGridSize },
                                set: { v in try? store.update { $0.snapGridSize = v } }),
                 in: 1...32)
-            Toggle("Show alignment guides", isOn: Binding(
+            LutinToggle("Show alignment guides", isOn: Binding(
                 get: { store.preferences.showAlignmentGuides },
                 set: { v in try? store.update { $0.showAlignmentGuides = v } }))
         }

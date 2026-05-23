@@ -53,7 +53,7 @@ public struct ImageInspector: View {
                             format: .number)
                     }
                 }
-                Toggle("Hidden", isOn: Binding(
+                LutinToggle("Hidden", isOn: Binding(
                     get: { deco.hidden ?? false },
                     set: { try? document.apply(.setImageHidden(index: index, hidden: $0)) }))
             } else {

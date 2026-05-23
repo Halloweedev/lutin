@@ -35,7 +35,7 @@ public struct ArrowInspector: View {
                     get: { arrow?.label ?? "" },
                     set: { try? document.apply(.renameArrowLabel(from: from, to: to, label: $0.isEmpty ? nil : $0)) }))
             }
-            Toggle("Hidden", isOn: Binding(
+            LutinToggle("Hidden", isOn: Binding(
                 get: { arrow?.hidden ?? false },
                 set: { try? document.apply(.setArrowHidden(from: from, to: to, hidden: $0)) }))
         }

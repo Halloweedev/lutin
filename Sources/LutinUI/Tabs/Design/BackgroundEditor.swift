@@ -118,10 +118,9 @@ public struct BackgroundEditor: View {
                               onPick: pickImage)
             }
             SettingsField("Show grid overlay") {
-                Toggle("", isOn: Binding(
+                LutinToggle("", isOn: Binding(
                     get: { bg.grid ?? false },
                     set: { var b = bg; b.grid = $0; try? document.apply(.setBackground(b)) }))
-                    .labelsHidden()
             }
         }
     }

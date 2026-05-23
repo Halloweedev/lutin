@@ -28,12 +28,12 @@ public struct ReleaseTab: View {
     private var signingSection: some View {
         SettingsSection("Signing") {
             SettingsRow(icon: "checkmark.seal", "Enabled") {
-                Toggle("", isOn: Binding(
+                LutinToggle("", isOn: Binding(
                     get: { document.config.signing?.enabled ?? false },
                     set: { v in
                         var s = currentSigning(); s.enabled = v
                         try? document.apply(.setSigning(s))
-                    })).labelsHidden()
+                    }))
             }
             SettingsField("Identity",
                           helper: identities.isEmpty
@@ -53,12 +53,12 @@ public struct ReleaseTab: View {
                 .labelsHidden()
             }
             SettingsRow(icon: "lock.shield", "Hardened runtime") {
-                Toggle("", isOn: Binding(
+                LutinToggle("", isOn: Binding(
                     get: { document.config.signing?.hardenedRuntime ?? false },
                     set: { v in
                         var s = currentSigning(); s.hardenedRuntime = v
                         try? document.apply(.setSigning(s))
-                    })).labelsHidden()
+                    }))
             }
             SettingsField("Entitlements") {
                 PathPickerRow(value: document.config.signing?.entitlements ?? "",
@@ -66,12 +66,12 @@ public struct ReleaseTab: View {
                               onPick: pickEntitlements)
             }
             SettingsRow(icon: "doc.zipper", "Sign DMG") {
-                Toggle("", isOn: Binding(
+                LutinToggle("", isOn: Binding(
                     get: { document.config.signing?.signDmg ?? false },
                     set: { v in
                         var s = currentSigning(); s.signDmg = v
                         try? document.apply(.setSigning(s))
-                    })).labelsHidden()
+                    }))
             }
             doctorRow(label: "Signing status",
                       ok: (document.config.signing?.enabled ?? false) &&
@@ -84,12 +84,12 @@ public struct ReleaseTab: View {
     private var notarizationSection: some View {
         SettingsSection("Notarization") {
             SettingsRow(icon: "checkmark.seal", "Enabled") {
-                Toggle("", isOn: Binding(
+                LutinToggle("", isOn: Binding(
                     get: { document.config.notarization?.enabled ?? false },
                     set: { v in
                         var n = currentNotarization(); n.enabled = v
                         try? document.apply(.setNotarization(n))
-                    })).labelsHidden()
+                    }))
             }
             SettingsField("Profile",
                           helper: notaryProfiles.isEmpty
@@ -116,12 +116,12 @@ public struct ReleaseTab: View {
                 }
             }
             SettingsRow(icon: "paperclip", "Staple") {
-                Toggle("", isOn: Binding(
+                LutinToggle("", isOn: Binding(
                     get: { document.config.notarization?.staple ?? false },
                     set: { v in
                         var n = currentNotarization(); n.staple = v
                         try? document.apply(.setNotarization(n))
-                    })).labelsHidden()
+                    }))
             }
             doctorRow(label: "Notarization status",
                       ok: (document.config.notarization?.enabled ?? false) &&
@@ -134,12 +134,12 @@ public struct ReleaseTab: View {
     private var sparkleSection: some View {
         SettingsSection("Sparkle") {
             SettingsRow(icon: "checkmark.seal", "Enabled") {
-                Toggle("", isOn: Binding(
+                LutinToggle("", isOn: Binding(
                     get: { document.config.sparkle?.enabled ?? false },
                     set: { v in
                         var sp = currentSparkle(); sp.enabled = v
                         try? document.apply(.setSparkle(sp))
-                    })).labelsHidden()
+                    }))
             }
             SettingsField("Appcast path") {
                 PathPickerRow(value: document.config.sparkle?.appcastPath ?? "",

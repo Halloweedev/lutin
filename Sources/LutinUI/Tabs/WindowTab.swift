@@ -42,10 +42,10 @@ public struct WindowTab: View {
 
             SettingsSection("Finder chrome") {
                 SettingsRow(icon: "macwindow.on.rectangle", "Show toolbar") {
-                    Toggle("", isOn: showToolbarBinding).labelsHidden()
+                    LutinToggle("", isOn: showToolbarBinding)
                 }
                 SettingsRow(icon: "sidebar.left", "Show sidebar") {
-                    Toggle("", isOn: showSidebarBinding).labelsHidden()
+                    LutinToggle("", isOn: showSidebarBinding)
                 }
             }
         }
