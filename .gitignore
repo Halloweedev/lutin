@@ -2,3 +2,6 @@
 .DS_Store
 *.xcodeproj
 .superpowers/
+
+# Packaged .app output from scripts/dev-app.sh and release-app.sh.
+/Apps/LutinApp/build/
