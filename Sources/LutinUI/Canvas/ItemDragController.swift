@@ -52,6 +52,8 @@ public struct ItemDragController: ViewModifier {
                         defer { pendingDX = 0; pendingDY = 0 }
                         guideState.guideX = nil
                         guideState.guideY = nil
+                        guideState.equalSpacingX = nil
+                        guideState.equalSpacingY = nil
                         let dx = Self.snap(Int(v.translation.width), gridSize: snapGrid)
                         let dy = Self.snap(Int(v.translation.height), gridSize: snapGrid)
                         guard dx != 0 || dy != 0 else { return }
@@ -77,7 +79,40 @@ public struct ItemDragController: ViewModifier {
             let snapY = AlignmentGuides.snap(value: newY, candidates: candidatesY, threshold: 4)
             guideState.guideX = snapX.target
             guideState.guideY = snapY.target
+
+            // Equal-spacing pills: only when the snap is the midpoint of two
+            // candidates. Use the unselected-items' x/y as siblings; pick the
+            // closest two flanking the snapped value.
+            if let mid = AlignmentGuides.equalSpacing(value: newX, others: candidatesX, threshold: 4) {
+                let (a, b) = closestFlanking(value: mid.snapped, in: candidatesX)
+                guideState.equalSpacingX = .init(leftOrTop: a, rightOrBottom: b,
+                                                  midpoint: mid.snapped, distance: mid.distance)
+            } else {
+                guideState.equalSpacingX = nil
+            }
+            if let mid = AlignmentGuides.equalSpacing(value: newY, others: candidatesY, threshold: 4) {
+                let (a, b) = closestFlanking(value: mid.snapped, in: candidatesY)
+                guideState.equalSpacingY = .init(leftOrTop: a, rightOrBottom: b,
+                                                  midpoint: mid.snapped, distance: mid.distance)
+            } else {
+                guideState.equalSpacingY = nil
+            }
         }
+    }
+
+    /// Returns the two values flanking `midpoint` in the candidates list.
+    /// Used to draw equal-spacing pills between the dragged item and the
+    /// nearest two neighbors that produced the midpoint snap.
+    private func closestFlanking(value: Int, in candidates: [Int]) -> (Int, Int) {
+        let sorted = candidates.sorted()
+        // The midpoint sits between some (a, b) where a < value <= b.
+        var lower = sorted.first ?? value
+        var upper = sorted.last ?? value
+        for c in sorted {
+            if c <= value { lower = c }
+            if c > value { upper = c; break }
+        }
+        return (lower, upper)
     }
 
     public static func deltas(forSelection sel: Set<CanvasSelectionID>,

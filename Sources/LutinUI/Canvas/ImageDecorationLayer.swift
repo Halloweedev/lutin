@@ -6,9 +6,14 @@ import LutinConfig
 public struct ImageDecorationLayer: View {
     @Bindable var document: LutinProjectDocument
     @Bindable var selectionModel: CanvasSelectionModel
+    let guideState: CanvasGuideState
 
-    public init(document: LutinProjectDocument, selectionModel: CanvasSelectionModel) {
-        self.document = document; self.selectionModel = selectionModel
+    public init(document: LutinProjectDocument,
+                selectionModel: CanvasSelectionModel,
+                guideState: CanvasGuideState) {
+        self.document = document
+        self.selectionModel = selectionModel
+        self.guideState = guideState
     }
 
     public var body: some View {
@@ -51,5 +56,13 @@ public struct ImageDecorationLayer: View {
                 ResizeHandles(document: document, index: index, deco: deco)
             }
         }
+        // Image overlays now participate in the multi-element drag path:
+        // selecting + dragging an image moves it (along with any other
+        // selected moveables) via the shared moveMany intent.
+        .draggableItem(document: document,
+                       selectionModel: selectionModel,
+                       id: .image(index: index),
+                       snapGrid: 0,
+                       guideState: guideState)
     }
 }

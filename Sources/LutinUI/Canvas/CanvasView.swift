@@ -41,7 +41,9 @@ public struct CanvasView: View {
                                    get: { selectionModel.selection },
                                    set: { selectionModel.replace(with: $0) }),
                                iconSize: document.config.window?.iconSize ?? 96)
-                    ImageDecorationLayer(document: document, selectionModel: selectionModel)
+                    ImageDecorationLayer(document: document,
+                                         selectionModel: selectionModel,
+                                         guideState: guideState)
                     ItemLayer(document: document, selectionModel: selectionModel, guideState: guideState)
                     if let gx = guideState.guideX {
                         Rectangle()
@@ -56,6 +58,14 @@ public struct CanvasView: View {
                             .frame(width: configW, height: Tokens.Size.hairline)
                             .position(x: configW / 2, y: CGFloat(gy))
                             .allowsHitTesting(false)
+                    }
+                    // Equal-spacing pills — render two distance badges
+                    // between the dragged item and its flanking siblings.
+                    if let hint = guideState.equalSpacingX {
+                        equalSpacingPillsHorizontal(hint, axisY: configH / 2)
+                    }
+                    if let hint = guideState.equalSpacingY {
+                        equalSpacingPillsVertical(hint, axisX: configW / 2)
                     }
                 }
                 .frame(width: configW, height: configH)
@@ -154,6 +164,50 @@ public struct CanvasView: View {
         } else {
             ProgressView().controlSize(.small)
         }
+    }
+
+    @ViewBuilder
+    private func equalSpacingPillsHorizontal(_ hint: CanvasGuideState.EqualSpacingHint,
+                                             axisY: CGFloat) -> some View {
+        let leftMid = CGFloat(hint.leftOrTop + hint.midpoint) / 2
+        let rightMid = CGFloat(hint.midpoint + hint.rightOrBottom) / 2
+        ZStack {
+            pill(distance: hint.distance).position(x: leftMid, y: axisY)
+            pill(distance: hint.distance).position(x: rightMid, y: axisY)
+            Rectangle()
+                .fill(Tokens.color(.alignmentGuide))
+                .frame(width: CGFloat(hint.rightOrBottom - hint.leftOrTop),
+                       height: Tokens.Size.hairline)
+                .position(x: CGFloat(hint.leftOrTop + hint.rightOrBottom) / 2, y: axisY)
+        }
+        .allowsHitTesting(false)
+    }
+
+    @ViewBuilder
+    private func equalSpacingPillsVertical(_ hint: CanvasGuideState.EqualSpacingHint,
+                                           axisX: CGFloat) -> some View {
+        let topMid = CGFloat(hint.leftOrTop + hint.midpoint) / 2
+        let bottomMid = CGFloat(hint.midpoint + hint.rightOrBottom) / 2
+        ZStack {
+            pill(distance: hint.distance).position(x: axisX, y: topMid)
+            pill(distance: hint.distance).position(x: axisX, y: bottomMid)
+            Rectangle()
+                .fill(Tokens.color(.alignmentGuide))
+                .frame(width: Tokens.Size.hairline,
+                       height: CGFloat(hint.rightOrBottom - hint.leftOrTop))
+                .position(x: axisX, y: CGFloat(hint.leftOrTop + hint.rightOrBottom) / 2)
+        }
+        .allowsHitTesting(false)
+    }
+
+    private func pill(distance: Int) -> some View {
+        Text("\(distance)")
+            .font(Typography.chromeSmall.weight(.medium))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(
+                Capsule().fill(Tokens.color(.alignmentGuide))
+            )
     }
 
     private func nudge(dx: Int, dy: Int) {
