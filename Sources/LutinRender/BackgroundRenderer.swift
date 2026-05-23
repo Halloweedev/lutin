@@ -130,7 +130,16 @@ struct BackgroundRenderer {
         let drawH = imgH * scale
         let rect = CGRect(x: (canvasW - drawW) / 2, y: (canvasH - drawH) / 2,
                           width: drawW, height: drawH)
-        ctx.cg.draw(loaded, in: rect)
+        // RenderContext applies a y-flipped CTM so callers can think in
+        // top-left coordinates. `CGContext.draw(image, in:)` lays out the
+        // image with its bottom-left origin, which combined with the
+        // flipped CTM renders the image upside-down. Locally invert the
+        // flip around the draw so the image lands right-side-up.
+        ctx.cg.saveGState()
+        ctx.cg.translateBy(x: rect.origin.x, y: rect.origin.y + rect.size.height)
+        ctx.cg.scaleBy(x: 1, y: -1)
+        ctx.cg.draw(loaded, in: CGRect(origin: .zero, size: rect.size))
+        ctx.cg.restoreGState()
         return ctx.finish()
     }
 
