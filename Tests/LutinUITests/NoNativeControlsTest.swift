@@ -17,7 +17,8 @@ final class NoNativeControlsTest: XCTestCase {
     /// descriptive suffix is allowed: `// allow-menu-button: reason here`.
     private static let bannedPrimitives: [String] = [
         "Button",
-        // "TextField", "Toggle", "Stepper", "Picker", "Slider"
+        "TextField",
+        // "Toggle", "Stepper", "Picker", "Slider"
         // Filled in as each migration task lands.
     ]
 

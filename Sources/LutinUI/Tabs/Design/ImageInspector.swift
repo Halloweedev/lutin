@@ -26,7 +26,7 @@ public struct ImageInspector: View {
                 }
                 HStack(spacing: Tokens.spacing(.sm)) {
                     LabeledField(label: "x") {
-                        TextField("", value: Binding(
+                        TextField("", value: Binding(  // allow-menu-button: numeric value:format: — needs LutinNumericField (not yet built)
                             get: { deco.x ?? 0 },
                             set: { try? document.apply(.moveImageDecoration(index: index,
                                                                             x: $0,
@@ -36,7 +36,7 @@ public struct ImageInspector: View {
                             .background(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))
                     }
                     LabeledField(label: "y") {
-                        TextField("", value: Binding(
+                        TextField("", value: Binding(  // allow-menu-button: numeric value:format: — needs LutinNumericField (not yet built)
                             get: { deco.y ?? 0 },
                             set: { try? document.apply(.moveImageDecoration(index: index,
                                                                             x: deco.x ?? 0,
@@ -46,7 +46,7 @@ public struct ImageInspector: View {
                             .background(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))
                     }
                     LabeledField(label: "w") {
-                        TextField("", value: Binding(
+                        TextField("", value: Binding(  // allow-menu-button: numeric value:format: — needs LutinNumericField (not yet built)
                             get: { deco.width ?? 100 },
                             set: { try? document.apply(.moveImageDecoration(index: index,
                                                                             x: deco.x ?? 0,
