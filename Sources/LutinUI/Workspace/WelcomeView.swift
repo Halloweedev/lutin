@@ -20,20 +20,19 @@ public struct WelcomeView: View {
     }
 
     public var body: some View {
-        ZStack {
-            Tokens.color(.canvasBackground).ignoresSafeArea()
-            ScrollView {
-                VStack(spacing: Tokens.spacing(.xl)) {
-                    header
-                    ctaCard
-                    recents
-                }
-                .frame(maxWidth: 520)
-                .padding(.top, Tokens.spacing(.xl) * 2)
-                .padding(.bottom, Tokens.spacing(.xl))
-                .frame(maxWidth: .infinity)
+        ScrollView {
+            VStack(spacing: Tokens.spacing(.xl)) {
+                header
+                ctaCard
+                recents
             }
+            .frame(maxWidth: 520)
+            .padding(.top, Tokens.spacing(.xl) * 2)
+            .padding(.bottom, Tokens.spacing(.xl))
+            .frame(maxWidth: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Tokens.color(.canvasBackground).ignoresSafeArea())
     }
 
     private var header: some View {

@@ -63,7 +63,16 @@ public enum Tokens {
     // MARK: - Color resolution
 
     public static func color(_ key: Key) -> Color {
-        Color(key.rawValue, bundle: .module)
+        // Route every SwiftUI Color lookup through a dynamic NSColor so the
+        // JSON-fallback path in `nsColor(_:appearance:)` is honored when the
+        // asset catalog isn't compiled (SPM debug builds copy .xcassets
+        // verbatim instead of emitting a .car). The dynamicProvider closure
+        // re-resolves on appearance change so light/dark transitions still
+        // animate without a relaunch.
+        Color(nsColor: NSColor(name: NSColor.Name(key.rawValue),
+                                dynamicProvider: { appearance in
+            nsColor(key, appearance: appearance)
+        }))
     }
 
     /// Resolves a token to a concrete NSColor for the given appearance.
