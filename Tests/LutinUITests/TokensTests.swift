@@ -29,9 +29,27 @@ final class TokensTests: XCTestCase {
         XCTAssertEqual(Tokens.spacing(.xl), 32)
     }
 
-    func testRadiusScale() {
-        XCTAssertEqual(Tokens.radius(.button), 8)
-        XCTAssertEqual(Tokens.radius(.surface), 12)
-        XCTAssertEqual(Tokens.radius(.window), 16)
+    func testDarkenReducesEachComponentByRatio() {
+        let white = NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
+        let darkened = Tokens.darken(white, by: 0.04)
+        let r = darkened.redComponent
+        let g = darkened.greenComponent
+        let b = darkened.blueComponent
+        XCTAssertEqual(r, 0.96, accuracy: 0.001)
+        XCTAssertEqual(g, 0.96, accuracy: 0.001)
+        XCTAssertEqual(b, 0.96, accuracy: 0.001)
+        XCTAssertEqual(darkened.alphaComponent, 1.0, accuracy: 0.001)
+    }
+
+    func testDarkenClampsAtZero() {
+        let black = NSColor(srgbRed: 0, green: 0, blue: 0, alpha: 1)
+        let darkened = Tokens.darken(black, by: 0.5)
+        XCTAssertEqual(darkened.redComponent, 0.0, accuracy: 0.001)
+    }
+
+    func testDarkenPreservesAlpha() {
+        let translucent = NSColor(srgbRed: 0.5, green: 0.5, blue: 0.5, alpha: 0.3)
+        let darkened = Tokens.darken(translucent, by: 0.1)
+        XCTAssertEqual(darkened.alphaComponent, 0.3, accuracy: 0.001)
     }
 }

@@ -108,10 +108,18 @@ public enum Tokens {
     public enum Spacing: CGFloat { case xs = 4, sm = 8, md = 14, lg = 20, xl = 32 }
     public static func spacing(_ s: Spacing) -> CGFloat { s.rawValue }
 
-    // MARK: - Radius (kept for backward compatibility)
+    // MARK: - Darken (state-machine math)
 
-    public enum Radius: CGFloat { case button = 8, surface = 12, window = 16 }
-    public static func radius(_ r: Radius) -> CGFloat { r.rawValue }
+    /// Returns a copy of `color` with each sRGB component reduced by `ratio`.
+    /// Clamps each component at 0; preserves alpha. Used by every interactive
+    /// control's hover/press/focus state.
+    public static func darken(_ color: NSColor, by ratio: Double) -> NSColor {
+        let srgb = color.usingColorSpace(.sRGB) ?? color
+        let r = max(0, srgb.redComponent - CGFloat(ratio))
+        let g = max(0, srgb.greenComponent - CGFloat(ratio))
+        let b = max(0, srgb.blueComponent - CGFloat(ratio))
+        return NSColor(srgbRed: r, green: g, blue: b, alpha: srgb.alphaComponent)
+    }
 
     // MARK: - Sizes (v2)
 
