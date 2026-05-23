@@ -27,7 +27,7 @@ public struct ReleaseTab: View {
 
     private var signingSection: some View {
         SettingsSection("Signing") {
-            SettingsField("Enabled") {
+            SettingsRow(icon: "checkmark.seal", "Enabled") {
                 Toggle("", isOn: Binding(
                     get: { document.config.signing?.enabled ?? false },
                     set: { v in
@@ -52,7 +52,7 @@ public struct ReleaseTab: View {
                 }
                 .labelsHidden()
             }
-            SettingsField("Hardened runtime") {
+            SettingsRow(icon: "lock.shield", "Hardened runtime") {
                 Toggle("", isOn: Binding(
                     get: { document.config.signing?.hardenedRuntime ?? false },
                     set: { v in
@@ -65,7 +65,7 @@ public struct ReleaseTab: View {
                               placeholder: "No .entitlements file",
                               onPick: pickEntitlements)
             }
-            SettingsField("Sign DMG") {
+            SettingsRow(icon: "doc.zipper", "Sign DMG") {
                 Toggle("", isOn: Binding(
                     get: { document.config.signing?.signDmg ?? false },
                     set: { v in
@@ -83,7 +83,7 @@ public struct ReleaseTab: View {
 
     private var notarizationSection: some View {
         SettingsSection("Notarization") {
-            SettingsField("Enabled") {
+            SettingsRow(icon: "checkmark.seal", "Enabled") {
                 Toggle("", isOn: Binding(
                     get: { document.config.notarization?.enabled ?? false },
                     set: { v in
@@ -115,7 +115,7 @@ public struct ReleaseTab: View {
                     .labelsHidden()
                 }
             }
-            SettingsField("Staple") {
+            SettingsRow(icon: "paperclip", "Staple") {
                 Toggle("", isOn: Binding(
                     get: { document.config.notarization?.staple ?? false },
                     set: { v in
@@ -133,7 +133,7 @@ public struct ReleaseTab: View {
 
     private var sparkleSection: some View {
         SettingsSection("Sparkle") {
-            SettingsField("Enabled") {
+            SettingsRow(icon: "checkmark.seal", "Enabled") {
                 Toggle("", isOn: Binding(
                     get: { document.config.sparkle?.enabled ?? false },
                     set: { v in

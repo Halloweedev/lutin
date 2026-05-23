@@ -63,8 +63,8 @@ public struct SettingsSection<Content: View>: View {
     }
 }
 
-/// Field with a label above its input. The input is whatever view the
-/// caller hands us — TextField, Stepper, Toggle, Picker, HStack, etc.
+/// Field with a label above its input. Used when the input needs the
+/// full row width (long text, multi-step pickers, etc.).
 public struct SettingsField<Content: View>: View {
     let label: String
     let helper: String?
@@ -89,6 +89,41 @@ public struct SettingsField<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Compact horizontal row: optional leading icon + label (left), and a
+/// trailing control (right). Matches the reference's "Padding [slider]
+/// 0px" / "Window Crop [toggle]" / "Border Radius [slider] 18px"
+/// pattern. Use for boolean toggles, steppers, sliders, and short
+/// pickers where the control fits beside the label.
+public struct SettingsRow<Content: View>: View {
+    let icon: String?
+    let label: String
+    let content: Content
+    public init(icon: String? = nil,
+                _ label: String,
+                @ViewBuilder content: () -> Content) {
+        self.icon = icon
+        self.label = label
+        self.content = content()
+    }
+    public var body: some View {
+        HStack(spacing: Tokens.spacing(.sm)) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(Tokens.color(.textSecondary))
+                    .frame(width: 18, alignment: .leading)
+            }
+            Text(label)
+                .font(.system(size: 13))
+                .foregroundStyle(Tokens.color(.textPrimary))
+            Spacer(minLength: Tokens.spacing(.md))
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 4)
     }
 }
 

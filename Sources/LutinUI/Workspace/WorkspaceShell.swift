@@ -15,26 +15,34 @@ public struct WorkspaceShell: View {
     @State private var showCreateNew = false
     @State private var preselectedDropURL: URL?
     @State private var showingDoctor = false
+    @State private var sidePanelHidden = false
 
     public init() {}
 
     public var body: some View {
-        Group {
-            if let document {
-                ProjectWorkspace(document: document,
-                                 editorState: editorStateStore.state(forConfigPath: document.configURL.path),
-                                 showingDoctor: $showingDoctor)
-            } else if let loadError {
-                EmptyState(title: "Could not load project", message: loadError, icon: "EmptySelection")
-            } else {
-                WelcomeView(
-                    onCreateNew: { showCreateNew = true },
-                    onOpenExisting: { showSwitcher = true },
-                    onSelectRecent: { name in selectedEntryName = name },
-                    onDropApp: { url in
-                        preselectedDropURL = url
-                        showCreateNew = true
-                    })
+        VStack(spacing: 0) {
+            AppHeaderBar(title: "Lutin",
+                         projectName: currentProjectName,
+                         sidePanelHidden: $sidePanelHidden,
+                         onTitleTap: { showSwitcher = true })
+            Group {
+                if let document {
+                    ProjectWorkspace(document: document,
+                                     editorState: editorStateStore.state(forConfigPath: document.configURL.path),
+                                     showingDoctor: $showingDoctor,
+                                     sidePanelHidden: $sidePanelHidden)
+                } else if let loadError {
+                    EmptyState(title: "Could not load project", message: loadError, icon: "EmptySelection")
+                } else {
+                    WelcomeView(
+                        onCreateNew: { showCreateNew = true },
+                        onOpenExisting: { showSwitcher = true },
+                        onSelectRecent: { name in selectedEntryName = name },
+                        onDropApp: { url in
+                            preselectedDropURL = url
+                            showCreateNew = true
+                        })
+                }
             }
         }
         .frame(minWidth: 900, minHeight: 600)
@@ -45,22 +53,6 @@ public struct WorkspaceShell: View {
                 .keyboardShortcut("n", modifiers: .command)
                 .opacity(0)
                 .frame(width: 0, height: 0)
-        }
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button(action: { showSwitcher = true }) {
-                    HStack(spacing: 6) {
-                        Text("Lutin").foregroundStyle(Tokens.color(.textSecondary))
-                        Text("•").foregroundStyle(Tokens.color(.textTertiary))
-                        Text(currentProjectName).foregroundStyle(Tokens.color(.textPrimary))
-                        Image(systemName: "chevron.down").font(.system(size: 9))
-                            .foregroundStyle(Tokens.color(.textTertiary))
-                    }
-                    .font(Typography.chrome)
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut("o", modifiers: .command)
-            }
         }
         .sheet(isPresented: $showSwitcher) {
             ProjectSwitcherModal(
@@ -125,6 +117,7 @@ private struct ProjectWorkspace: View {
     let document: LutinProjectDocument
     @Bindable var editorState: EditorState
     @Binding var showingDoctor: Bool
+    @Binding var sidePanelHidden: Bool
     @State private var selectionModel = CanvasSelectionModel()
     @State private var pipelineRunner = PipelineRunner()
 
@@ -134,10 +127,15 @@ private struct ProjectWorkspace: View {
                        onOpenSwitcher: {
                            NotificationCenter.default.post(name: .lutinOpenSwitcher, object: nil)
                        })
-            SidePanel(width: $editorState.sidePanelWidth) {
-                TabPanelHost(document: document,
-                             editorState: editorState,
-                             selectionModel: selectionModel)
+            if !sidePanelHidden {
+                SidePanel(width: $editorState.sidePanelWidth) {
+                    VStack(spacing: 0) {
+                        PanelHeader(editorState.selectedTab.title)
+                        TabPanelHost(document: document,
+                                     editorState: editorState,
+                                     selectionModel: selectionModel)
+                    }
+                }
             }
             CanvasView(document: document,
                        selectionModel: selectionModel,
@@ -145,6 +143,7 @@ private struct ProjectWorkspace: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Tokens.color(.canvasBackground))
         }
+        .animation(.easeInOut(duration: 0.18), value: sidePanelHidden)
         .toolbar {
             ToolbarActions(document: document, runner: pipelineRunner, showingDoctor: $showingDoctor)
         }

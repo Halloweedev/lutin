@@ -10,7 +10,7 @@ public struct ProjectTab: View {
         TabBody {
             SettingsSection("Identity") {
                 SettingsField("Project name") {
-                    SettingsTextField("", text: Binding(
+                    SettingsTextField("MyApp", text: Binding(
                         get: { document.config.project.name },
                         set: { try? document.apply(.setProjectMetadata(
                             name: $0,
@@ -24,7 +24,7 @@ public struct ProjectTab: View {
                             name: document.config.project.name,
                             bundleId: $0)) }))
                 }
-                SettingsField("App bundle (.app)") {
+                SettingsField("App bundle") {
                     PathPickerRow(value: document.config.app.path,
                                   placeholder: "No .app chosen",
                                   onPick: pickApp)
@@ -32,7 +32,7 @@ public struct ProjectTab: View {
             }
 
             SettingsSection("Output",
-                            footer: "DMG name tokens: ${version} and ${build} are filled at build time.") {
+                            footer: "DMG name supports ${version} and ${build} tokens, filled at build time.") {
                 SettingsField("Directory") {
                     PathPickerRow(value: document.config.output.directory,
                                   placeholder: "Pick a folder",
@@ -47,7 +47,7 @@ public struct ProjectTab: View {
                             volumeName: document.config.output.volumeName)) }))
                 }
                 SettingsField("Volume name",
-                              helper: "Title shown in Finder when the DMG mounts.") {
+                              helper: "Shown in Finder when the DMG mounts.") {
                     SettingsTextField("MyApp", text: Binding(
                         get: { document.config.output.volumeName },
                         set: { try? document.apply(.setOutput(

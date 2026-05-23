@@ -11,36 +11,40 @@ public struct WindowTab: View {
         TabBody {
             SettingsSection("Dimensions",
                             footer: "Window opens at this size when the DMG mounts.") {
-                SettingsField("Width") {
+                SettingsRow(icon: "arrow.left.and.right", "Width") {
                     Stepper(value: widthBinding, in: 320...2048, step: 10) {
-                        Text("\(window.width ?? 680) pt").font(Typography.chromeSmall)
+                        Text("\(window.width ?? 680) pt").font(.system(size: 12))
+                            .foregroundStyle(Tokens.color(.textSecondary))
                     }
                 }
-                SettingsField("Height") {
+                SettingsRow(icon: "arrow.up.and.down", "Height") {
                     Stepper(value: heightBinding, in: 240...1536, step: 10) {
-                        Text("\(window.height ?? 420) pt").font(Typography.chromeSmall)
+                        Text("\(window.height ?? 420) pt").font(.system(size: 12))
+                            .foregroundStyle(Tokens.color(.textSecondary))
                     }
                 }
             }
 
             SettingsSection("Icons & Labels") {
-                SettingsField("Icon size") {
+                SettingsRow(icon: "app.dashed", "Icon size") {
                     Stepper(value: iconSizeBinding, in: 32...256, step: 8) {
-                        Text("\(window.iconSize ?? 96) pt").font(Typography.chromeSmall)
+                        Text("\(window.iconSize ?? 96) pt").font(.system(size: 12))
+                            .foregroundStyle(Tokens.color(.textSecondary))
                     }
                 }
-                SettingsField("Text size") {
+                SettingsRow(icon: "textformat.size", "Text size") {
                     Stepper(value: textSizeBinding, in: 8...32, step: 1) {
-                        Text("\(window.textSize ?? 12) pt").font(Typography.chromeSmall)
+                        Text("\(window.textSize ?? 12) pt").font(.system(size: 12))
+                            .foregroundStyle(Tokens.color(.textSecondary))
                     }
                 }
             }
 
-            SettingsSection("Chrome") {
-                SettingsField("Show toolbar") {
+            SettingsSection("Finder chrome") {
+                SettingsRow(icon: "macwindow.on.rectangle", "Show toolbar") {
                     Toggle("", isOn: showToolbarBinding).labelsHidden()
                 }
-                SettingsField("Show sidebar") {
+                SettingsRow(icon: "sidebar.left", "Show sidebar") {
                     Toggle("", isOn: showSidebarBinding).labelsHidden()
                 }
             }
