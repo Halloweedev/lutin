@@ -21,8 +21,7 @@ final class NoNativeControlsTest: XCTestCase {
         "Toggle",
         "Stepper",
         "Picker",
-        // "Slider"
-        // Filled in as each migration task lands.
+        "Slider",
     ]
 
     func testNoBannedPrimitivesInProductionSources() throws {
