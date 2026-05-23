@@ -36,6 +36,7 @@ public struct LutinIconButton: View {
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
         .modifier(ControlInteractionState(onChange: { state in interaction = state }))
+        .focusEffectDisabled()
     }
 
     /// Resolves the current icon fill from interaction state and system appearance.

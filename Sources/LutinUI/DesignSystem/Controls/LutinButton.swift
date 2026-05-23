@@ -38,6 +38,7 @@ public struct LutinButton<Label: View>: View {
         }
         .buttonStyle(.plain)
         .modifier(ControlInteractionState(onChange: { state in interaction = state }))
+        .focusEffectDisabled()
     }
 
     var restFillKey: Tokens.Key { role == .primary ? .brandAccent : .surface }
