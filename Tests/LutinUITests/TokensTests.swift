@@ -21,11 +21,12 @@ final class TokensTests: XCTestCase {
     }
 
     func testSpacingScale() {
-        XCTAssertEqual(Tokens.spacing(.xs), 2)
-        XCTAssertEqual(Tokens.spacing(.sm), 4)
-        XCTAssertEqual(Tokens.spacing(.md), 8)
-        XCTAssertEqual(Tokens.spacing(.lg), 16)
-        XCTAssertEqual(Tokens.spacing(.xl), 24)
+        // Bumped 2026-05-23 to give chrome surfaces more breathing room.
+        XCTAssertEqual(Tokens.spacing(.xs), 4)
+        XCTAssertEqual(Tokens.spacing(.sm), 8)
+        XCTAssertEqual(Tokens.spacing(.md), 14)
+        XCTAssertEqual(Tokens.spacing(.lg), 20)
+        XCTAssertEqual(Tokens.spacing(.xl), 32)
     }
 
     func testRadiusScale() {

@@ -101,7 +101,11 @@ public enum Tokens {
 
     // MARK: - Spacing (unchanged — existing tests rely on these raw values)
 
-    public enum Spacing: CGFloat { case xs = 2, sm = 4, md = 8, lg = 16, xl = 24 }
+    /// Spacing scale. Bumped from {2, 4, 8, 16, 24} in 2026-05-23 — the old
+    /// tighter values made form rows feel cramped and section gutters
+    /// disappear. The new scale leans roomier so chrome surfaces breathe
+    /// without needing per-site overrides.
+    public enum Spacing: CGFloat { case xs = 4, sm = 8, md = 14, lg = 20, xl = 32 }
     public static func spacing(_ s: Spacing) -> CGFloat { s.rawValue }
 
     // MARK: - Radius (kept for backward compatibility)

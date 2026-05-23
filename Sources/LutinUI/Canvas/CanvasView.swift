@@ -34,6 +34,10 @@ public struct CanvasView: View {
             let scale = CGFloat(editorState.zoomPercent) / 100.0
 
             ScrollView([.horizontal, .vertical]) {
+                FinderWindowChrome(title: document.config.output.volumeName.isEmpty
+                                   ? document.config.project.name
+                                   : document.config.output.volumeName,
+                                   contentSize: CGSize(width: configW, height: configH)) {
                 ZStack(alignment: .topLeading) {
                     background(configW: configW, configH: configH)
                     ArrowLayer(document: document,
@@ -70,8 +74,6 @@ public struct CanvasView: View {
                 }
                 .frame(width: configW, height: configH)
                 .coordinateSpace(.named("canvas"))
-                .scaleEffect(scale, anchor: .topLeading)
-                .frame(width: configW * scale, height: configH * scale)
                 .background(Tokens.color(.canvasBackground))
                 .contentShape(Rectangle())
                 .onTapGesture { selectionModel.clear() }
@@ -134,6 +136,9 @@ public struct CanvasView: View {
                 // change. document.id is stable across edits, so we hash
                 // the render-relevant fields into a fingerprint string.
                 .task(id: renderFingerprint) { await render() }
+                } // FinderWindowChrome content
+                .scaleEffect(scale, anchor: .topLeading)
+                .padding(Tokens.spacing(.xl))
             }
             .scrollIndicators(.hidden)
             .overlay(alignment: .bottomTrailing) {
