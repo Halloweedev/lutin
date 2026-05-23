@@ -149,10 +149,10 @@ public struct BackgroundEditor: View {
             if currentVariant != .image {
                 SettingsField("Noise",
                               helper: "Subtle texture overlay. 0 = none, 1 = strong.") {
-                    Slider(value: Binding(
+                    LutinSlider(value: Binding(
                         get: { bg.noise ?? 0 },
                         set: { var b = bg; b.noise = $0; try? document.apply(.setBackground(b)) }),
-                           in: 0...1)
+                                in: 0...1)
                 }
             }
         }
