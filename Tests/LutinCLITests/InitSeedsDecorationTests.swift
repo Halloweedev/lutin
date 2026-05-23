@@ -6,7 +6,7 @@ import LutinRegistry
 @testable import LutinCLI
 
 final class InitSeedsDecorationTests: XCTestCase {
-    func testInitSeedsItemsAndADefaultArrow() throws {
+    func testInitSeedsItemsButNoDefaultArrow() throws {
         let dir = try Fixtures.makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
         let registry = Registry(storeURL: dir.appendingPathComponent("registry.json"))
@@ -19,11 +19,10 @@ final class InitSeedsDecorationTests: XCTestCase {
         let items = config.items ?? []
         XCTAssertTrue(items.contains { $0.type == "app" })
         XCTAssertTrue(items.contains { $0.type == "applications" })
-        let decorations = config.decorations ?? []
-        XCTAssertEqual(decorations.count, 1)
-        XCTAssertEqual(decorations.first?.type, "arrow")
-        XCTAssertEqual(decorations.first?.from, "app")
-        XCTAssertEqual(decorations.first?.to, "applications")
+        // Arrows are now opt-in via drag-to-connect on the canvas; the
+        // init template seeds two items only.
+        XCTAssertNil(config.decorations,
+                     "lutin init should not seed a default arrow")
     }
 
     func testInitConfigPassesValidation() throws {
