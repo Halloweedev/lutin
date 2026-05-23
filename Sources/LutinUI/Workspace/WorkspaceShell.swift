@@ -13,6 +13,7 @@ public struct WorkspaceShell: View {
     @State private var loadError: String?
     @State private var showSwitcher = false
     @State private var showCreateNew = false
+    @State private var preselectedDropURL: URL?
     @State private var showingDoctor = false
 
     public init() {}
@@ -29,7 +30,11 @@ public struct WorkspaceShell: View {
                 WelcomeView(
                     onCreateNew: { showCreateNew = true },
                     onOpenExisting: { showSwitcher = true },
-                    onSelectRecent: { name in selectedEntryName = name })
+                    onSelectRecent: { name in selectedEntryName = name },
+                    onDropApp: { url in
+                        preselectedDropURL = url
+                        showCreateNew = true
+                    })
             }
         }
         .frame(minWidth: 900, minHeight: 600)
@@ -61,8 +66,8 @@ public struct WorkspaceShell: View {
             ProjectSwitcherModal(selectedEntryName: $selectedEntryName)
                 .environment(registryStore)
         }
-        .sheet(isPresented: $showCreateNew) {
-            CreateProjectSheet { url, entryName in
+        .sheet(isPresented: $showCreateNew, onDismiss: { preselectedDropURL = nil }) {
+            CreateProjectSheet(preselectedAppURL: preselectedDropURL) { url, entryName in
                 try? registryStore.add(configURL: url)
                 selectedEntryName = entryName
             }

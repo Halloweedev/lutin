@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import LutinRegistry
 import LutinDocument
 
@@ -10,13 +11,17 @@ public struct WelcomeView: View {
     let onCreateNew: () -> Void
     let onOpenExisting: () -> Void
     let onSelectRecent: (String) -> Void
+    let onDropApp: (URL) -> Void
+    @State private var isDropTargeted = false
 
     public init(onCreateNew: @escaping () -> Void,
                 onOpenExisting: @escaping () -> Void,
-                onSelectRecent: @escaping (String) -> Void) {
+                onSelectRecent: @escaping (String) -> Void,
+                onDropApp: @escaping (URL) -> Void) {
         self.onCreateNew = onCreateNew
         self.onOpenExisting = onOpenExisting
         self.onSelectRecent = onSelectRecent
+        self.onDropApp = onDropApp
     }
 
     public var body: some View {
@@ -33,6 +38,36 @@ public struct WelcomeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Tokens.color(.canvasBackground).ignoresSafeArea())
+        .overlay {
+            // Drop-target highlight: covers the whole pane in brand accent
+            // when the user is hovering a .app over the window.
+            if isDropTargeted {
+                Rectangle()
+                    .strokeBorder(Tokens.color(.brandAccent), lineWidth: 3)
+                    .background(Tokens.color(.brandAccentMuted))
+                    .overlay {
+                        VStack(spacing: Tokens.spacing(.xs)) {
+                            Image(systemName: "arrow.down.app")
+                                .font(.system(size: 36, weight: .light))
+                                .foregroundStyle(Tokens.color(.brandAccent))
+                            Text("Drop to create project")
+                                .font(Typography.chrome)
+                                .foregroundStyle(Tokens.color(.brandAccent))
+                        }
+                    }
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.15), value: isDropTargeted)
+        .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
+            guard let provider = providers.first else { return false }
+            _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                guard let url, url.pathExtension.lowercased() == "app" else { return }
+                DispatchQueue.main.async { onDropApp(url) }
+            }
+            return true
+        }
     }
 
     private var header: some View {

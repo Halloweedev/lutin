@@ -10,6 +10,7 @@ import LutinDocument
 public struct CreateProjectSheet: View {
     @Environment(\.dismiss) private var dismiss
     let onCreate: (URL, String) -> Void
+    let preselectedAppURL: URL?
 
     @State private var appPath: String = ""
     @State private var appVersion: String?
@@ -20,7 +21,9 @@ public struct CreateProjectSheet: View {
     @State private var windowHeight: Int = 420
     @State private var error: String?
 
-    public init(onCreate: @escaping (URL, String) -> Void) {
+    public init(preselectedAppURL: URL? = nil,
+                onCreate: @escaping (URL, String) -> Void) {
+        self.preselectedAppURL = preselectedAppURL
         self.onCreate = onCreate
     }
 
@@ -34,6 +37,11 @@ public struct CreateProjectSheet: View {
         }
         .frame(width: 540)
         .background(Tokens.color(.sheetBackground))
+        .onAppear {
+            if let url = preselectedAppURL, appPath.isEmpty {
+                ingest(appURL: url)
+            }
+        }
     }
 
     private var header: some View {
@@ -196,19 +204,23 @@ public struct CreateProjectSheet: View {
         panel.allowsMultipleSelection = false
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        appPath = url.path
+        ingest(appURL: url)
+    }
+
+    private func ingest(appURL: URL) {
+        appPath = appURL.path
         // Read the Info.plist. On success, overwrite name + bundleId from
         // the real values. On failure, fall back to filename slug + suggested
         // bundle id and surface a soft warning.
         do {
-            let meta = try AppBundleInfo.read(url)
+            let meta = try AppBundleInfo.read(appURL)
             projectName = meta.displayName
             bundleId = meta.bundleIdentifier
             appVersion = meta.shortVersion
             appBuild = meta.build
             error = nil
         } catch {
-            let fallback = url.deletingPathExtension().lastPathComponent
+            let fallback = appURL.deletingPathExtension().lastPathComponent
             projectName = fallback
             bundleId = ProjectBootstrap.suggestedBundleId(for: fallback)
             appVersion = nil
