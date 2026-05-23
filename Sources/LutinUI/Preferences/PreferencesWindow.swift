@@ -25,10 +25,15 @@ public struct PreferencesWindow: View {
             LutinToggle("Autosave", isOn: Binding(
                 get: { store.preferences.autosave },
                 set: { v in try? store.update { $0.autosave = v } }))
-            Stepper("Snap grid: \(store.preferences.snapGridSize) pt",
-                value: Binding(get: { store.preferences.snapGridSize },
-                               set: { v in try? store.update { $0.snapGridSize = v } }),
-                in: 1...32)
+            LabeledContent("Snap grid") {
+                HStack(spacing: Tokens.spacing(.sm)) {
+                    Text("\(store.preferences.snapGridSize) pt").font(Typography.chromeSmall)
+                    LutinStepper(
+                        value: Binding(get: { store.preferences.snapGridSize },
+                                       set: { v in try? store.update { $0.snapGridSize = v } }),
+                        in: 1...32)
+                }
+            }
             LutinToggle("Show alignment guides", isOn: Binding(
                 get: { store.preferences.showAlignmentGuides },
                 set: { v in try? store.update { $0.showAlignmentGuides = v } }))

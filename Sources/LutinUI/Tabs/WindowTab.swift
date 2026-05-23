@@ -12,30 +12,34 @@ public struct WindowTab: View {
             SettingsSection("Dimensions",
                             footer: "Window opens at this size when the DMG mounts.") {
                 SettingsRow(icon: "arrow.left.and.right", "Width") {
-                    Stepper(value: widthBinding, in: 320...2048, step: 10) {
+                    HStack(spacing: Tokens.spacing(.sm)) {
                         Text("\(window.width ?? 680) pt").font(.system(size: 12))
                             .foregroundStyle(Tokens.color(.textSecondary))
+                        LutinStepper(value: widthBinding, in: 320...2048, step: 10)
                     }
                 }
                 SettingsRow(icon: "arrow.up.and.down", "Height") {
-                    Stepper(value: heightBinding, in: 240...1536, step: 10) {
+                    HStack(spacing: Tokens.spacing(.sm)) {
                         Text("\(window.height ?? 420) pt").font(.system(size: 12))
                             .foregroundStyle(Tokens.color(.textSecondary))
+                        LutinStepper(value: heightBinding, in: 240...1536, step: 10)
                     }
                 }
             }
 
             SettingsSection("Icons & Labels") {
                 SettingsRow(icon: "app.dashed", "Icon size") {
-                    Stepper(value: iconSizeBinding, in: 32...256, step: 8) {
+                    HStack(spacing: Tokens.spacing(.sm)) {
                         Text("\(window.iconSize ?? 96) pt").font(.system(size: 12))
                             .foregroundStyle(Tokens.color(.textSecondary))
+                        LutinStepper(value: iconSizeBinding, in: 32...256, step: 8)
                     }
                 }
                 SettingsRow(icon: "textformat.size", "Text size") {
-                    Stepper(value: textSizeBinding, in: 8...32, step: 1) {
+                    HStack(spacing: Tokens.spacing(.sm)) {
                         Text("\(window.textSize ?? 12) pt").font(.system(size: 12))
                             .foregroundStyle(Tokens.color(.textSecondary))
+                        LutinStepper(value: textSizeBinding, in: 8...32, step: 1)
                     }
                 }
             }

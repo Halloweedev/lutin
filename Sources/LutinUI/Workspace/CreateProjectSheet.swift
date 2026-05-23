@@ -132,13 +132,15 @@ public struct CreateProjectSheet: View {
     private var windowSizeRow: some View {
         HStack(spacing: Tokens.spacing(.md)) {
             labeled("Window width") {
-                Stepper(value: $windowWidth, in: 320...2048, step: 10) {
+                HStack(spacing: Tokens.spacing(.sm)) {
                     Text("\(windowWidth) pt").font(Typography.chromeSmall)
+                    LutinStepper(value: $windowWidth, in: 320...2048, step: 10)
                 }
             }
             labeled("Window height") {
-                Stepper(value: $windowHeight, in: 240...1536, step: 10) {
+                HStack(spacing: Tokens.spacing(.sm)) {
                     Text("\(windowHeight) pt").font(Typography.chromeSmall)
+                    LutinStepper(value: $windowHeight, in: 240...1536, step: 10)
                 }
             }
         }

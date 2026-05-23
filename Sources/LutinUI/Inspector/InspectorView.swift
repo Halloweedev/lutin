@@ -36,11 +36,16 @@ public struct InspectorView: View {
             LutinTextField("Background template", text: Binding(
                 get: { document.config.background?.template ?? "" },
                 set: { try? document.apply(.setBackgroundTemplate($0)) }))
-            Stepper("Icon size: \(document.config.window?.iconSize ?? 96) pt",
-                value: Binding(
-                    get: { document.config.window?.iconSize ?? 96 },
-                    set: { try? document.apply(.setIconSize($0)) }),
-                in: 32...256, step: 8)
+            LabeledContent("Icon size") {
+                HStack(spacing: Tokens.spacing(.sm)) {
+                    Text("\(document.config.window?.iconSize ?? 96) pt").font(Typography.chromeSmall)
+                    LutinStepper(
+                        value: Binding(
+                            get: { document.config.window?.iconSize ?? 96 },
+                            set: { try? document.apply(.setIconSize($0)) }),
+                        in: 32...256, step: 8)
+                }
+            }
         }
     }
 
@@ -48,14 +53,26 @@ public struct InspectorView: View {
         Section("Item · \(id)") {
             if let item = document.config.items?.first(where: { $0.id == id }) {
                 LabeledContent("Type", value: item.type)
-                Stepper("x: \(item.x)", value: Binding(
-                    get: { item.x },
-                    set: { try? document.apply(.moveItem(id: id, x: $0, y: item.y)) }),
-                    in: 0...4096)
-                Stepper("y: \(item.y)", value: Binding(
-                    get: { item.y },
-                    set: { try? document.apply(.moveItem(id: id, x: item.x, y: $0)) }),
-                    in: 0...4096)
+                LabeledContent("x") {
+                    HStack(spacing: Tokens.spacing(.sm)) {
+                        Text("\(item.x)").font(Typography.chromeSmall)
+                        LutinStepper(
+                            value: Binding(
+                                get: { item.x },
+                                set: { try? document.apply(.moveItem(id: id, x: $0, y: item.y)) }),
+                            in: 0...4096)
+                    }
+                }
+                LabeledContent("y") {
+                    HStack(spacing: Tokens.spacing(.sm)) {
+                        Text("\(item.y)").font(Typography.chromeSmall)
+                        LutinStepper(
+                            value: Binding(
+                                get: { item.y },
+                                set: { try? document.apply(.moveItem(id: id, x: item.x, y: $0)) }),
+                            in: 0...4096)
+                    }
+                }
                 LutinTextField("Label", text: Binding(
                     get: { item.label ?? "" },
                     set: { try? document.apply(.renameItemLabel(id: id, label: $0.isEmpty ? nil : $0)) }))

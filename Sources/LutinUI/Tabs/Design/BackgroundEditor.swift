@@ -100,11 +100,12 @@ public struct BackgroundEditor: View {
                 })
             }
             SettingsField("Angle") {
-                Stepper(value: Binding(
-                    get: { bg.angle ?? 0 },
-                    set: { var b = bg; b.angle = $0; try? document.apply(.setBackground(b)) }),
-                        in: 0...359, step: 15) {
+                HStack(spacing: Tokens.spacing(.sm)) {
                     Text("\(bg.angle ?? 0)°").font(Typography.chromeSmall)
+                    LutinStepper(value: Binding(
+                        get: { bg.angle ?? 0 },
+                        set: { var b = bg; b.angle = $0; try? document.apply(.setBackground(b)) }),
+                        in: 0...359, step: 15)
                 }
             }
         }
@@ -128,19 +129,21 @@ public struct BackgroundEditor: View {
     private var commonFields: some View {
         VStack(alignment: .leading, spacing: Tokens.spacing(.md)) {
             SettingsField("Scale") {
-                Stepper(value: Binding(
-                    get: { bg.scale ?? 2 },
-                    set: { var b = bg; b.scale = $0; try? document.apply(.setBackground(b)) }),
-                        in: 1...2, step: 1) {
+                HStack(spacing: Tokens.spacing(.sm)) {
                     Text("\(bg.scale ?? 2)×").font(Typography.chromeSmall)
+                    LutinStepper(value: Binding(
+                        get: { bg.scale ?? 2 },
+                        set: { var b = bg; b.scale = $0; try? document.apply(.setBackground(b)) }),
+                        in: 1...2, step: 1)
                 }
             }
             SettingsField("Corner radius") {
-                Stepper(value: Binding(
-                    get: { bg.cornerRadius ?? 0 },
-                    set: { var b = bg; b.cornerRadius = $0; try? document.apply(.setBackground(b)) }),
-                        in: 0...64, step: 1) {
+                HStack(spacing: Tokens.spacing(.sm)) {
                     Text("\(bg.cornerRadius ?? 0) pt").font(Typography.chromeSmall)
+                    LutinStepper(value: Binding(
+                        get: { bg.cornerRadius ?? 0 },
+                        set: { var b = bg; b.cornerRadius = $0; try? document.apply(.setBackground(b)) }),
+                        in: 0...64, step: 1)
                 }
             }
             if currentVariant != .image {
