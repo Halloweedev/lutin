@@ -9,7 +9,7 @@ public struct BackgroundEditor: View {
     public init(document: LutinProjectDocument) { self.document = document }
 
     private enum Variant: String, CaseIterable, Identifiable {
-        case template, solid, gradient, image
+        case solid, gradient, image
         var id: String { rawValue }
         var title: String { rawValue.capitalized }
     }
@@ -21,7 +21,6 @@ public struct BackgroundEditor: View {
             variantSegments
 
             switch currentVariant {
-            case .template: templateFields
             case .solid:    solidFields
             case .gradient: gradientFields
             case .image:    imageFields
@@ -61,19 +60,6 @@ public struct BackgroundEditor: View {
     }
 
     // MARK: - Variant-specific bodies
-
-    private var templateFields: some View {
-        SettingsField("Template",
-                      helper: "e.g. blueprint, paper, neon") {
-            SettingsTextField("blueprint", text: Binding(
-                get: { bg.template ?? "" },
-                set: { newValue in
-                    var b = bg
-                    b.template = newValue.isEmpty ? nil : newValue
-                    try? document.apply(.setBackground(b))
-                }))
-        }
-    }
 
     private var solidFields: some View {
         SettingsField("Color") {
@@ -172,7 +158,7 @@ public struct BackgroundEditor: View {
         case "solid": return .solid
         case "gradient": return .gradient
         case "image": return .image
-        default: return .template
+        default: return .solid  // legacy "generated" + nil → solid in the UI
         }
     }
 
@@ -180,7 +166,6 @@ public struct BackgroundEditor: View {
         var b = bg
         b.type = v.rawValue
         switch v {
-        case .template: b.colorA = nil; b.colorB = nil; b.path = nil; b.angle = nil
         case .solid:    b.template = nil; b.colorB = nil; b.path = nil; b.angle = nil
         case .gradient: b.template = nil; b.path = nil
         case .image:    b.template = nil; b.colorA = nil; b.colorB = nil
