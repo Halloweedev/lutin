@@ -87,17 +87,14 @@ public struct InspectorSection: View {
     }
 }
 
-/// Wraps an inspector sub-group with a top-and-bottom 1px hairline divider,
-/// creating visible horizontal band separation between categories without
-/// boxing them in a card (Option 1 treatment).
+/// Wraps an inspector sub-group with a single bottom hairline divider.
+/// Using only a bottom divider avoids doubling up between adjacent categories
+/// while still providing clear horizontal band separation.
 struct InspectorCategory<Content: View>: View {
     let content: Content
     init(@ViewBuilder content: () -> Content) { self.content = content() }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Rectangle()
-                .fill(Tokens.color(.divider))
-                .frame(height: Tokens.Size.hairline)
             content
                 .padding(.horizontal, Tokens.spacing(.md))
                 .padding(.vertical, Tokens.spacing(.md))
