@@ -13,15 +13,18 @@ final class BackgroundStyleTests: XCTestCase {
     }
 
     private func spec(grid: Bool, noise: Double, cornerRadius: Int) -> BackgroundSpec {
-        BackgroundSpec(kind: .generated, widthPoints: 120, heightPoints: 120, scale: 2,
+        BackgroundSpec(kind: .gradient, widthPoints: 120, heightPoints: 120, scale: 2,
                        colorA: "#EEF4FF", colorB: "#DDE8FF", grid: grid, noise: noise,
                        cornerRadius: cornerRadius, imageURL: nil)
     }
 
-    func testGridChangesTheOutput() throws {
+    // Note: the `grid` field is no longer applied to solid or gradient renders
+    // (it was a blueprint-template artefact). Grid is preserved in the schema
+    // for future image-overlay support.
+    func testGridFieldDoesNotAffectGradientOutput() throws {
         let plain = try BackgroundRenderer().renderBase(spec(grid: false, noise: 0, cornerRadius: 0))
-        let withGrid = try BackgroundRenderer().renderBase(spec(grid: true, noise: 0, cornerRadius: 0))
-        XCTAssertNotEqual(pngBytes(plain), pngBytes(withGrid))
+        let withGridFlag = try BackgroundRenderer().renderBase(spec(grid: true, noise: 0, cornerRadius: 0))
+        XCTAssertEqual(pngBytes(plain), pngBytes(withGridFlag))
     }
 
     func testNoiseChangesTheOutput() throws {

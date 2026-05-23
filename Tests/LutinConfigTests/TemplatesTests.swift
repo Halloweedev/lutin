@@ -7,7 +7,8 @@ final class TemplatesTests: XCTestCase {
     func testKnownTemplateLookup() throws {
         let blueprint = try Templates.named("blueprint")
         XCTAssertEqual(blueprint.window.width, 680)
-        XCTAssertEqual(blueprint.background.template, "blueprint")
+        XCTAssertEqual(blueprint.background.type, "solid")
+        XCTAssertEqual(blueprint.background.colorA, "#EEF4FF")
     }
 
     func testUnknownTemplateThrows() {
@@ -22,7 +23,7 @@ final class TemplatesTests: XCTestCase {
         config = try Templates.applyDefaults(to: config)
         XCTAssertEqual(config.window?.width, 680)            // from blueprint
         XCTAssertEqual(config.background?.colorA, "#EEF4FF") // from blueprint
-        XCTAssertEqual(config.background?.template, "blueprint")
+        XCTAssertEqual(config.background?.type, "solid")     // blueprint now ships solid
     }
 
     func testExplicitValuesWinOverTemplate() throws {

@@ -8,7 +8,7 @@ import LutinBuilder
 @testable import LutinRelease
 
 final class RenderedBackgroundTests: XCTestCase {
-    func testGeneratedBackgroundProducesADmgWithARenderedBackground() throws {
+    func testSolidBackgroundProducesADmgWithARenderedBackground() throws {
         let fm = FileManager.default
         // A project dir with ONLY the app — no assets/background.png — so a
         // background on the DMG can only come from the renderer.
@@ -25,9 +25,9 @@ final class RenderedBackgroundTests: XCTestCase {
             output: .init(directory: outDir.path, dmgName: "Barry.dmg", volumeName: "Barry"),
             window: .init(width: 680, height: 420, iconSize: 96, textSize: 13,
                           showToolbar: false, showSidebar: false),
-            background: .init(type: "generated", template: "blueprint", path: nil,
-                              scale: 2, colorA: "#EEF4FF", colorB: "#DDE8FF",
-                              grid: true, noise: 0.03, cornerRadius: 24),
+            background: .init(type: "solid", template: nil, path: nil,
+                              scale: 2, colorA: "#EEF4FF", colorB: nil,
+                              grid: false, noise: 0, cornerRadius: 0),
             items: [.init(type: "app", id: "app", x: 180, y: 220, label: "Barry"),
                     .init(type: "applications", id: "applications", x: 500, y: 220, label: nil)],
             decorations: [.init(type: "arrow", from: "app", to: "applications",

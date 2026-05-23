@@ -22,9 +22,10 @@ final class LutinRendererTests: XCTestCase {
     }
 
     private func generated() -> LutinConfig.BackgroundInfo {
-        .init(type: "generated", template: "blueprint", path: nil, scale: 2,
-              colorA: "#EEF4FF", colorB: "#DDE8FF", grid: true, noise: 0.03,
-              cornerRadius: 24)
+        // legacy "generated" type — renderer treats it as solid (solid fallback)
+        .init(type: "generated", template: nil, path: nil, scale: 2,
+              colorA: "#EEF4FF", colorB: "#DDE8FF", grid: false, noise: 0,
+              cornerRadius: 0)
     }
 
     private func pngSize(_ url: URL) -> (w: Int, h: Int)? {
@@ -37,7 +38,7 @@ final class LutinRendererTests: XCTestCase {
     // design against. The renderer must emit a PNG at exactly that size
     // (× scale for Retina) so Finder draws it 1:1. Growing the outer frame
     // for chrome is the builder's job, not the renderer's.
-    func testRendersGeneratedBackgroundAtWindowDimsTimesScale() throws {
+    func testRendersSolidBackgroundAtWindowDimsTimesScale() throws {
         let dir = FileManager.default.temporaryDirectory
         let url = try LutinRenderer.renderBackground(
             config: config(background: generated(), decorations: nil),

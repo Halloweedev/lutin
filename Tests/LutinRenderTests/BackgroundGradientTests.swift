@@ -20,9 +20,9 @@ final class BackgroundGradientTests: XCTestCase {
                 Double(pixels[offset + 2]) / 255.0)
     }
 
-    func testGeneratedBackgroundHasPixelSizeWindowTimesScale() throws {
+    func testGradientBackgroundHasPixelSizeWindowTimesScale() throws {
         let spec = BackgroundSpec(
-            kind: .generated, widthPoints: 200, heightPoints: 100, scale: 2,
+            kind: .gradient, widthPoints: 200, heightPoints: 100, scale: 2,
             colorA: "#FF0000", colorB: "#0000FF", grid: false, noise: 0,
             cornerRadius: 0, imageURL: nil)
         let image = try BackgroundRenderer().renderBase(spec)
@@ -33,7 +33,7 @@ final class BackgroundGradientTests: XCTestCase {
     func testGradientRunsFromColorAToColorB() throws {
         // Pure-red to pure-blue, top-left to bottom-right, no grid/noise/corners.
         let spec = BackgroundSpec(
-            kind: .generated, widthPoints: 100, heightPoints: 100, scale: 1,
+            kind: .gradient, widthPoints: 100, heightPoints: 100, scale: 1,
             colorA: "#FF0000", colorB: "#0000FF", grid: false, noise: 0,
             cornerRadius: 0, imageURL: nil)
         let image = try BackgroundRenderer().renderBase(spec)
@@ -47,7 +47,7 @@ final class BackgroundGradientTests: XCTestCase {
 
     func testMalformedColorThrowsRenderFailed() {
         let spec = BackgroundSpec(
-            kind: .generated, widthPoints: 50, heightPoints: 50, scale: 1,
+            kind: .gradient, widthPoints: 50, heightPoints: 50, scale: 1,
             colorA: "not-a-color", colorB: "#000000", grid: false, noise: 0,
             cornerRadius: 0, imageURL: nil)
         XCTAssertThrowsError(try BackgroundRenderer().renderBase(spec)) { error in
@@ -57,7 +57,7 @@ final class BackgroundGradientTests: XCTestCase {
 
     func testMalformedColorBThrowsRenderFailed() {
         let spec = BackgroundSpec(
-            kind: .generated, widthPoints: 50, heightPoints: 50, scale: 1,
+            kind: .gradient, widthPoints: 50, heightPoints: 50, scale: 1,
             colorA: "#FF0000", colorB: "not-a-color", grid: false, noise: 0,
             cornerRadius: 0, imageURL: nil)
         XCTAssertThrowsError(try BackgroundRenderer().renderBase(spec)) { error in
