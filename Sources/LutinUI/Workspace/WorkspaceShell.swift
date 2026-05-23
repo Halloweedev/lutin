@@ -138,9 +138,6 @@ private struct ProjectWorkspace: View {
                 .background(Tokens.color(.canvasBackground))
         }
         .animation(.easeInOut(duration: 0.18), value: sidePanelHidden)
-        .toolbar {
-            ToolbarActions(document: document, runner: pipelineRunner, showingDoctor: $showingDoctor)
-        }
         .sheet(isPresented: $showingDoctor) { DoctorSheet(document: document) }
         .onReceive(NotificationCenter.default.publisher(for: .lutinDelete)) { _ in
             try? selectionModel.delete(in: document)
