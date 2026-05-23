@@ -1,67 +1,26 @@
 import SwiftUI
-import LutinDocument
 
-/// Custom header bar drawn at the top of the workspace. Replaces the
-/// macOS title bar (hidden in main.swift via `.windowStyle(.hiddenTitleBar)`).
-/// Shows the current section title plus a trailing collapse arrow that
-/// hides the side panel — a "Background"-style header, like the
-/// reference image.
+/// Thin bar at the very top of the workspace that reserves space for the
+/// macOS traffic lights (close / minimise / zoom). The title bar is hidden
+/// via `.windowStyle(.hiddenTitleBar)` in main.swift; macOS still draws the
+/// three buttons in the window's top-left corner and needs ~72 pt of clear
+/// horizontal space so they don't overlap workspace chrome.
 ///
-/// The leading inset reserves room for the macOS traffic lights so they
-/// don't overlap the title.
+/// All interactive content that used to live here (project switcher dropdown,
+/// sidebar-collapse toggle) moved into the SidePanel's top row (Item L).
 public struct AppHeaderBar: View {
-    let title: String
-    let projectName: String
-    @Binding var sidePanelHidden: Bool
-    let onTitleTap: () -> Void
-
-    public init(title: String,
-                projectName: String,
-                sidePanelHidden: Binding<Bool>,
-                onTitleTap: @escaping () -> Void) {
-        self.title = title
-        self.projectName = projectName
-        self._sidePanelHidden = sidePanelHidden
-        self.onTitleTap = onTitleTap
-    }
+    public init() {}
 
     public var body: some View {
-        HStack(spacing: Tokens.spacing(.md)) {
-            // Reserve room for traffic lights (macOS positions them in
-            // the window's top-left corner; ~72 pt accommodates the three
-            // lights + their margin).
+        HStack(spacing: 0) {
+            // Traffic-light reservation — macOS draws close/min/max here when
+            // the title bar is transparent. Empty content; the chrome that
+            // used to live here moved into the SidePanel.
             Spacer().frame(width: 72)
-
-            LutinButton(role: .secondary, action: onTitleTap) {
-                HStack(spacing: 6) {
-                    Text(title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Tokens.color(.textPrimary))
-                    Text("•")
-                        .foregroundStyle(Tokens.color(.textTertiary))
-                    Text(projectName)
-                        .font(.system(size: 13))
-                        .foregroundStyle(Tokens.color(.textSecondary))
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(Tokens.color(.textTertiary))
-                }
-                .padding(.vertical, 4)
-                .contentShape(Rectangle())
-            }
-            .keyboardShortcut("o", modifiers: .command)
-
             Spacer()
-
-            LutinIconButton(systemName: sidePanelHidden ? "sidebar.left" : "chevron.left.2",
-                            accessibilityLabel: sidePanelHidden ? "Show side panel" : "Hide side panel") {
-                sidePanelHidden.toggle()
-            }
-            .help(sidePanelHidden ? "Show side panel" : "Hide side panel")
         }
-        .padding(.horizontal, Tokens.spacing(.md))
-        .frame(height: 48)
-        .background(Tokens.color(.toolbarBackground))
+        .frame(height: 28)
+        .background(Tokens.color(.panelBackground))
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(Tokens.color(.divider))

@@ -21,10 +21,7 @@ public struct WorkspaceShell: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            AppHeaderBar(title: "Lutin",
-                         projectName: currentProjectName,
-                         sidePanelHidden: $sidePanelHidden,
-                         onTitleTap: { showSwitcher = true })
+            AppHeaderBar()
             Group {
                 if let document {
                     ProjectWorkspace(document: document,
@@ -90,10 +87,6 @@ public struct WorkspaceShell: View {
         .onReceive(NotificationCenter.default.publisher(for: .lutinOpenSwitcher)) { _ in
             showSwitcher = true
         }
-    }
-
-    private var currentProjectName: String {
-        selectedEntryName ?? "No project"
     }
 
     private func loadDocument(named name: String?) {
