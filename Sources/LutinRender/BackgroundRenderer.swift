@@ -7,14 +7,16 @@ import LutinCore
 /// (`LutinRenderer`) builds this from `LutinConfig`; the renderer never reads
 /// config types directly, so it stays independently testable.
 struct BackgroundSpec {
-    enum Kind { case generated, image }
+    /// The three supported background variants. Legacy `"generated"` configs
+    /// are treated as `.solid` by `LutinRenderer` — no grid, no pattern.
+    enum Kind { case solid, gradient, image }
     let kind: Kind
     let widthPoints: Int
     let heightPoints: Int
     let scale: Int
     let colorA: String
     let colorB: String
-    let grid: Bool
+    let grid: Bool  // reserved for future image-overlay use; not applied to solid/gradient
     let noise: Double
     let cornerRadius: Int
     /// For `.image`: the resolved on-disk URL of the user's background image.
@@ -24,19 +26,57 @@ struct BackgroundSpec {
     var pixelHeight: Int { heightPoints * max(1, scale) }
 }
 
-/// Draws the base background layer: gradient, grid, noise, corner rounding,
-/// and the user-supplied background image.
+/// Draws the base background layer: solid fill or gradient, optional noise,
+/// corner rounding, and the user-supplied background image.
 struct BackgroundRenderer {
     func renderBase(_ spec: BackgroundSpec) throws -> CGImage {
         switch spec.kind {
-        case .generated:
-            return try renderGenerated(spec)
+        case .solid:
+            return try renderSolid(spec)
+        case .gradient:
+            return try renderGradient(spec)
         case .image:
             return try renderImage(spec)
         }
     }
 
-    private func renderGenerated(_ spec: BackgroundSpec) throws -> CGImage {
+    /// Fills the canvas with `colorA` — a flat solid colour. Applies corner
+    /// radius and optional noise. No grid, no gradient.
+    private func renderSolid(_ spec: BackgroundSpec) throws -> CGImage {
+        guard let colorA = RenderColor.parse(spec.colorA) else {
+            throw LutinError(code: "render_failed",
+                             message: "background.colorA is not a valid #RRGGBB colour: '\(spec.colorA)'.")
+        }
+        let ctx = try RenderContext(pixelWidth: spec.pixelWidth, pixelHeight: spec.pixelHeight)
+        let scale = CGFloat(max(1, spec.scale))
+        let radius = CGFloat(spec.cornerRadius) * scale
+
+        if radius > 0 {
+            ctx.cg.setFillColor(colorA.withAlpha(1).cgColor)
+            ctx.cg.fill(CGRect(x: 0, y: 0, width: ctx.cg.width, height: ctx.cg.height))
+            let margin = 14 * scale
+            let panel = CGRect(x: margin, y: margin,
+                               width: CGFloat(ctx.cg.width) - 2 * margin,
+                               height: CGFloat(ctx.cg.height) - 2 * margin)
+            ctx.cg.saveGState()
+            ctx.cg.addPath(CGPath(roundedRect: panel, cornerWidth: radius,
+                                  cornerHeight: radius, transform: nil))
+            ctx.cg.clip()
+            ctx.cg.setFillColor(colorA.withAlpha(1).cgColor)
+            ctx.cg.fill(CGRect(x: 0, y: 0, width: ctx.cg.width, height: ctx.cg.height))
+            if spec.noise > 0 { drawNoise(in: ctx, intensity: spec.noise, scale: scale) }
+            ctx.cg.restoreGState()
+        } else {
+            ctx.cg.setFillColor(colorA.withAlpha(1).cgColor)
+            ctx.cg.fill(CGRect(x: 0, y: 0, width: ctx.cg.width, height: ctx.cg.height))
+            if spec.noise > 0 { drawNoise(in: ctx, intensity: spec.noise, scale: scale) }
+        }
+        return ctx.finish()
+    }
+
+    /// Draws a linear gradient from `colorA` (top-left) to `colorB`
+    /// (bottom-right), with optional corner radius and noise. No grid.
+    private func renderGradient(_ spec: BackgroundSpec) throws -> CGImage {
         guard let colorA = RenderColor.parse(spec.colorA) else {
             throw LutinError(code: "render_failed",
                              message: "background.colorA is not a valid #RRGGBB colour: '\(spec.colorA)'.")
@@ -61,30 +101,14 @@ struct BackgroundRenderer {
             ctx.cg.addPath(CGPath(roundedRect: panel, cornerWidth: radius,
                                   cornerHeight: radius, transform: nil))
             ctx.cg.clip()
-            drawGradient(in: ctx, from: colorA, to: colorB)
-            if spec.grid { drawGrid(in: ctx, scale: scale) }
+            drawLinearGradient(in: ctx, from: colorA, to: colorB)
             if spec.noise > 0 { drawNoise(in: ctx, intensity: spec.noise, scale: scale) }
             ctx.cg.restoreGState()
         } else {
-            drawGradient(in: ctx, from: colorA, to: colorB)
-            if spec.grid { drawGrid(in: ctx, scale: scale) }
+            drawLinearGradient(in: ctx, from: colorA, to: colorB)
             if spec.noise > 0 { drawNoise(in: ctx, intensity: spec.noise, scale: scale) }
         }
         return ctx.finish()
-    }
-
-    /// A faint engineering grid: lines every 26 points.
-    private func drawGrid(in ctx: RenderContext, scale: CGFloat) {
-        let step = 26 * scale
-        let w = CGFloat(ctx.cg.width)
-        let h = CGFloat(ctx.cg.height)
-        ctx.cg.setStrokeColor(CGColor(srgbRed: 0.35, green: 0.47, blue: 0.78, alpha: 0.16))
-        ctx.cg.setLineWidth(max(1, scale))
-        var x: CGFloat = step
-        while x < w { ctx.cg.move(to: CGPoint(x: x, y: 0)); ctx.cg.addLine(to: CGPoint(x: x, y: h)); x += step }
-        var y: CGFloat = step
-        while y < h { ctx.cg.move(to: CGPoint(x: 0, y: y)); ctx.cg.addLine(to: CGPoint(x: w, y: y)); y += step }
-        ctx.cg.strokePath()
     }
 
     /// A subtle, deterministic noise dither. `intensity` (0...1) scales how many
@@ -152,7 +176,7 @@ struct BackgroundRenderer {
     /// bottom-right we must convert: visual top-left is device (0, 0), which
     /// in the flipped user space is (0, h); visual bottom-right is device
     /// (w, h), which in user space is (w, 0).
-    private func drawGradient(in ctx: RenderContext, from colorA: RenderColor, to colorB: RenderColor) {
+    private func drawLinearGradient(in ctx: RenderContext, from colorA: RenderColor, to colorB: RenderColor) {
         let space = CGColorSpace(name: CGColorSpace.sRGB)!
         let gradient = CGGradient(
             colorsSpace: space,

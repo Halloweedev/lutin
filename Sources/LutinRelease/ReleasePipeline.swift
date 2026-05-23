@@ -136,13 +136,15 @@ public enum ReleasePipeline {
     }
 
     /// Produces the background image to embed. Renders via `LutinRender` when
-    /// the config asks for a generated background or carries decorations;
-    /// otherwise falls back to the plain user-image resolution.
+    /// the background is a solid/gradient (or legacy "generated"), or when the
+    /// config carries decorations. Falls back to plain user-image resolution
+    /// only for a bare `type: "image"` background with no decorations.
     static func renderedBackground(config: LutinConfig, projectDirectory: URL,
                                    onOutput: ((String) -> Void)?) throws -> URL? {
         let hasDecorations = !(config.decorations ?? []).isEmpty
-        let isGenerated = (config.background?.type ?? "") == "generated"
-        if isGenerated || hasDecorations {
+        let bgType = config.background?.type ?? ""
+        let needsRenderer = bgType != "image" || hasDecorations
+        if needsRenderer {
             return try LutinRenderer.renderBackground(
                 config: config, projectDirectory: projectDirectory, onOutput: onOutput)
         }

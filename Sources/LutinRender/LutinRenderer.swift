@@ -38,7 +38,13 @@ public enum LutinRenderer {
         // at exactly that size. Growing the .DS_Store WindowBounds to
         // accommodate Finder chrome happens in LayoutResolver.
 
-        let kind: BackgroundSpec.Kind = (bg?.type == "image") ? .image : .generated
+        let kind: BackgroundSpec.Kind
+        switch bg?.type {
+        case "image":    kind = .image
+        case "gradient": kind = .gradient
+        case "solid":    kind = .solid
+        default:         kind = .solid   // legacy "generated" + nil → solid fallback
+        }
         var imageURL: URL?
         if kind == .image {
             guard let path = bg?.path, !path.isEmpty else {
