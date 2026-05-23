@@ -81,8 +81,9 @@ public struct ItemLayer: View {
                     .frame(width: 80)
                     .offset(y: 36)
             } else if let label = item.label, !label.isEmpty {
+                let textSize = CGFloat(document.config.window?.textSize ?? 12)
                 Text(label)
-                    .font(Typography.canvasLabel)
+                    .font(.system(size: textSize))
                     .offset(y: iconSize / 2 + 12)
                     .onTapGesture(count: 2) { editingID = item.id }
             } else {
