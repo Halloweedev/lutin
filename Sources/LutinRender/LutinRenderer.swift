@@ -24,8 +24,15 @@ public enum LutinRenderer {
     /// - Returns: the URL of a freshly written PNG.
     /// - Throws: `LutinError` with code `render_failed` or
     ///   `decoration_image_not_found`.
+    /// When `includeDecorations` is `false`, the renderer writes only the
+    /// background layer (color / gradient / image) and skips compositing
+    /// arrows + image overlays on top. The canvas preview uses this mode so
+    /// SwiftUI's `ArrowLayer` / `ImageDecorationLayer` can draw decorations
+    /// live (interactive, dragable). The DMG output path keeps the default
+    /// `true` so the final PNG has every decoration baked in.
     public static func renderBackground(config: LutinConfig,
                                         projectDirectory: URL,
+                                        includeDecorations: Bool = true,
                                         onOutput: ((String) -> Void)? = nil) throws -> URL {
         let window = config.window
         let widthPoints = window?.width ?? 680
@@ -66,10 +73,15 @@ public enum LutinRenderer {
             cornerRadius: bg?.cornerRadius ?? 0, imageURL: imageURL)
 
         let base = try BackgroundRenderer().renderBase(spec)
-        let decorations = try resolveDecorations(config: config,
-                                                 projectDirectory: projectDirectory)
-        let final = try DecorationCompositor().composite(
-            base: base, decorations: decorations, iconSizePoints: iconSize, scale: scale)
+        let final: CGImage
+        if includeDecorations {
+            let decorations = try resolveDecorations(config: config,
+                                                     projectDirectory: projectDirectory)
+            final = try DecorationCompositor().composite(
+                base: base, decorations: decorations, iconSizePoints: iconSize, scale: scale)
+        } else {
+            final = base
+        }
 
         let outURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("lutin-render-\(UUID().uuidString).png")

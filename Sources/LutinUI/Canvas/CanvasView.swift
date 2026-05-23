@@ -297,8 +297,12 @@ public struct CanvasView: View {
         let projectDirSnapshot = document.projectDirectory
         renderTask = Task.detached(priority: .userInitiated) {
             do {
+                // Canvas preview = background only. Arrows + image overlays
+                // are drawn live by ArrowLayer / ImageDecorationLayer on top
+                // of this PNG; baking them in here would double them.
                 let url = try LutinRenderer.renderBackground(
-                    config: configSnapshot, projectDirectory: projectDirSnapshot)
+                    config: configSnapshot, projectDirectory: projectDirSnapshot,
+                    includeDecorations: false)
                 // Force-decode now: CGImageSourceCreateImageAtIndex is lazy by
                 // default. If we let it defer until SwiftUI displays the image,
                 // the file may already be gone — which yields a valid CGImage
