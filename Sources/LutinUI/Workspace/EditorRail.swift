@@ -58,14 +58,16 @@ public struct EditorRail: View {
                             isSelected: Bool,
                             tooltip: String,
                             action: @escaping () -> Void) -> some View {
-        LutinIconButton(systemName: systemImage,
-                        accessibilityLabel: tooltip,
-                        action: action)
-            .frame(maxWidth: .infinity)
-            .background(SquareShape().fill(isSelected
-                                            ? Tokens.color(.brandAccentMuted)
-                                            : Color.clear))
-            .help(tooltip)
+        HStack(spacing: 0) {
+            Rectangle()
+                .fill(isSelected ? Tokens.color(.brandAccent) : Color.clear)
+                .frame(width: 3)
+            LutinIconButton(systemName: systemImage,
+                            accessibilityLabel: tooltip,
+                            action: action)
+                .frame(maxWidth: .infinity)
+        }
+        .help(tooltip)
     }
 
     /// Opens the macOS Preferences scene via the standard menu action.
