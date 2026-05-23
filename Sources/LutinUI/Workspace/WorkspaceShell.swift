@@ -46,6 +46,7 @@ public struct WorkspaceShell: View {
             }
         }
         .frame(minWidth: 900, minHeight: 600)
+        .tint(Tokens.color(.brandAccent))
         .background {
             // Hidden button to wire ⌘N globally without claiming a visible
             // toolbar slot — same pattern other commands use.
