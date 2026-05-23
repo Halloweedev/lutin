@@ -51,8 +51,12 @@ public struct ProjectSwitcherModal: View {
             Divider().frame(height: Tokens.Size.hairline).background(Tokens.color(.divider))
             Button(action: addProject) {
                 HStack {
-                    Image(systemName: "plus")
+                    Image(systemName: "plus.square")
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundStyle(Tokens.color(.brandAccent))
+                        .frame(width: 24, height: 24)
                     Text("Add project…").font(Typography.chrome)
+                        .foregroundStyle(Tokens.color(.textPrimary))
                     Spacer()
                 }
                 .padding(Tokens.spacing(.md))
@@ -78,9 +82,15 @@ public struct ProjectSwitcherModal: View {
 
     private func entryRow(_ entry: RegistryEntry, isHighlighted: Bool) -> some View {
         HStack(spacing: Tokens.spacing(.sm)) {
-            Image(systemName: "shippingbox")
-                .foregroundStyle(Tokens.color(.brandAccent))
-                .frame(width: 24, height: 24)
+            ZStack {
+                SquareShape()
+                    .stroke(Tokens.color(.divider),
+                            lineWidth: Tokens.Size.hairline)
+                    .frame(width: 24, height: 24)
+                Text(String(entry.name.prefix(1)).uppercased())
+                    .font(Typography.chromeSmall)
+                    .foregroundStyle(Tokens.color(.textSecondary))
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.name).font(Typography.chrome)
                     .foregroundStyle(Tokens.color(.textPrimary))
@@ -89,10 +99,15 @@ public struct ProjectSwitcherModal: View {
                     .lineLimit(1).truncationMode(.middle)
             }
             Spacer()
-            if let version = entry.lastDetectedVersion {
-                Text(version)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(entry.lastOpenedDate, format: .relative(presentation: .named))
                     .font(Typography.chromeSmall)
                     .foregroundStyle(Tokens.color(.textTertiary))
+                if let version = entry.lastDetectedVersion {
+                    Text(version)
+                        .font(Typography.chromeSmall)
+                        .foregroundStyle(Tokens.color(.textTertiary))
+                }
             }
         }
         .padding(.horizontal, Tokens.spacing(.md))
