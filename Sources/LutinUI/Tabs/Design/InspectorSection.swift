@@ -13,14 +13,14 @@ public struct InspectorSection: View {
     }
 
     public var body: some View {
-        DisclosureGroup(isExpanded: $isExpanded) {
-            content
-        } label: {
+        LutinCollapsibleSection(isExpanded: $isExpanded) {
             Text("Inspector").font(Typography.chromeSmall)
                 .foregroundStyle(Tokens.color(.textSecondary))
                 .textCase(.uppercase)
                 .padding(.horizontal, Tokens.spacing(.md))
                 .padding(.top, Tokens.spacing(.sm))
+        } content: {
+            content
         }
     }
 

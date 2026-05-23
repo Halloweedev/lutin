@@ -13,19 +13,19 @@ public struct LayersSection: View {
     }
 
     public var body: some View {
-        DisclosureGroup(isExpanded: $isExpanded) {
+        LutinCollapsibleSection(isExpanded: $isExpanded) {
+            Text("Layers").font(Typography.chromeSmall)
+                .foregroundStyle(Tokens.color(.textSecondary))
+                .textCase(.uppercase)
+                .padding(.horizontal, Tokens.spacing(.md))
+                .padding(.top, Tokens.spacing(.sm))
+        } content: {
             VStack(spacing: 0) {
                 ForEach(LayersOrdering.rows(from: document.config), id: \.id) { row in
                     layerRow(row)
                 }
             }
             .padding(.vertical, Tokens.spacing(.xs))
-        } label: {
-            Text("Layers").font(Typography.chromeSmall)
-                .foregroundStyle(Tokens.color(.textSecondary))
-                .textCase(.uppercase)
-                .padding(.horizontal, Tokens.spacing(.md))
-                .padding(.top, Tokens.spacing(.sm))
         }
     }
 
