@@ -5,12 +5,16 @@ import AppKit
 import LutinCore
 import LutinConfig
 import LutinRender
+import LutinRelease
 import LutinDocument
 
 public struct CanvasView: View {
     @Bindable var document: LutinProjectDocument
     @Bindable var selectionModel: CanvasSelectionModel
     @Bindable var editorState: EditorState
+    @Bindable var runner: PipelineRunner
+    @Binding var showingDoctor: Bool
+    @Binding var sidePanelHidden: Bool
     @State private var backgroundImage: CGImage?
     @State private var renderError: String?
     @State private var renderTask: Task<Void, Never>?
@@ -21,10 +25,16 @@ public struct CanvasView: View {
 
     public init(document: LutinProjectDocument,
                 selectionModel: CanvasSelectionModel,
-                editorState: EditorState) {
+                editorState: EditorState,
+                runner: PipelineRunner,
+                showingDoctor: Binding<Bool>,
+                sidePanelHidden: Binding<Bool>) {
         self.document = document
         self.selectionModel = selectionModel
         self.editorState = editorState
+        self.runner = runner
+        self._showingDoctor = showingDoctor
+        self._sidePanelHidden = sidePanelHidden
     }
 
     public var body: some View {
@@ -141,11 +151,31 @@ public struct CanvasView: View {
                 .padding(Tokens.spacing(.xl))
             }
             .scrollIndicators(.hidden)
-            .overlay(alignment: .bottomTrailing) {
-                ZoomControlBar(zoomPercent: $editorState.zoomPercent,
-                               paneSize: proxy.size,
-                               canvasSize: CGSize(width: configW, height: configH))
+            // Bottom-leading: Build/Preview/Release/Doctor + zoom controls
+            .overlay(alignment: .bottomLeading) {
+                HStack(spacing: Tokens.spacing(.xs)) {
+                    CanvasActionsBar(document: document,
+                                     runner: runner,
+                                     showingDoctor: $showingDoctor)
+                    ZoomControlBar(zoomPercent: $editorState.zoomPercent,
+                                   paneSize: proxy.size,
+                                   canvasSize: CGSize(width: configW, height: configH))
+                }
+                .padding(Tokens.spacing(.md))
+            }
+            // Top-trailing: + Add menu
+            .overlay(alignment: .topTrailing) {
+                CanvasAddMenu(document: document)
                     .padding(Tokens.spacing(.md))
+            }
+            // Top-leading: Show sidebar button (visible only when panel is hidden)
+            .overlay(alignment: .topLeading) {
+                if sidePanelHidden {
+                    LutinIconButton(systemName: "sidebar.left",
+                                    accessibilityLabel: "Show sidebar",
+                                    action: { sidePanelHidden = false })
+                        .padding(Tokens.spacing(.md))
+                }
             }
             .overlay(alignment: .bottom) {
                 if selectionModel.moveableIDs.count >= 2 {

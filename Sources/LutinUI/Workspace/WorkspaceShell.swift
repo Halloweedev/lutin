@@ -133,7 +133,10 @@ private struct ProjectWorkspace: View {
             }
             CanvasView(document: document,
                        selectionModel: selectionModel,
-                       editorState: editorState)
+                       editorState: editorState,
+                       runner: pipelineRunner,
+                       showingDoctor: $showingDoctor,
+                       sidePanelHidden: $sidePanelHidden)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Tokens.color(.canvasBackground))
         }
