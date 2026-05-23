@@ -22,5 +22,11 @@ public enum LibraryItem: String, CaseIterable, Sendable {
         }
     }
 
-    public static let dragType = UTType("com.lutin.library-item")!
+    /// Process-local UTI. Using `importedAs(_:conformingTo:)` makes this
+    /// work without an Info.plist declaration — the type system creates
+    /// an in-memory entry for the current process. The previous
+    /// `UTType("com.lutin.library-item")!` trapped on first use in a
+    /// packaged .app where no UTExportedTypeDeclarations exist.
+    public static let dragType = UTType(importedAs: "com.lutin.library-item",
+                                         conformingTo: .text)
 }
