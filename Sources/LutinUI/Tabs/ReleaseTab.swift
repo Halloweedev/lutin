@@ -39,18 +39,16 @@ public struct ReleaseTab: View {
                           helper: identities.isEmpty
                           ? "No Developer ID identities found in the Keychain."
                           : nil) {
-                Picker("", selection: Binding(
-                    get: { document.config.signing?.identity ?? "" },
-                    set: { v in
-                        var s = currentSigning(); s.identity = v.isEmpty ? nil : v
-                        try? document.apply(.setSigning(s))
-                    })) {
-                    Text("Not set").tag("")
-                    ForEach(identities) { i in
-                        Text(i.name).tag(i.name as String)
-                    }
-                }
-                .labelsHidden()
+                LutinPicker(
+                    selection: Binding(
+                        get: { document.config.signing?.identity ?? "" },
+                        set: { v in
+                            var s = currentSigning(); s.identity = v.isEmpty ? nil : v
+                            try? document.apply(.setSigning(s))
+                        }),
+                    options: [.init(id: "", label: "Not set")]
+                        + identities.map { .init(id: $0.name, label: $0.name) }
+                )
             }
             SettingsRow(icon: "lock.shield", "Hardened runtime") {
                 LutinToggle("", isOn: Binding(
@@ -103,16 +101,16 @@ public struct ReleaseTab: View {
                             try? document.apply(.setNotarization(n))
                         }))
                 } else {
-                    Picker("", selection: Binding(
-                        get: { document.config.notarization?.profile ?? "" },
-                        set: { v in
-                            var n = currentNotarization(); n.profile = v.isEmpty ? nil : v
-                            try? document.apply(.setNotarization(n))
-                        })) {
-                        Text("Not set").tag("")
-                        ForEach(notaryProfiles, id: \.self) { Text($0).tag($0) }
-                    }
-                    .labelsHidden()
+                    LutinPicker(
+                        selection: Binding(
+                            get: { document.config.notarization?.profile ?? "" },
+                            set: { v in
+                                var n = currentNotarization(); n.profile = v.isEmpty ? nil : v
+                                try? document.apply(.setNotarization(n))
+                            }),
+                        options: [.init(id: "", label: "Not set")]
+                            + notaryProfiles.map { .init(id: $0, label: $0) }
+                    )
                 }
             }
             SettingsRow(icon: "paperclip", "Staple") {

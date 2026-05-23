@@ -58,12 +58,19 @@ public struct PreferencesWindow: View {
 
     private var themeTab: some View {
         Form {
-            Picker("Appearance", selection: Binding(
-                get: { store.preferences.theme },
-                set: { v in try? store.update { $0.theme = v } })) {
-                Text("System").tag(LutinPreferences.Theme.system)
-                Text("Light").tag(LutinPreferences.Theme.light)
-                Text("Dark").tag(LutinPreferences.Theme.dark)
+            HStack {
+                Text("Appearance").font(Typography.controlLabel)
+                Spacer()
+                LutinPicker(
+                    selection: Binding(
+                        get: { store.preferences.theme },
+                        set: { v in try? store.update { $0.theme = v } }),
+                    options: [
+                        .init(id: LutinPreferences.Theme.system, label: "System"),
+                        .init(id: LutinPreferences.Theme.light, label: "Light"),
+                        .init(id: LutinPreferences.Theme.dark, label: "Dark"),
+                    ]
+                )
             }
         }
     }
