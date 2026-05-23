@@ -63,7 +63,14 @@ public struct WorkspaceShell: View {
             }
         }
         .sheet(isPresented: $showSwitcher) {
-            ProjectSwitcherModal(selectedEntryName: $selectedEntryName)
+            ProjectSwitcherModal(
+                selectedEntryName: $selectedEntryName,
+                onAddNewProject: {
+                    // SwiftUI dismisses the switcher first; defer the
+                    // Create sheet by a runloop so the second sheet
+                    // doesn't fight the first sheet's dismiss animation.
+                    DispatchQueue.main.async { showCreateNew = true }
+                })
                 .environment(registryStore)
         }
         .sheet(isPresented: $showCreateNew, onDismiss: { preselectedDropURL = nil }) {

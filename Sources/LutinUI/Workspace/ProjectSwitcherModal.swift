@@ -17,11 +17,14 @@ public struct ProjectSwitcherModal: View {
     @Environment(RegistryStore.self) private var registryStore
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedEntryName: String?
+    let onAddNewProject: () -> Void
     @State private var query = ""
     @State private var highlightedIndex = 0
 
-    public init(selectedEntryName: Binding<String?>) {
+    public init(selectedEntryName: Binding<String?>,
+                onAddNewProject: @escaping () -> Void) {
         self._selectedEntryName = selectedEntryName
+        self.onAddNewProject = onAddNewProject
     }
 
     public var body: some View {
@@ -49,17 +52,40 @@ public struct ProjectSwitcherModal: View {
                 }
             }
             Divider().frame(height: Tokens.Size.hairline).background(Tokens.color(.divider))
-            Button(action: addProject) {
-                HStack {
+            Button(action: addNewProject) {
+                HStack(spacing: Tokens.spacing(.sm)) {
                     Image(systemName: "plus.square")
                         .font(.system(size: 16, weight: .regular))
                         .foregroundStyle(Tokens.color(.brandAccent))
                         .frame(width: 24, height: 24)
-                    Text("Add project…").font(Typography.chrome)
-                        .foregroundStyle(Tokens.color(.textPrimary))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("New project from .app…").font(Typography.chrome)
+                            .foregroundStyle(Tokens.color(.textPrimary))
+                        Text("Pick a .app bundle to bootstrap a fresh project")
+                            .font(Typography.chromeSmall)
+                            .foregroundStyle(Tokens.color(.textSecondary))
+                    }
                     Spacer()
+                    Text("⌘N").font(Typography.chromeSmall)
+                        .foregroundStyle(Tokens.color(.textTertiary))
                 }
                 .padding(Tokens.spacing(.md))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            Divider().frame(height: Tokens.Size.hairline).background(Tokens.color(.divider))
+            Button(action: linkExistingProject) {
+                HStack(spacing: Tokens.spacing(.sm)) {
+                    Image(systemName: "link")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(Tokens.color(.textSecondary))
+                        .frame(width: 24, height: 24)
+                    Text("Link existing lutin.yml…").font(Typography.chromeSmall)
+                        .foregroundStyle(Tokens.color(.textSecondary))
+                    Spacer()
+                }
+                .padding(.horizontal, Tokens.spacing(.md))
+                .padding(.vertical, Tokens.spacing(.sm))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -121,7 +147,19 @@ public struct ProjectSwitcherModal: View {
         dismiss()
     }
 
-    private func addProject() {
+    /// Primary "Add" path: dismiss the switcher and ask the workspace to
+    /// open the Create-new-project sheet (which starts by picking a .app).
+    /// Aligns the verb "Add a project" with creating one from scratch
+    /// instead of indexing an existing yml.
+    private func addNewProject() {
+        dismiss()
+        onAddNewProject()
+    }
+
+    /// Secondary path for the rare case the user has a lutin.yml lying
+    /// around (e.g. cloned from another machine or hand-written) and
+    /// wants to register it without recreating it.
+    private func linkExistingProject() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.yaml]
         panel.allowsMultipleSelection = false
