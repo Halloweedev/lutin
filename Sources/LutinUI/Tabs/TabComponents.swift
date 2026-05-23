@@ -18,6 +18,7 @@ public struct TabBody<Content: View>: View {
             VStack(alignment: .leading, spacing: 0) {
                 content
             }
+            .padding(.horizontal, Tokens.spacing(.lg))
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Tokens.color(.panelBackground))
@@ -53,7 +54,6 @@ public struct SettingsSection<Content: View>: View {
                     .padding(.top, 2)
             }
         }
-        .padding(.horizontal, Tokens.spacing(.lg))
         .padding(.vertical, Tokens.spacing(.lg))
         .overlay(alignment: .bottom) {
             Rectangle()
