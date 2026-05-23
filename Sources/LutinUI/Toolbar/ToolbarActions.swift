@@ -6,7 +6,6 @@ public struct ToolbarActions: ToolbarContent {
     @Bindable var document: LutinProjectDocument
     @Bindable var runner: PipelineRunner
     @Binding var showingDoctor: Bool
-    @State private var successPulse: Bool = false
 
     public init(document: LutinProjectDocument, runner: PipelineRunner, showingDoctor: Binding<Bool>) {
         self.document = document
@@ -32,12 +31,6 @@ public struct ToolbarActions: ToolbarContent {
                                          projectDirectory: document.projectDirectory) }
             }
             .disabled(isRunning)
-            .onChange(of: runner.state) { _, newValue in
-                if case .succeeded = newValue {
-                    successPulse = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { successPulse = false }
-                }
-            }
 
             LutinIconButton(systemName: "eye.fill", accessibilityLabel: "Preview") {
                 Task { await runner.run(mode: .preview,

@@ -61,7 +61,11 @@ public struct EditorRail: View {
         LutinIconButton(systemName: systemImage,
                         accessibilityLabel: tooltip,
                         action: action)
-        .help(tooltip)
+            .frame(maxWidth: .infinity)
+            .background(SquareShape().fill(isSelected
+                                            ? Tokens.color(.brandAccentMuted)
+                                            : Color.clear))
+            .help(tooltip)
     }
 
     /// Opens the macOS Preferences scene via the standard menu action.
