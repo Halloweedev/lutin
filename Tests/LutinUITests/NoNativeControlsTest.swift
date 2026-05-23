@@ -19,7 +19,8 @@ final class NoNativeControlsTest: XCTestCase {
         "Button",
         "TextField",
         "Toggle",
-        // "Stepper", "Picker", "Slider"
+        "Stepper",
+        // "Picker", "Slider"
         // Filled in as each migration task lands.
     ]
 
