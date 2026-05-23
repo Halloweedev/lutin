@@ -12,7 +12,8 @@ final class NoNativeControlsTest: XCTestCase {
     /// Add a primitive here the moment its migration task completes.
     /// Order matches plan task order so PR history is auditable.
     private static let bannedPrimitives: [String] = [
-        // "Button", "TextField", "Toggle", "Stepper", "Picker", "Slider"
+        "Button",
+        // "TextField", "Toggle", "Stepper", "Picker", "Slider"
         // Filled in as each migration task lands.
     ]
 
@@ -50,9 +51,11 @@ final class NoNativeControlsTest: XCTestCase {
                 let contents = try String(contentsOf: url, encoding: .utf8)
                 let lines = contents.components(separatedBy: "\n")
                 for (idx, line) in lines.enumerated() {
+                    let trimmed = line.trimmingCharacters(in: .whitespaces)
+                    if trimmed.hasSuffix("// allow-menu-button") { continue }
                     let range = NSRange(line.startIndex..., in: line)
                     if regex.firstMatch(in: line, range: range) != nil {
-                        violations.append("\(url.path):\(idx + 1): \(line.trimmingCharacters(in: .whitespaces))")
+                        violations.append("\(url.path):\(idx + 1): \(trimmed)")
                     }
                 }
             }
