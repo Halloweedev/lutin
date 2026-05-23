@@ -37,7 +37,7 @@ public struct PreferencesWindow: View {
 
     private var buildTab: some View {
         Form {
-            TextField("Default output directory", text: Binding(
+            LutinTextField("Default output directory", text: Binding(
                 get: { store.preferences.defaultOutputDirectory ?? "" },
                 set: { v in try? store.update { $0.defaultOutputDirectory = v.isEmpty ? nil : v } }))
         }

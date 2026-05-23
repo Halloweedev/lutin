@@ -64,18 +64,10 @@ public struct CreateProjectSheet: View {
                 // 2. Auto-filled metadata. Editable for the rare case the
                 //    user wants to deviate from what's in Info.plist.
                 labeled("Project name") {
-                    TextField("", text: $projectName)
-                        .textFieldStyle(.plain)
-                        .padding(6)
-                        .background(SquareShape().stroke(Tokens.color(.divider),
-                                                         lineWidth: Tokens.Size.hairline))
+                    LutinTextField("", text: $projectName)
                 }
                 labeled("Bundle identifier") {
-                    TextField("com.example.appname", text: $bundleId)
-                        .textFieldStyle(.plain)
-                        .padding(6)
-                        .background(SquareShape().stroke(Tokens.color(.divider),
-                                                         lineWidth: Tokens.Size.hairline))
+                    LutinTextField("com.example.appname", text: $bundleId)
                 }
                 versionRow
                 windowSizeRow

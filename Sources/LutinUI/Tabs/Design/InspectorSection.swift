@@ -38,12 +38,9 @@ public struct InspectorSection: View {
     private var projectAndBackgroundForm: some View {
         VStack(alignment: .leading, spacing: Tokens.spacing(.md)) {
             LabeledField(label: "Project name") {
-                TextField("", text: Binding(
+                LutinTextField("", text: Binding(
                     get: { document.config.project.name },
                     set: { try? document.apply(.setProjectName($0)) }))
-                    .textFieldStyle(.plain)
-                    .padding(6)
-                    .background(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))
             }
             BackgroundEditor(document: document)
         }

@@ -15,9 +15,7 @@ public struct InlineLabelEditor: View {
     }
 
     public var body: some View {
-        TextField("", text: $draft)
-            .textFieldStyle(.plain)
-            .font(Typography.canvasLabel)
+        LutinTextField("", text: $draft)
             .focused($focused)
             .onAppear {
                 draft = document.config.items?.first { $0.id == itemID }?.label ?? ""

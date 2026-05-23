@@ -137,13 +137,7 @@ public struct SettingsTextField: View {
         self._text = text
     }
     public var body: some View {
-        TextField(placeholder, text: $text)
-            .textFieldStyle(.plain)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(SquareShape().fill(Tokens.color(.canvasBackground)))
-            .overlay(SquareShape().stroke(Tokens.color(.divider),
-                                          lineWidth: Tokens.Size.hairline))
+        LutinTextField(placeholder, text: $text)
     }
 }
 

@@ -31,11 +31,9 @@ public struct ArrowInspector: View {
                 }
             }
             LabeledField(label: "Label") {
-                TextField("", text: Binding(
+                LutinTextField("", text: Binding(
                     get: { arrow?.label ?? "" },
                     set: { try? document.apply(.renameArrowLabel(from: from, to: to, label: $0.isEmpty ? nil : $0)) }))
-                    .textFieldStyle(.plain).padding(6)
-                    .background(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))
             }
             Toggle("Hidden", isOn: Binding(
                 get: { arrow?.hidden ?? false },

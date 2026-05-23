@@ -29,9 +29,7 @@ public struct ProjectSwitcherModal: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            TextField("Search projects…", text: $query)
-                .textFieldStyle(.plain)
-                .font(Typography.chrome)
+            LutinTextField("Search projects…", text: $query)
                 .padding(Tokens.spacing(.md))
                 .background(Tokens.color(.sheetBackground))
             Divider().frame(height: Tokens.Size.hairline).background(Tokens.color(.divider))

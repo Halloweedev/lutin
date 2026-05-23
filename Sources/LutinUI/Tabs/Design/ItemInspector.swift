@@ -22,13 +22,8 @@ public struct ItemInspector: View {
                         .background(Tokens.color(.brandAccentMuted))
                 }
                 LabeledField(label: "ID") {
-                    TextField("", text: $idDraft, onCommit: commitID)
-                        .textFieldStyle(.plain)
-                        .padding(6)
-                        .background(SquareShape().stroke(idError == nil
-                                                         ? Tokens.color(.divider)
-                                                         : Tokens.color(.logError),
-                                                         lineWidth: Tokens.Size.hairline))
+                    LutinTextField("", text: $idDraft)
+                        .onSubmit { commitID() }
                         .onAppear { idDraft = item.id }
                         .onChange(of: itemID) { _, new in idDraft = new; idError = nil }
                     if let idError {
@@ -53,11 +48,9 @@ public struct ItemInspector: View {
                     }
                 }
                 LabeledField(label: "Label") {
-                    TextField("", text: Binding(
+                    LutinTextField("", text: Binding(
                         get: { item.label ?? "" },
                         set: { try? document.apply(.renameItemLabel(id: itemID, label: $0.isEmpty ? nil : $0)) }))
-                        .textFieldStyle(.plain).padding(6)
-                        .background(SquareShape().stroke(Tokens.color(.divider), lineWidth: Tokens.Size.hairline))
                 }
                 Toggle("Hidden", isOn: Binding(
                     get: { item.hidden ?? false },

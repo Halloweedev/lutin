@@ -27,13 +27,13 @@ public struct InspectorView: View {
 
     private var projectSection: some View {
         Section("Project") {
-            TextField("Name", text: Binding(
+            LutinTextField("Name", text: Binding(
                 get: { document.config.project.name },
                 set: { try? document.apply(.setProjectName($0)) }))
-            TextField("Output directory", text: Binding(
+            LutinTextField("Output directory", text: Binding(
                 get: { document.config.output.directory },
                 set: { try? document.apply(.setOutputDirectory($0)) }))
-            TextField("Background template", text: Binding(
+            LutinTextField("Background template", text: Binding(
                 get: { document.config.background?.template ?? "" },
                 set: { try? document.apply(.setBackgroundTemplate($0)) }))
             Stepper("Icon size: \(document.config.window?.iconSize ?? 96) pt",
@@ -56,7 +56,7 @@ public struct InspectorView: View {
                     get: { item.y },
                     set: { try? document.apply(.moveItem(id: id, x: item.x, y: $0)) }),
                     in: 0...4096)
-                TextField("Label", text: Binding(
+                LutinTextField("Label", text: Binding(
                     get: { item.label ?? "" },
                     set: { try? document.apply(.renameItemLabel(id: id, label: $0.isEmpty ? nil : $0)) }))
             } else {
@@ -71,7 +71,7 @@ public struct InspectorView: View {
             LabeledContent("To", value: to)
             if let arrow = document.config.decorations?.first(where: {
                 $0.type == "arrow" && $0.from == from && $0.to == to }) {
-                TextField("Label", text: Binding(
+                LutinTextField("Label", text: Binding(
                     get: { arrow.label ?? "" },
                     set: { try? document.apply(.renameArrowLabel(from: from, to: to, label: $0.isEmpty ? nil : $0)) }))
             }
