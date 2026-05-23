@@ -12,6 +12,7 @@ public struct WorkspaceShell: View {
     @State private var document: LutinProjectDocument?
     @State private var loadError: String?
     @State private var showSwitcher = false
+    @State private var showCreateNew = false
     @State private var showingDoctor = false
 
     public init() {}
@@ -25,12 +26,21 @@ public struct WorkspaceShell: View {
             } else if let loadError {
                 EmptyState(title: "Could not load project", message: loadError, icon: "EmptySelection")
             } else {
-                EmptyState(title: "No project open",
-                           message: "Press ⌘O or click the project name to open one.",
-                           icon: "EmptySelection")
+                WelcomeView(
+                    onCreateNew: { showCreateNew = true },
+                    onOpenExisting: { showSwitcher = true },
+                    onSelectRecent: { name in selectedEntryName = name })
             }
         }
         .frame(minWidth: 900, minHeight: 600)
+        .background {
+            // Hidden button to wire ⌘N globally without claiming a visible
+            // toolbar slot — same pattern other commands use.
+            Button("New project") { showCreateNew = true }
+                .keyboardShortcut("n", modifiers: .command)
+                .opacity(0)
+                .frame(width: 0, height: 0)
+        }
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button(action: { showSwitcher = true }) {
@@ -50,6 +60,12 @@ public struct WorkspaceShell: View {
         .sheet(isPresented: $showSwitcher) {
             ProjectSwitcherModal(selectedEntryName: $selectedEntryName)
                 .environment(registryStore)
+        }
+        .sheet(isPresented: $showCreateNew) {
+            CreateProjectSheet { url, entryName in
+                try? registryStore.add(configURL: url)
+                selectedEntryName = entryName
+            }
         }
         .environment(registryStore)
         .environment(preferencesStore)
