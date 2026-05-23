@@ -8,7 +8,8 @@ public struct LutinIconButton: View {
     let accessibilityLabel: String
     let action: () -> Void
 
-    @State private var fill: NSColor = .clear
+    @State private var interaction = ControlInteractionState.State(
+        isHovered: false, isPressed: false, isFocused: false)
 
     public init(asset: String, accessibilityLabel: String, action: @escaping () -> Void) {
         self.symbol = Image(asset, bundle: .module)
@@ -23,8 +24,8 @@ public struct LutinIconButton: View {
     }
 
     public var body: some View {
-        let interactionFill = Tokens.nsColor(interactionFillKey,
-                                             appearance: NSApp?.effectiveAppearance ?? .currentDrawing())
+        let appearance = NSApp?.effectiveAppearance ?? .currentDrawing()
+        let fill = resolvedFill(appearance: appearance)
         SwiftUI.Button(action: action) {  // allow-menu-button: hidden behind LutinIconButton
             symbol
                 .renderingMode(.template)
@@ -34,15 +35,20 @@ public struct LutinIconButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
-        .modifier(ControlInteractionState(onChange: { state in
-            if state.isPressed {
-                fill = Tokens.darken(interactionFill, by: ControlInteractionState.pressDarken)
-            } else if state.isInteracting {
-                fill = interactionFill
-            } else {
-                fill = .clear
-            }
-        }))
+        .modifier(ControlInteractionState(onChange: { state in interaction = state }))
+    }
+
+    /// Resolves the current icon fill from interaction state and system appearance.
+    /// Extracted from body so that if/else logic doesn't sit in a @ViewBuilder context.
+    private func resolvedFill(appearance: NSAppearance) -> NSColor {
+        let interactionFill = Tokens.nsColor(interactionFillKey, appearance: appearance)
+        if interaction.isPressed {
+            return Tokens.darken(interactionFill, by: ControlInteractionState.pressDarken)
+        } else if interaction.isInteracting {
+            return interactionFill
+        } else {
+            return .clear
+        }
     }
 
     var restFillKey: Tokens.Key? { nil }

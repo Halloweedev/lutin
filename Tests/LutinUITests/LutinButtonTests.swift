@@ -23,7 +23,7 @@ final class LutinButtonTests: XCTestCase {
     }
 
     func testRenderingAttachment() throws {
-        for role in [LutinButton<Text>.Role.primary, .secondary] {
+        for role in [LutinButton<_LutinButtonTitle>.Role.primary, .secondary] {
             for label in ["Build", "Cancel"] {
                 let view = LutinButton(label, role: role, action: {})
                 let png = try renderToPNG(view, size: CGSize(width: 200, height: 32))

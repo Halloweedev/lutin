@@ -11,6 +11,10 @@ final class NoNativeControlsTest: XCTestCase {
 
     /// Add a primitive here the moment its migration task completes.
     /// Order matches plan task order so PR history is auditable.
+    ///
+    /// To exempt a single line (e.g., a menu/command Button inside CommandGroup
+    /// or Menu { ... }), append `// allow-menu-button` to it. An optional
+    /// descriptive suffix is allowed: `// allow-menu-button: reason here`.
     private static let bannedPrimitives: [String] = [
         "Button",
         // "TextField", "Toggle", "Stepper", "Picker", "Slider"
@@ -52,7 +56,10 @@ final class NoNativeControlsTest: XCTestCase {
                 let lines = contents.components(separatedBy: "\n")
                 for (idx, line) in lines.enumerated() {
                     let trimmed = line.trimmingCharacters(in: .whitespaces)
-                    if trimmed.hasSuffix("// allow-menu-button") { continue }
+                    // Marker may be bare (`// allow-menu-button`) or with a trailing
+                    // description (`// allow-menu-button: hidden behind LutinButton`).
+                    // Match either form.
+                    if trimmed.contains("// allow-menu-button") { continue }
                     let range = NSRange(line.startIndex..., in: line)
                     if regex.firstMatch(in: line, range: range) != nil {
                         violations.append("\(url.path):\(idx + 1): \(trimmed)")
