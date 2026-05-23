@@ -14,7 +14,7 @@ public struct InspectorSection: View {
 
     public var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
-            content.padding(Tokens.spacing(.md))
+            content
         } label: {
             Text("Inspector").font(Typography.chromeSmall)
                 .foregroundStyle(Tokens.color(.textSecondary))
@@ -36,33 +36,41 @@ public struct InspectorSection: View {
     }
 
     private var projectAndBackgroundForm: some View {
-        VStack(alignment: .leading, spacing: Tokens.spacing(.md)) {
-            LabeledField(label: "Project name") {
-                LutinTextField("", text: Binding(
-                    get: { document.config.project.name },
-                    set: { try? document.apply(.setProjectName($0)) }))
+        VStack(alignment: .leading, spacing: 0) {
+            InspectorCategory {
+                LabeledField(label: "Project name") {
+                    LutinTextField("", text: Binding(
+                        get: { document.config.project.name },
+                        set: { try? document.apply(.setProjectName($0)) }))
+                }
             }
-            BackgroundEditor(document: document)
+            InspectorCategory {
+                BackgroundEditor(document: document)
+            }
         }
     }
 
     @ViewBuilder
     private func singleSelectionForm(for id: CanvasSelectionID) -> some View {
-        switch id {
-        case .item(let itemID): ItemInspector(document: document, itemID: itemID)
-        case .arrow(let from, let to):
-            ArrowInspector(document: document, from: from, to: to)
-        case .image(let i): ImageInspector(document: document, index: i)
+        InspectorCategory {
+            switch id {
+            case .item(let itemID): ItemInspector(document: document, itemID: itemID)
+            case .arrow(let from, let to):
+                ArrowInspector(document: document, from: from, to: to)
+            case .image(let i): ImageInspector(document: document, index: i)
+            }
         }
     }
 
     private var multiSelectionForm: some View {
-        VStack(alignment: .leading, spacing: Tokens.spacing(.md)) {
-            Text("\(selectionModel.selection.count) selected")
-                .font(Typography.chrome)
-                .foregroundStyle(Tokens.color(.textPrimary))
-            LutinButton("Hide all") { hideAll(true) }
-            LutinButton("Show all") { hideAll(false) }
+        InspectorCategory {
+            VStack(alignment: .leading, spacing: Tokens.spacing(.md)) {
+                Text("\(selectionModel.selection.count) selected")
+                    .font(Typography.chrome)
+                    .foregroundStyle(Tokens.color(.textPrimary))
+                LutinButton("Hide all") { hideAll(true) }
+                LutinButton("Show all") { hideAll(false) }
+            }
         }
     }
 
@@ -75,6 +83,27 @@ public struct InspectorSection: View {
                 case .image(let i): try document.apply(.setImageHidden(index: i, hidden: hidden))
                 }
             } catch { /* surfaced */ }
+        }
+    }
+}
+
+/// Wraps an inspector sub-group with a top-and-bottom 1px hairline divider,
+/// creating visible horizontal band separation between categories without
+/// boxing them in a card (Option 1 treatment).
+struct InspectorCategory<Content: View>: View {
+    let content: Content
+    init(@ViewBuilder content: () -> Content) { self.content = content() }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Rectangle()
+                .fill(Tokens.color(.divider))
+                .frame(height: Tokens.Size.hairline)
+            content
+                .padding(.horizontal, Tokens.spacing(.md))
+                .padding(.vertical, Tokens.spacing(.md))
+            Rectangle()
+                .fill(Tokens.color(.divider))
+                .frame(height: Tokens.Size.hairline)
         }
     }
 }
