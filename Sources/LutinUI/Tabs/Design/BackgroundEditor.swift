@@ -16,11 +16,9 @@ public struct BackgroundEditor: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: Tokens.spacing(.md)) {
-            Picker("", selection: variantBinding) {
-                ForEach(Variant.allCases) { v in Text(v.title).tag(v) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            // Variant switcher — flat segmented control rendered as a row
+            // of buttons so it matches the rest of the chrome.
+            variantSegments
 
             switch currentVariant {
             case .template: templateFields
@@ -33,11 +31,41 @@ public struct BackgroundEditor: View {
         }
     }
 
+    // MARK: - Variant segmented control
+
+    private var variantSegments: some View {
+        HStack(spacing: 0) {
+            ForEach(Variant.allCases) { v in
+                Button(action: { selectVariant(v) }) {
+                    Text(v.title)
+                        .font(Typography.chromeSmall)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .foregroundStyle(currentVariant == v
+                                         ? Color.white
+                                         : Tokens.color(.textPrimary))
+                        .background(currentVariant == v
+                                    ? Tokens.color(.brandAccent)
+                                    : Tokens.color(.canvasBackground))
+                }
+                .buttonStyle(.plain)
+                if v != Variant.allCases.last {
+                    Rectangle()
+                        .fill(Tokens.color(.divider))
+                        .frame(width: Tokens.Size.hairline)
+                }
+            }
+        }
+        .overlay(SquareShape().stroke(Tokens.color(.divider),
+                                      lineWidth: Tokens.Size.hairline))
+    }
+
+    // MARK: - Variant-specific bodies
+
     private var templateFields: some View {
-        VStack(alignment: .leading, spacing: Tokens.spacing(.sm)) {
-            Text("Template").font(Typography.chromeSmall)
-                .foregroundStyle(Tokens.color(.textSecondary))
-            TextField("Name (e.g. blueprint)", text: Binding(
+        SettingsField("Template",
+                      helper: "e.g. blueprint, paper, neon") {
+            SettingsTextField("blueprint", text: Binding(
                 get: { bg.template ?? "" },
                 set: { newValue in
                     var b = bg
@@ -48,69 +76,87 @@ public struct BackgroundEditor: View {
     }
 
     private var solidFields: some View {
-        VStack(alignment: .leading) {
-            colorWell(label: "Color A", value: bg.colorA, onCommit: { hex in
-                var b = bg; b.colorA = hex; b.colorB = nil; b.template = nil; b.path = nil
+        SettingsField("Color") {
+            colorWell(value: bg.colorA, onCommit: { hex in
+                var b = bg; b.colorA = hex; b.colorB = nil
+                b.template = nil; b.path = nil
                 try? document.apply(.setBackground(b))
             })
         }
     }
 
     private var gradientFields: some View {
-        VStack(alignment: .leading, spacing: Tokens.spacing(.sm)) {
-            colorWell(label: "Color A", value: bg.colorA, onCommit: { hex in
-                var b = bg; b.colorA = hex; try? document.apply(.setBackground(b)) })
-            colorWell(label: "Color B", value: bg.colorB, onCommit: { hex in
-                var b = bg; b.colorB = hex; try? document.apply(.setBackground(b)) })
-            Stepper("Angle: \(bg.angle ?? 0)°",
-                    value: Binding(
-                        get: { bg.angle ?? 0 },
-                        set: { var b = bg; b.angle = $0; try? document.apply(.setBackground(b)) }),
-                    in: 0...359, step: 15)
+        VStack(alignment: .leading, spacing: Tokens.spacing(.md)) {
+            SettingsField("Color A") {
+                colorWell(value: bg.colorA, onCommit: { hex in
+                    var b = bg; b.colorA = hex
+                    try? document.apply(.setBackground(b))
+                })
+            }
+            SettingsField("Color B") {
+                colorWell(value: bg.colorB, onCommit: { hex in
+                    var b = bg; b.colorB = hex
+                    try? document.apply(.setBackground(b))
+                })
+            }
+            SettingsField("Angle") {
+                Stepper(value: Binding(
+                    get: { bg.angle ?? 0 },
+                    set: { var b = bg; b.angle = $0; try? document.apply(.setBackground(b)) }),
+                        in: 0...359, step: 15) {
+                    Text("\(bg.angle ?? 0)°").font(Typography.chromeSmall)
+                }
+            }
         }
     }
 
     private var imageFields: some View {
-        VStack(alignment: .leading, spacing: Tokens.spacing(.sm)) {
-            HStack {
-                Text("File")
-                Spacer()
-                Text(bg.path ?? "—").lineLimit(1).truncationMode(.middle)
-                Button("Choose…") {
-                    let panel = NSOpenPanel()
-                    panel.allowedContentTypes = [.png, .jpeg]
-                    if panel.runModal() == .OK, let url = panel.url {
-                        var b = bg; b.path = url.path; b.template = nil; b.colorA = nil; b.colorB = nil
-                        try? document.apply(.setBackground(b))
-                    }
-                }
+        VStack(alignment: .leading, spacing: Tokens.spacing(.md)) {
+            SettingsField("Image") {
+                PathPickerRow(value: bg.path ?? "",
+                              placeholder: "No image chosen",
+                              onPick: pickImage)
             }
-            Toggle("Show grid overlay", isOn: Binding(
-                get: { bg.grid ?? false },
-                set: { var b = bg; b.grid = $0; try? document.apply(.setBackground(b)) }))
+            SettingsField("Show grid overlay") {
+                Toggle("", isOn: Binding(
+                    get: { bg.grid ?? false },
+                    set: { var b = bg; b.grid = $0; try? document.apply(.setBackground(b)) }))
+                    .labelsHidden()
+            }
         }
     }
 
     private var commonFields: some View {
-        VStack(alignment: .leading) {
-            Stepper("Scale: \(bg.scale ?? 2)x",
-                    value: Binding(
-                        get: { bg.scale ?? 2 },
-                        set: { var b = bg; b.scale = $0; try? document.apply(.setBackground(b)) }),
-                    in: 1...2, step: 1)
-            Stepper("Corner radius: \(bg.cornerRadius ?? 0) pt",
-                    value: Binding(
-                        get: { bg.cornerRadius ?? 0 },
-                        set: { var b = bg; b.cornerRadius = $0; try? document.apply(.setBackground(b)) }),
-                    in: 0...64, step: 1)
+        VStack(alignment: .leading, spacing: Tokens.spacing(.md)) {
+            SettingsField("Scale") {
+                Stepper(value: Binding(
+                    get: { bg.scale ?? 2 },
+                    set: { var b = bg; b.scale = $0; try? document.apply(.setBackground(b)) }),
+                        in: 1...2, step: 1) {
+                    Text("\(bg.scale ?? 2)×").font(Typography.chromeSmall)
+                }
+            }
+            SettingsField("Corner radius") {
+                Stepper(value: Binding(
+                    get: { bg.cornerRadius ?? 0 },
+                    set: { var b = bg; b.cornerRadius = $0; try? document.apply(.setBackground(b)) }),
+                        in: 0...64, step: 1) {
+                    Text("\(bg.cornerRadius ?? 0) pt").font(Typography.chromeSmall)
+                }
+            }
             if currentVariant != .image {
-                Slider(value: Binding(
-                    get: { bg.noise ?? 0 },
-                    set: { var b = bg; b.noise = $0; try? document.apply(.setBackground(b)) }),
-                    in: 0...1) { Text("Noise") }
+                SettingsField("Noise",
+                              helper: "Subtle texture overlay. 0 = none, 1 = strong.") {
+                    Slider(value: Binding(
+                        get: { bg.noise ?? 0 },
+                        set: { var b = bg; b.noise = $0; try? document.apply(.setBackground(b)) }),
+                           in: 0...1)
+                }
             }
         }
     }
+
+    // MARK: - Helpers
 
     private var bg: LutinConfig.BackgroundInfo {
         document.config.background ?? LutinConfig.BackgroundInfo(
@@ -128,30 +174,35 @@ public struct BackgroundEditor: View {
         }
     }
 
-    private var variantBinding: Binding<Variant> {
-        Binding(get: { currentVariant }, set: { v in
-            var b = bg
-            b.type = v.rawValue
-            switch v {
-            case .template: b.colorA = nil; b.colorB = nil; b.path = nil; b.angle = nil
-            case .solid:    b.template = nil; b.colorB = nil; b.path = nil; b.angle = nil
-            case .gradient: b.template = nil; b.path = nil
-            case .image:    b.template = nil; b.colorA = nil; b.colorB = nil; b.angle = nil; b.noise = nil
-            }
-            try? document.apply(.setBackground(b))
-        })
+    private func selectVariant(_ v: Variant) {
+        var b = bg
+        b.type = v.rawValue
+        switch v {
+        case .template: b.colorA = nil; b.colorB = nil; b.path = nil; b.angle = nil
+        case .solid:    b.template = nil; b.colorB = nil; b.path = nil; b.angle = nil
+        case .gradient: b.template = nil; b.path = nil
+        case .image:    b.template = nil; b.colorA = nil; b.colorB = nil
+                        b.angle = nil; b.noise = nil
+        }
+        try? document.apply(.setBackground(b))
     }
 
-    private func colorWell(label: String, value: String?, onCommit: @escaping (String) -> Void) -> some View {
-        HStack {
-            Text(label).font(Typography.chromeSmall)
-                .foregroundStyle(Tokens.color(.textSecondary))
-            Spacer()
-            ColorPicker("", selection: Binding(
-                get: { Color(hex: value ?? "#888888") ?? .gray },
-                set: { newColor in onCommit(newColor.hexString) }))
-                .labelsHidden()
-        }
+    private func colorWell(value: String?,
+                           onCommit: @escaping (String) -> Void) -> some View {
+        ColorPicker("", selection: Binding(
+            get: { Color(hex: value ?? "#888888") ?? .gray },
+            set: { newColor in onCommit(newColor.hexString) }))
+            .labelsHidden()
+    }
+
+    private func pickImage() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.png, .jpeg]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        var b = bg
+        b.path = url.path
+        b.template = nil; b.colorA = nil; b.colorB = nil
+        try? document.apply(.setBackground(b))
     }
 }
 

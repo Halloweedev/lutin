@@ -28,7 +28,10 @@ public struct EditorRail: View {
             Spacer(minLength: 0)
         }
         .frame(width: Tokens.Size.railWidth)
-        .background(Tokens.color(.railBackground))
+        // Rail shares the panel's surface color so the two read as one
+        // continuous left column. The trailing hairline marks where
+        // the tab content actually begins.
+        .background(Tokens.color(.panelBackground))
         .overlay(alignment: .trailing) {
             Rectangle()
                 .fill(Tokens.color(.divider))
