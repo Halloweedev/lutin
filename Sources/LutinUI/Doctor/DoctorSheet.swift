@@ -7,6 +7,8 @@ import LutinDocument
 public struct DoctorSheet: View {
     let document: LutinProjectDocument
     @Environment(\.dismiss) private var dismiss
+    @Environment(CredentialsStore.self) private var credentialsStore
+    @Environment(PreferencesStore.self) private var preferencesStore
     @State private var results: [Check] = []
     @State private var running: Bool = false
 
@@ -38,43 +40,19 @@ public struct DoctorSheet: View {
     }
 
     struct Check: Identifiable {
-        enum Status { case ok, warn, fail }
         let id = UUID()
         let title: String
         let detail: String
-        let status: Status
+        let status: StatusKind  // shared with the rest of the app —
+                                 // see `TabComponents.StatusKind`.
     }
 
     private func runChecks() async {
         running = true
         var collected: [Check] = []
 
-        if let signing = document.config.signing, signing.enabled, let identity = signing.identity {
-            do {
-                try CodeSigner.verifyIdentityExists(identity, runner: ShellCommandRunner())
-                collected.append(.init(title: "Signing identity present",
-                                       detail: identity, status: .ok))
-            } catch let err as LutinError {
-                collected.append(.init(title: "Signing identity missing",
-                                       detail: err.message, status: .fail))
-            } catch {
-                collected.append(.init(title: "Signing identity check failed",
-                                       detail: error.localizedDescription, status: .fail))
-            }
-        } else {
-            collected.append(.init(title: "Signing disabled",
-                                   detail: "`signing.enabled` is false; release builds will be unsigned.",
-                                   status: .warn))
-        }
-
-        if let notary = document.config.notarization, notary.enabled, let profile = notary.profile, !profile.isEmpty {
-            collected.append(.init(title: "Notary profile configured",
-                                   detail: "Keychain profile: \(profile)", status: .ok))
-        } else {
-            collected.append(.init(title: "Notary profile missing",
-                                   detail: "Add a notary profile via `xcrun notarytool store-credentials`.",
-                                   status: .warn))
-        }
+        collected.append(signingCheck())
+        collected.append(notaryCheck())
 
         let appURL = URL(fileURLWithPath: document.config.app.path,
                          relativeTo: document.projectDirectory)
@@ -83,11 +61,85 @@ public struct DoctorSheet: View {
                                    detail: appURL.path, status: .ok))
         } else {
             collected.append(.init(title: "App bundle missing",
-                                   detail: "Expected at \(appURL.path)", status: .fail))
+                                   detail: "Expected at \(appURL.path)", status: .blocked))
         }
 
         results = collected
         running = false
+    }
+
+    /// Signing-identity check. Four states, ordered most-helpful to
+    /// least: configured-and-present, configured-but-stale (in YAML but
+    /// no longer in Keychain), unconfigured-with-options (Keychain has
+    /// identities; pick one), unconfigured-and-empty (Keychain is bare;
+    /// import a `.cer`).
+    private func signingCheck() -> Check {
+        let signing = document.config.signing
+        let availableNames = credentialsStore.identities.map(\.name)
+
+        if let signing, signing.enabled, let identity = signing.identity {
+            if availableNames.contains(identity) {
+                return .init(title: "Signing identity present",
+                             detail: identity, status: .ok)
+            }
+            return .init(
+                title: "Signing identity not in Keychain",
+                detail: "'\(identity)' is in your project config but isn't installed on this machine. Pick another in the Release tab or import the certificate via Open Keychain.",
+                status: .blocked)
+        }
+        if availableNames.isEmpty {
+            return .init(
+                title: "No signing identity available",
+                detail: "No codesigning identities found in the Keychain. Click 'Open Keychain' in the Release tab to import a Developer ID Application certificate.",
+                status: .warn)
+        }
+        return .init(
+            title: "Signing identity not selected",
+            detail: "\(availableNames.count) identity \(availableNames.count == 1 ? "is" : "are") available in your Keychain. Pick one in the Release tab → Signing → Identity.",
+            status: .warn)
+    }
+
+    /// Notary-profile check. notarytool's keychain entries are
+    /// ACL-restricted to its signing team — Lutin can't query them
+    /// directly to verify a profile name is real. We only have two
+    /// sources of truth:
+    ///
+    /// 1. `PreferencesStore.knownNotaryProfiles` — names Lutin saw at
+    ///    creation time. Positive-only signal.
+    /// 2. `xcrun notarytool history --keychain-profile …` — definitive
+    ///    but slow (network). Triggered from the Test button in the
+    ///    Release tab, not from Doctor.
+    ///
+    /// So this check is intentionally less assertive than the signing
+    /// one: a recorded name gets a green check; an unrecorded name
+    /// gets a yellow warn with a clear "this might be fine, press
+    /// Test to confirm" hint.
+    private func notaryCheck() -> Check {
+        let notary = document.config.notarization
+        let known = preferencesStore.preferences.knownNotaryProfiles
+
+        if let notary, notary.enabled,
+           let profile = notary.profile, !profile.isEmpty {
+            if known.contains(profile) {
+                return .init(title: "Notary profile configured",
+                             detail: "Lutin remembers creating '\(profile)' on this machine.",
+                             status: .ok)
+            }
+            return .init(
+                title: "Notary profile unverified",
+                detail: "'\(profile)' may or may not exist — Lutin didn't create it (or doesn't remember doing so), and notarytool's keychain entries are ACL-locked to Apple's signing team so we can't query them directly. Press Test in Release tab → Notarization → Profile to ask notarytool itself.",
+                status: .warn)
+        }
+        if known.isEmpty {
+            return .init(
+                title: "No notary profile remembered",
+                detail: "Lutin hasn't observed any profile creations on this machine. If you already have one (e.g. created via Terminal), type its name in the Release tab and press Test — notarytool will confirm. Otherwise click 'New profile…' to create one.",
+                status: .warn)
+        }
+        return .init(
+            title: "Notary profile not selected",
+            detail: "Lutin remembers these profiles: \(known.joined(separator: ", ")). Type one in Release tab → Notarization → Profile, or press Test there to verify a different name.",
+            status: .warn)
     }
 }
 
@@ -106,11 +158,11 @@ private struct CheckRow: View {
         .padding(.vertical, Tokens.spacing(.sm))
     }
 
+    /// Status glyph + color sourced from the shared `StatusKind` token
+    /// — same color/icon the inline `StatusRow` would draw for an
+    /// equivalent state in the Release tab. One enum, one mapping.
     @ViewBuilder private var icon: some View {
-        switch check.status {
-        case .ok:   Image(systemName: "checkmark.circle.fill").foregroundStyle(Tokens.color(.logSuccess))
-        case .warn: Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Tokens.color(.logProgress))
-        case .fail: Image(systemName: "xmark.octagon.fill").foregroundStyle(Tokens.color(.logError))
-        }
+        Image(systemName: check.status.systemImage)
+            .foregroundStyle(check.status.color)
     }
 }

@@ -17,7 +17,21 @@ public final class LutinProjectDocument: Identifiable {
     @ObservationIgnored
     private var autosaveTimer: Timer?
 
-    public var autosaveEnabled: Bool = false
+    /// Watches `configURL` for external rewrites — supports the
+    /// agent-edit-on-disk → canvas-reflects-it loop without an
+    /// app reopen. Self-writes are filtered out by the watcher's own
+    /// cool-down (see `ConfigFileWatcher.noteSelfWrite`). External
+    /// changes post `.lutinDocumentReloadedFromDisk` so the UI can
+    /// surface a "reloaded" badge.
+    @ObservationIgnored
+    private var fileWatcher: ConfigFileWatcher?
+
+    // Autosave is always on. Edits from the side-panel tabs (and any
+    // other intent path) schedule a debounced save automatically — the
+    // user shouldn't have to remember ⌘S for what reads as a settings
+    // surface. Existing `preferences.json` files can still carry the
+    // now-defunct `autosave` key; JSONDecoder ignores unknown fields
+    // and the value is dropped on next re-save.
 
     public init(configURL: URL) throws {
         self.configURL = configURL.standardizedFileURL
@@ -30,6 +44,39 @@ public final class LutinProjectDocument: Identifiable {
             throw LutinError(code: "config_load_failed",
                              message: "Could not load \(configURL.path): \(error.localizedDescription)")
         }
+        // One-shot load-time normalization: clean up known-invalid
+        // states in the YAML so the rest of the app can assume a
+        // self-consistent config. Currently only `background.type ==
+        // "image"` with no `path` — that combination can't render and
+        // would otherwise need defensive fallbacks at every reader.
+        // We only normalize on initial load; the hot-reload path
+        // (`ConfigFileWatcher`) leaves the disk state alone so an
+        // agent mid-edit (write type first, write path next) isn't
+        // clobbered.
+        normalizeOnLoad()
+        // Wire up hot-reload. The closure hops to the main actor
+        // (via DispatchQueue.main inside ConfigFileWatcher) so it's
+        // safe to mutate `config` here.
+        let url = self.configURL
+        fileWatcher = ConfigFileWatcher(url: url) { [weak self] in
+            guard let self else { return }
+            // Swallow load failures — they typically mean the file was
+            // caught mid-write. The next event delivers the settled
+            // state, and a partial-YAML error wouldn't be actionable
+            // for the user anyway.
+            do {
+                try self.reloadFromDisk()
+                NotificationCenter.default.post(
+                    name: .lutinDocumentReloadedFromDisk, object: self)
+            } catch {
+                // Intentionally silent — see comment above.
+            }
+        }
+        fileWatcher?.start()
+    }
+
+    deinit {
+        fileWatcher?.stop()
     }
 
     public func apply(_ intent: DocumentIntent) throws {
@@ -43,16 +90,6 @@ public final class LutinProjectDocument: Identifiable {
             config.items = (config.items ?? []) + [item]
         case .deleteItem(let id):
             config.items?.removeAll { $0.id == id }
-            config.decorations?.removeAll { $0.type == "arrow" && ($0.from == id || $0.to == id) }
-        case .addArrow(let from, let to, let label):
-            let dec = LutinConfig.Decoration(type: "arrow", from: from, to: to, label: label)
-            config.decorations = (config.decorations ?? []) + [dec]
-        case .deleteArrow(let from, let to):
-            config.decorations?.removeAll {
-                $0.type == "arrow" && $0.from == from && $0.to == to
-            }
-        case .renameArrowLabel(let from, let to, let label):
-            mutateArrow(from: from, to: to) { $0.label = label }
         case .setProjectName(let name):
             config.project.name = name
         case .setOutputDirectory(let dir):
@@ -113,30 +150,21 @@ public final class LutinProjectDocument: Identifiable {
         case .deleteSelection(let targets):
             guard !targets.isEmpty else { return }
             var newConfig = config
-            // Delete image decorations by descending index so earlier indices stay valid.
-            let imageIndices = targets.compactMap { t -> Int? in
-                if case .imageDecoration(let i) = t { return i } else { return nil }
+            // Delete image decorations by descending index so earlier
+            // indices stay valid.
+            let decoIndices: [Int] = targets.compactMap { t -> Int? in
+                if case .imageDecoration(let i) = t { return i }
+                return nil
             }.sorted(by: >)
-            for i in imageIndices {
+            for i in decoIndices {
                 guard let decos = newConfig.decorations, i >= 0, i < decos.count else { continue }
                 newConfig.decorations?.remove(at: i)
             }
-            // Delete arrows directly named.
-            for case let .arrow(from, to) in targets {
-                newConfig.decorations?.removeAll {
-                    $0.type == "arrow" && $0.from == from && $0.to == to
-                }
-            }
-            // Delete items, and cascade any arrows that reference them.
             let itemIDs = Set(targets.compactMap { t -> String? in
                 if case .item(let id) = t { return id } else { return nil }
             })
             if !itemIDs.isEmpty {
                 newConfig.items?.removeAll { itemIDs.contains($0.id) }
-                newConfig.decorations?.removeAll {
-                    $0.type == "arrow"
-                        && (itemIDs.contains($0.from ?? "") || itemIDs.contains($0.to ?? ""))
-                }
             }
             commit(newConfig: newConfig, undoLabel: "Delete")
             return
@@ -175,14 +203,6 @@ public final class LutinProjectDocument: Identifiable {
                                  message: "Item id '\(trimmed)' already exists")
             }
             newConfig.items?[idx].id = trimmed
-            // Cascade into arrows that referenced the old id.
-            if var decos = newConfig.decorations {
-                for i in decos.indices where decos[i].type == "arrow" {
-                    if decos[i].from == old { decos[i].from = trimmed }
-                    if decos[i].to == old { decos[i].to = trimmed }
-                }
-                newConfig.decorations = decos
-            }
             commit(newConfig: newConfig, undoLabel: "Rename")
             return
 
@@ -246,20 +266,6 @@ public final class LutinProjectDocument: Identifiable {
             commit(newConfig: newConfig, undoLabel: "Reorder")
             return
 
-        case .swapArrow(let from, let to):
-            var newConfig = config
-            guard var decos = newConfig.decorations,
-                  let idx = decos.firstIndex(where: {
-                      $0.type == "arrow" && $0.from == from && $0.to == to }) else {
-                throw LutinError(code: "editor_arrow_not_found",
-                                 message: "Arrow \(from)→\(to) not found")
-            }
-            decos[idx].from = to
-            decos[idx].to = from
-            newConfig.decorations = decos
-            commit(newConfig: newConfig, undoLabel: "Swap arrow")
-            return
-
         case .setWindow(let w, let h, let icon, let text, let toolbar, let sidebar):
             var newConfig = config
             if newConfig.window == nil {
@@ -321,22 +327,10 @@ public final class LutinProjectDocument: Identifiable {
             commit(newConfig: newConfig, undoLabel: "Sparkle")
             return
 
-        case .setArrowHidden(let from, let to, let hidden):
-            var newConfig = config
-            guard var decos = newConfig.decorations,
-                  let idx = decos.firstIndex(where: {
-                      $0.type == "arrow" && $0.from == from && $0.to == to }) else {
-                throw LutinError(code: "editor_arrow_not_found",
-                                 message: "Arrow \(from)→\(to) not found")
-            }
-            decos[idx].hidden = hidden ? true : nil
-            newConfig.decorations = decos
-            commit(newConfig: newConfig, undoLabel: hidden ? "Hide" : "Show")
-            return
         }
         isDirty = true
         registerUndo(previous: previous)
-        if autosaveEnabled { scheduleAutosave() }
+        scheduleAutosave()
     }
 
     public func scheduleAutosave(after delay: TimeInterval = 0.5) {
@@ -347,7 +341,43 @@ public final class LutinProjectDocument: Identifiable {
         }
     }
 
+    /// One-shot fix for known-invalid YAML states encountered at load
+    /// time. Mutates `config` in place, marks the document dirty, and
+    /// schedules an autosave so the corrected state lands on disk.
+    /// Called once from `init` — NOT from the hot-reload path, where
+    /// an agent mid-edit might be writing a multi-field change one
+    /// field at a time and we don't want to overwrite their work.
+    ///
+    /// Currently fixes:
+    ///   • `background.type == "image"` with no `path` → rewrite to
+    ///     `type: "solid"` with a white `colorA` default, dropping
+    ///     the gradient/template/noise fields that don't apply.
+    private func normalizeOnLoad() {
+        if let bg = config.background,
+           bg.type == "image",
+           (bg.path ?? "").trimmingCharacters(in: .whitespaces).isEmpty {
+            config.background = LutinConfig.BackgroundInfo(
+                type: "solid",
+                template: nil,
+                path: nil,
+                scale: bg.scale,
+                colorA: bg.colorA ?? "#FFFFFF",
+                colorB: nil,
+                grid: nil,
+                noise: nil,
+                cornerRadius: bg.cornerRadius,
+                angle: nil)
+            isDirty = true
+            scheduleAutosave()
+        }
+    }
+
     public func save() throws {
+        // Mark before the atomic rotate so the watcher's dispatch
+        // source ignores the event our own write generates. Must run
+        // BEFORE `replaceItemAt`, not after, because the kernel
+        // delivers the FS event from the rename almost immediately.
+        fileWatcher?.noteSelfWrite()
         let tmp = configURL.appendingPathExtension("tmp")
         do {
             try config.save(to: tmp)
@@ -385,7 +415,7 @@ public final class LutinProjectDocument: Identifiable {
         isDirty = true
         undoManager.setActionName(undoLabel)
         registerUndo(previous: previous)
-        if autosaveEnabled { scheduleAutosave() }
+        scheduleAutosave()
     }
 
     private func mutateItem(id: String, _ mutate: (inout LutinConfig.Item) -> Void) {
@@ -394,13 +424,6 @@ public final class LutinProjectDocument: Identifiable {
         config.items = items
     }
 
-    private func mutateArrow(from: String, to: String, _ mutate: (inout LutinConfig.Decoration) -> Void) {
-        guard var decorations = config.decorations,
-              let idx = decorations.firstIndex(where: { $0.type == "arrow" && $0.from == from && $0.to == to })
-        else { return }
-        mutate(&decorations[idx])
-        config.decorations = decorations
-    }
 
     private func registerUndo(previous: LutinConfig) {
         undoManager.registerUndo(withTarget: self) { doc in

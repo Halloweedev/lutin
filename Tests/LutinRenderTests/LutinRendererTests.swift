@@ -48,15 +48,14 @@ final class LutinRendererTests: XCTestCase {
         XCTAssertEqual(pngSize(url)?.h, 240)        // 120 * 2
     }
 
-    func testRendersWithAnArrowDecoration() throws {
+    /// Drawn arrows were removed; the renderer rejects `type: arrow`
+    /// because the resolver only knows the `image` case now.
+    func testArrowDecorationIsRejectedByRenderer() {
         let dir = FileManager.default.temporaryDirectory
-        let decorations = [LutinConfig.Decoration(
-            type: "arrow", from: "app", to: "applications", label: "Drag to install")]
-        let url = try LutinRenderer.renderBackground(
+        let decorations = [LutinConfig.Decoration(type: "arrow")]
+        XCTAssertThrowsError(try LutinRenderer.renderBackground(
             config: config(background: generated(), decorations: decorations),
-            projectDirectory: dir)
-        defer { try? FileManager.default.removeItem(at: url) }
-        XCTAssertNotNil(pngSize(url))
+            projectDirectory: dir))
     }
 
     func testMissingDecorationImageSurfacesTypedError() {

@@ -8,8 +8,13 @@ import AppKit
 /// translate that state into their own fill (text buttons darken a base
 /// fill; icon buttons branch on `isInteracting`).
 public struct ControlInteractionState: ViewModifier {
-    public static let hoverDarken: Double = 0.04
-    public static let pressDarken: Double = 0.08
+    // Tuned for pure-white chrome (2026-05-24): a 4% darken on white
+    // (→ 0.96 grey) read as "is anything happening?" — the user explicitly
+    // asked for clearly-greyer button hovers. 8/14 now lands the rest /
+    // hover / press states at white → 0.92 → 0.86, which reads as
+    // discrete steps without feeling heavy.
+    public static let hoverDarken: Double = 0.08
+    public static let pressDarken: Double = 0.14
 
     public struct State: Equatable, Sendable {
         public let isHovered: Bool
@@ -42,6 +47,14 @@ public struct ControlInteractionState: ViewModifier {
         content
             .focusable()
             .focused($isFocused)
+            // `.focusEffectDisabled()` MUST live here, after `.focusable()`.
+            // If callers apply it on their inner Button instead, SwiftUI
+            // still paints its rounded-blue ring once focus settles on the
+            // outer focusable this modifier installs — the disable scope
+            // does not extend outward through later modifiers. Every Lutin
+            // control that adopts this modifier gets the suppression for
+            // free, and the bug can't recur in a new control.
+            .focusEffectDisabled()
             .onHover { hovering in
                 isHovered = hovering
                 if !hovering { isPressed = false }

@@ -18,13 +18,4 @@ final class IdentityProbeParserTests: XCTestCase {
         let sample = "  0 valid identities found"
         XCTAssertTrue(IdentityProbe.parse(securityOutput: sample).isEmpty)
     }
-    func testNotaryProfilesParser() {
-        let sample = """
-        Keychain Profiles:
-          ci-notary
-          dev-personal
-        """
-        let parsed = NotaryProbe.parse(notarytoolOutput: sample)
-        XCTAssertEqual(parsed, ["ci-notary", "dev-personal"])
-    }
 }

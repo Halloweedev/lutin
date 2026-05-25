@@ -1,37 +1,43 @@
 import SwiftUI
+import AppKit
 
+/// Narrow left rail holding the four editor-tab buttons and a Preferences
+/// cog. The project switcher lives in the SidePanel's top row as a name +
+/// chevron dropdown — having a second opener here (a brand emblem at the
+/// top) duplicated the affordance, so it was removed.
 public struct EditorRail: View {
     @Binding var selectedTab: EditorTab
-    let onOpenSwitcher: () -> Void
 
-    public init(selectedTab: Binding<EditorTab>, onOpenSwitcher: @escaping () -> Void) {
+    public init(selectedTab: Binding<EditorTab>) {
         self._selectedTab = selectedTab
-        self.onOpenSwitcher = onOpenSwitcher
     }
 
     public var body: some View {
         VStack(spacing: 0) {
-            brandEmblem
-            Rectangle()
-                .fill(Tokens.color(.divider))
-                .frame(height: Tokens.Size.hairline)
-                .padding(.horizontal, 8)
-            VStack(spacing: 4) {
-                ForEach(EditorTab.allCases, id: \.self) { tab in
-                    railButton(systemImage: tab.iconName,
-                               isSelected: tab == selectedTab,
-                               tooltip: tab.title,
-                               action: { selectedTab = tab })
-                }
+            // Top-of-rail slot reserved for the Lutin brand logo.
+            LogoSlot()
+            // Tab buttons. Each row carries a top hairline so the rail
+            // reads as a sequence of cleanly separated cells — same
+            // pattern as the trailing rail divider and the section
+            // dividers in tab content. No inter-row spacing; the
+            // hairline does the visual separation work.
+            ForEach(EditorTab.allCases, id: \.self) { tab in
+                RailButton(systemImage: tab.iconName,
+                           isSelected: tab == selectedTab,
+                           tooltip: tab.title,
+                           action: { selectedTab = tab })
+                    .modifier(RailRowDivider())
             }
-            .padding(.vertical, Tokens.spacing(.sm))
             Spacer(minLength: 0)
-            // Settings cog pinned to the bottom of the rail.
-            railButton(systemImage: "gearshape",
+            // Settings cog pinned to the bottom of the rail — also
+            // carries the top hairline so the gap-then-cog reads as
+            // "cog is its own group", visually anchored to the rail
+            // bottom.
+            RailButton(systemImage: "gearshape",
                        isSelected: false,
                        tooltip: "Preferences (⌘,)",
                        action: openPreferences)
-                .padding(.bottom, Tokens.spacing(.sm))
+                .modifier(RailRowDivider())
         }
         .frame(width: Tokens.Size.railWidth)
         // Rail shares the panel's surface color so the two read as one
@@ -45,37 +51,110 @@ public struct EditorRail: View {
         }
     }
 
-    /// Brand mark — clickable, opens the Project Switcher just like
-    /// clicking the title in the header does.
-    private var brandEmblem: some View {
-        LutinIconButton(systemName: "shippingbox.fill",
-                        accessibilityLabel: "Open project switcher",
-                        action: onOpenSwitcher)
-        .frame(height: 28)
-        .help("Projects… (⌘O)")
-    }
-
-    private func railButton(systemImage: String,
-                            isSelected: Bool,
-                            tooltip: String,
-                            action: @escaping () -> Void) -> some View {
-        HStack(spacing: 0) {
-            Rectangle()
-                .fill(isSelected ? Tokens.color(.brandAccent) : Color.clear)
-                .frame(width: 3, height: 28)
-            LutinIconButton(systemName: systemImage,
-                            accessibilityLabel: tooltip,
-                            action: action)
-                .frame(maxWidth: .infinity)
-        }
-        .frame(height: 28)
-        .help(tooltip)
-    }
-
     /// Opens the macOS Preferences scene via the standard menu action.
     /// macOS handles routing this to the `Settings { }` declared in
     /// LutinApp.main.
     private func openPreferences() {
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+    }
+}
+
+/// Brand-logo placeholder pinned at the top of the rail. Renders a
+/// brand-accent rounded square with a white "L" — a temporary mark
+/// that occupies the slot the real Lutin logo will fill later. Not
+/// interactive (no hover, no action) — adding behaviour would
+/// pre-commit to what the logo does on click; better to wire that
+/// when the real logo design lands.
+///
+/// The slot is `railWidth × railWidth` so it shares the rail's grid
+/// with the tab buttons below it — swap to an `Image(...)` of the same
+/// frame to ship the real logo without disturbing layout.
+private struct LogoSlot: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 6)
+            .fill(Tokens.color(.brandAccent))
+            .frame(width: 24, height: 24)
+            .overlay {
+                Text("L")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(Tokens.color(.textOnAccent))
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: Tokens.Size.railWidth)
+            .accessibilityLabel("Lutin")
+    }
+}
+
+/// 1pt hairline at the top of each rail row, in the standard divider
+/// color. Pulled into a `ViewModifier` so the call sites stay tidy and
+/// every rail divider in the app reads as one design token rather than
+/// multiple inline overlays with subtly different colors/heights.
+private struct RailRowDivider: ViewModifier {
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .top) {
+            Rectangle()
+                .fill(Tokens.color(.divider))
+                .frame(height: Tokens.Size.hairline)
+        }
+    }
+}
+
+/// A single rail row. Full-width (left edge → trailing divider) fill states:
+///   • selected → `brandAccent` background, `textOnAccent` glyph
+///   • hover    → `controlHoverFill` background, `textPrimary` glyph
+///   • rest     → clear background, `textPrimary` glyph
+///
+/// No 3pt accent stripe — the entire row acts as the selection indicator.
+/// Press darkens the active fill (selected → darker accent; hover → darker
+/// grey) so users get the same press feedback in both states.
+private struct RailButton: View {
+    let systemImage: String
+    let isSelected: Bool
+    let tooltip: String
+    let action: () -> Void
+
+    @State private var interaction = ControlInteractionState.State(
+        isHovered: false, isPressed: false, isFocused: false)
+
+    var body: some View {
+        let appearance = NSApp?.effectiveAppearance ?? .currentDrawing()
+        let bg = resolvedBackground(appearance: appearance)
+        let fg = resolvedForeground()
+        // Row height equals the rail width (`Tokens.Size.railWidth = 44`)
+        // so the selected fill draws a true square from left edge to the
+        // trailing divider. The visual indicator and the hit target are
+        // the same surface — no inner padding to mistime hover/selection.
+        SwiftUI.Button(action: action) {  // allow-menu-button: hidden behind RailButton
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .regular))
+                .foregroundStyle(fg)
+                .frame(maxWidth: .infinity)
+                .frame(height: Tokens.Size.railWidth)
+                .background(bg)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(tooltip)
+        .help(tooltip)
+        .modifier(ControlInteractionState(onChange: { state in interaction = state }))
+        .lutinHitTarget(minHeight: Tokens.Size.railWidth)
+    }
+
+    private func resolvedBackground(appearance: NSAppearance) -> Color {
+        if isSelected {
+            let base = Tokens.nsColor(.brandAccent, appearance: appearance)
+            return Color(nsColor: interaction.resolvedFill(base: base))
+        }
+        if interaction.isPressed {
+            let hover = Tokens.nsColor(.controlHoverFill, appearance: appearance)
+            return Color(nsColor: Tokens.darken(hover, by: ControlInteractionState.pressDarken))
+        }
+        if interaction.isInteracting {
+            return Tokens.color(.controlHoverFill)
+        }
+        return .clear
+    }
+
+    private func resolvedForeground() -> Color {
+        isSelected ? Tokens.color(.textOnAccent) : Tokens.color(.textPrimary)
     }
 }

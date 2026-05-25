@@ -9,8 +9,6 @@ public struct IntentEnvelope: Decodable, Sendable {
     public let kind: String
     public let id: String?
     public let new: String?
-    public let from: String?
-    public let to: String?
     public let x: Int?
     public let y: Int?
     public let width: Int?
@@ -31,7 +29,7 @@ public struct IntentEnvelope: Decodable, Sendable {
     public let deltas: [DeltaEnv]?
 
     public struct DeltaEnv: Decodable, Sendable {
-        public let kind: String   // "item" or "image"
+        public let kind: String   // "item" | "image"
         public let id: String?
         public let index: Int?
         public let dx: Int
@@ -65,10 +63,6 @@ public struct IntentEnvelope: Decodable, Sendable {
             try document.apply(.reorderItem(id: id ?? "", toIndex: index ?? 0))
         case "reorderImageDecoration":
             try document.apply(.reorderImageDecoration(fromIndex: x ?? 0, toIndex: index ?? 0))
-        case "swapArrow":
-            try document.apply(.swapArrow(from: from ?? "", to: to ?? ""))
-        case "setArrowHidden":
-            try document.apply(.setArrowHidden(from: from ?? "", to: to ?? "", hidden: hidden ?? false))
         case "setWindow":
             try document.apply(.setWindow(width: width, height: height, iconSize: iconSize,
                                           textSize: textSize, showToolbar: showToolbar, showSidebar: showSidebar))
@@ -84,19 +78,17 @@ public struct IntentEnvelope: Decodable, Sendable {
             try document.apply(.moveItem(id: id ?? "", x: x ?? 0, y: y ?? 0))
         case "renameItemLabel":
             try document.apply(.renameItemLabel(id: id ?? "", label: label))
-        case "addArrow":
-            try document.apply(.addArrow(from: from ?? "", to: to ?? "", label: label))
-        case "deleteArrow":
-            try document.apply(.deleteArrow(from: from ?? "", to: to ?? ""))
-        case "renameArrowLabel":
-            try document.apply(.renameArrowLabel(from: from ?? "", to: to ?? "", label: label))
         case "deleteItem":
             try document.apply(.deleteItem(id: id ?? ""))
         case "deleteSelection":
             // deleteSelection with a tagged-union target list is not representable in
-            // a flat JSON envelope. Use deleteItem / deleteArrow / deleteImageDecoration
-            // individually for parity purposes.
-            throw IntentBridgeError.unsupported("deleteSelection — use deleteItem / deleteArrow / deleteImageDecoration individually")
+            // a flat JSON envelope. Use deleteItem / deleteImageDecoration individually.
+            throw IntentBridgeError.unsupported("deleteSelection — use deleteItem / deleteImageDecoration individually")
+        case "addArrow", "deleteArrow", "updateArrow", "moveArrowEndpoint",
+             "setArrowHidden", "swapArrow", "renameArrowLabel":
+            // Drawn arrows were removed. Add arrows as image decorations
+            // instead (`addImageDecoration` with an arrow PNG).
+            throw IntentBridgeError.unsupported("\(kind) — drawn arrows removed; use addImageDecoration with an arrow image")
         default:
             throw IntentBridgeError.unknown(kind)
         }

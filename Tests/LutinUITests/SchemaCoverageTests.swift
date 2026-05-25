@@ -17,9 +17,11 @@ final class SchemaCoverageTests: XCTestCase {
                                                     grid: true, noise: 0.1,
                                                     cornerRadius: 4, angle: 0)
         cfg.items = [LutinConfig.Item(type: "app", id: "a", x: 0, y: 0, label: "L", hidden: false)]
-        var deco = LutinConfig.Decoration(type: "arrow")
-        deco.from = "a"; deco.to = "b"; deco.label = "L"
-        deco.path = "./i.png"; deco.x = 0; deco.y = 0; deco.width = 10
+        // `type: image` is the only decoration kind left after the
+        // drawn-arrow removal — populate every field so Mirror walks them.
+        var deco = LutinConfig.Decoration(type: "image",
+                                          path: "./i.png", x: 0, y: 0, width: 10,
+                                          label: "L")
         deco.hidden = false
         cfg.decorations = [deco]
         cfg.signing = LutinConfig.SigningInfo(enabled: false, identity: "i",

@@ -3,24 +3,34 @@ import Observation
 import LutinCore
 
 public struct LutinPreferences: Codable, Equatable {
-    public var autosave: Bool
     public var defaultOutputDirectory: String?
     public var snapGridSize: Int
     public var showAlignmentGuides: Bool
     public var theme: Theme
+    /// Notarytool profile names Lutin has successfully created (via the
+    /// in-app New profile sheet) on this user account. Used as a
+    /// positive-only signal for the UI — `notarytool` stores its
+    /// credentials in a keychain partition whose access group is
+    /// restricted to its own signed binary, so third-party apps
+    /// (including Lutin) literally can't enumerate or verify these
+    /// items via `SecItemCopyMatching` or `/usr/bin/security`. The
+    /// only readers of that partition are notarytool itself and the
+    /// Keychain Access app. So Lutin tracks creations it observed
+    /// firsthand and stays silent about everything else.
+    public var knownNotaryProfiles: [String]
 
     public enum Theme: String, Codable, Equatable { case system, light, dark }
 
-    public init(autosave: Bool = false,
-                defaultOutputDirectory: String? = nil,
+    public init(defaultOutputDirectory: String? = nil,
                 snapGridSize: Int = 4,
                 showAlignmentGuides: Bool = true,
-                theme: Theme = .system) {
-        self.autosave = autosave
+                theme: Theme = .system,
+                knownNotaryProfiles: [String] = []) {
         self.defaultOutputDirectory = defaultOutputDirectory
         self.snapGridSize = snapGridSize
         self.showAlignmentGuides = showAlignmentGuides
         self.theme = theme
+        self.knownNotaryProfiles = knownNotaryProfiles
     }
 }
 
@@ -62,6 +72,32 @@ public final class PreferencesStore {
         mutate(&copy)
         try write(copy)
         preferences = copy
+    }
+
+    /// Records a notarytool profile name Lutin just created. Idempotent
+    /// (no duplicates). See `LutinPreferences.knownNotaryProfiles` for
+    /// the reasoning — we can't enumerate notarytool's keychain entries
+    /// (ACL-restricted to its signing team), so the only profiles we
+    /// can confidently mark as "exists" are the ones we observed
+    /// firsthand at creation time.
+    public func rememberNotaryProfile(_ name: String) throws {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        try update { prefs in
+            if !prefs.knownNotaryProfiles.contains(trimmed) {
+                prefs.knownNotaryProfiles.append(trimmed)
+            }
+        }
+    }
+
+    /// Drops a name from the remembered list — used if a verify-test
+    /// reveals the profile is gone from the Keychain.
+    public func forgetNotaryProfile(_ name: String) throws {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        try update { prefs in
+            prefs.knownNotaryProfiles.removeAll { $0 == trimmed }
+        }
     }
 
     private func write(_ prefs: LutinPreferences) throws {

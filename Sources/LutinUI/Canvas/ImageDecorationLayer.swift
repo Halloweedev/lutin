@@ -64,6 +64,10 @@ public struct ImageDecorationLayer: View {
                 selectionModel.select(.image(index: index))
             }
         }
+        // Per-view `.onHover` removed 2026-05-25 — hover is now
+        // canvas-level via `.onContinuousHover` in `CanvasView`,
+        // hit-testing against the same bounding boxes used for
+        // measurements (see ItemLayer for the longer history).
         .overlay {
             if isSelected {
                 // Selection ring positioned at the same top-left convention.

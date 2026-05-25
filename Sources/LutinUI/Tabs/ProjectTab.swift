@@ -16,18 +16,22 @@ public struct ProjectTab: View {
                             name: $0,
                             bundleId: document.config.project.bundleId)) }))
                 }
-                SettingsField("Bundle identifier",
-                              helper: "Reverse-DNS, e.g. com.example.myapp") {
-                    SettingsTextField("com.example.myapp", text: Binding(
-                        get: { document.config.project.bundleId },
-                        set: { try? document.apply(.setProjectMetadata(
-                            name: document.config.project.name,
-                            bundleId: $0)) }))
-                }
                 SettingsField("App bundle") {
                     PathPickerRow(value: document.config.app.path,
                                   placeholder: "No .app chosen",
                                   onPick: pickApp)
+                }
+                // Bundle identifier sourced live from the .app's
+                // Info.plist — read-only. The YAML's `project.bundleId`
+                // remains as a record of "what bundle id this project
+                // was built around" but it doesn't drive anything; the
+                // real identifier lives inside the .app. See helper.
+                SettingsField("Bundle identifier",
+                              helper: "Read from \(document.config.app.path.isEmpty ? "the linked .app" : "the .app")'s Info.plist. Edit it in Xcode → target → Signing & Capabilities, or in the .app's Info.plist directly.") {
+                    BundleIdentifierReadout(
+                        appPath: document.config.app.path,
+                        projectDirectory: document.projectDirectory,
+                        fallback: document.config.project.bundleId)
                 }
             }
 
@@ -74,5 +78,57 @@ public struct ProjectTab: View {
         try? document.apply(.setOutput(directory: url.path,
                                        dmgName: document.config.output.dmgName,
                                        volumeName: document.config.output.volumeName))
+    }
+}
+
+/// Read-only field that displays the linked `.app`'s `CFBundleIdentifier`.
+///
+/// The bundle identifier in the YAML (`config.project.bundleId`) is a
+/// record-only carry-over from project creation; the real identifier is
+/// inside the .app and is set by the developer in Xcode (or in the
+/// `Info.plist` directly). Showing it live keeps the UI honest: what you
+/// see is what the build pipeline (codesign / notarytool) will see when
+/// they inspect the bundle.
+///
+/// Falls back to the YAML value when the .app can't be read — usually
+/// because it's a relative path on a machine where the file no longer
+/// exists, or hasn't been picked yet.
+private struct BundleIdentifierReadout: View {
+    let appPath: String
+    let projectDirectory: URL
+    let fallback: String
+
+    var body: some View {
+        Text(displayedIdentifier.isEmpty ? "—" : displayedIdentifier)
+            .font(Typography.chromeSmall)
+            .foregroundStyle(displayedIdentifier.isEmpty
+                             ? Tokens.color(.textTertiary)
+                             : Tokens.color(.textPrimary))
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(SquareShape().fill(Tokens.color(.canvasBackground)))
+            .overlay(SquareShape().stroke(Tokens.color(.divider),
+                                          lineWidth: Tokens.Size.hairline))
+            .textSelection(.enabled)
+    }
+
+    /// Resolves the `.app` URL and asks `AppBundleInfo` to read its
+    /// Info.plist. On any failure (missing file, malformed plist, no
+    /// `CFBundleIdentifier` key), returns the YAML fallback — never
+    /// throws into the UI. The lookup is cheap (plist read on a small
+    /// file) but happens on every body re-eval; if it ever becomes hot,
+    /// cache via `@State` keyed on `appPath`.
+    private var displayedIdentifier: String {
+        let trimmed = appPath.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return fallback }
+        let url = URL(fileURLWithPath: trimmed, relativeTo: projectDirectory)
+            .standardizedFileURL
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return fallback
+        }
+        return (try? AppBundleInfo.read(url).bundleIdentifier) ?? fallback
     }
 }

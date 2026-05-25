@@ -11,28 +11,46 @@ final class ControlStatesTests: XCTestCase {
         XCTAssertEqual(resolved.redComponent, 1.0, accuracy: 0.001)
     }
 
-    func testHoverDarkensByFourPercent() {
+    // Hover/press values bumped 2026-05-24 alongside the pure-white chrome
+    // pass — 4% on white was too quiet to read as a state change. The
+    // hover/press constants are the source of truth; these tests pin the
+    // math through them so a future re-tune doesn't silently regress the
+    // resolution function.
+    func testHoverDarkens() {
         let base = NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
         let state = ControlInteractionState.State(isHovered: true, isPressed: false, isFocused: false)
-        XCTAssertEqual(state.resolvedFill(base: base).redComponent, 0.96, accuracy: 0.001)
+        let expected = 1.0 - ControlInteractionState.hoverDarken
+        XCTAssertEqual(state.resolvedFill(base: base).redComponent, CGFloat(expected), accuracy: 0.001)
     }
 
-    func testPressDarkensByEightPercent() {
+    func testPressDarkens() {
         let base = NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
         let state = ControlInteractionState.State(isHovered: false, isPressed: true, isFocused: false)
-        XCTAssertEqual(state.resolvedFill(base: base).redComponent, 0.92, accuracy: 0.001)
+        let expected = 1.0 - ControlInteractionState.pressDarken
+        XCTAssertEqual(state.resolvedFill(base: base).redComponent, CGFloat(expected), accuracy: 0.001)
     }
 
     func testFocusMatchesHover() {
         let base = NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
         let state = ControlInteractionState.State(isHovered: false, isPressed: false, isFocused: true)
-        XCTAssertEqual(state.resolvedFill(base: base).redComponent, 0.96, accuracy: 0.001)
+        let expected = 1.0 - ControlInteractionState.hoverDarken
+        XCTAssertEqual(state.resolvedFill(base: base).redComponent, CGFloat(expected), accuracy: 0.001)
     }
 
     func testPressBeatsHoverAndFocus() {
         let base = NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
         let state = ControlInteractionState.State(isHovered: true, isPressed: true, isFocused: true)
-        XCTAssertEqual(state.resolvedFill(base: base).redComponent, 0.92, accuracy: 0.001)
+        let expected = 1.0 - ControlInteractionState.pressDarken
+        XCTAssertEqual(state.resolvedFill(base: base).redComponent, CGFloat(expected), accuracy: 0.001)
+    }
+
+    func testHoverIsNoticeablyGreyer() {
+        // The user asked for clearly-greyer hovers (2026-05-24). Pin a floor
+        // so a future tune cannot drop back into "is anything happening?"
+        // territory — anything below 6% on white is imperceptible without
+        // a side-by-side comparison.
+        XCTAssertGreaterThanOrEqual(ControlInteractionState.hoverDarken, 0.06)
+        XCTAssertGreaterThan(ControlInteractionState.pressDarken, ControlInteractionState.hoverDarken)
     }
 
     func testIsInteractingFlag() {

@@ -32,6 +32,13 @@ public enum Tokens {
         // Accent — new v2 (camelCase colorsets)
         case brandAccentMuted
 
+        // Interaction — new v2 (camelCase colorsets).
+        // Pure-grey hover fill used by `LutinIconButton` and `LutinToggle`.
+        // Decoupled from `surfaceElevated` once the chrome surfaces went
+        // pure white — surfaceElevated meant "white above grey panel", which
+        // gave invisible hover affordance against a white panel.
+        case controlHoverFill
+
         // ── Legacy keys — rawValue maps to existing PascalCase colorsets ─────
 
         // Surfaces
@@ -43,6 +50,11 @@ public enum Tokens {
         case divider           = "Divider"
         case itemSelected      = "ItemSelected"
         case alignmentGuide    = "AlignmentGuide"
+        /// Magenta used by the Option-key measurement overlay
+        /// (`MeasurementGuides`). Distinct from `alignmentGuide`
+        /// (blue) so the two overlays never compete visually when
+        /// they appear in the same frame.
+        case measurementGuide  = "MeasurementGuide"
         case gridLine          = "GridLine"
 
         // Accent
@@ -130,6 +142,11 @@ public enum Tokens {
         public static let sidePanelMin: CGFloat = 240
         public static let sidePanelMax: CGFloat = 360
         public static let hairline: CGFloat = 1
+        /// Minimum hit-target height for any chrome control. Matches the
+        /// existing `LutinIconButton` frame and aligns with macOS HIG
+        /// pointer-control guidance. Applied via `.lutinHitTarget()` —
+        /// see `View+LutinHitTarget.swift`.
+        public static let controlHeight: CGFloat = 28
     }
 }
 

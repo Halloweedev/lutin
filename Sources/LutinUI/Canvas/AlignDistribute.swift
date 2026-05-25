@@ -67,7 +67,6 @@ public enum AlignDistribute {
         switch e.selectionID() {
         case .item(let id): return .item(id: id)
         case .image(let i): return .imageDecoration(index: i)
-        case .arrow: fatalError("Arrows are not align/distribute targets")
         }
     }
 }
@@ -124,7 +123,6 @@ public struct AlignDistributeToolbar: View {
             case .image(let i):
                 guard let d = document.config.decorations?[safe: i] else { return nil }
                 return Element(id: id, x: d.x ?? 0, y: d.y ?? 0)
-            case .arrow: return nil
             }
         }
     }

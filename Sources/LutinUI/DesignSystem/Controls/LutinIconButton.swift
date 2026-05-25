@@ -2,7 +2,8 @@ import SwiftUI
 import AppKit
 
 /// Square icon button. Bare glyph at rest (no container). On hover/press/focus
-/// a filled square appears behind the glyph using the `surfaceElevated` token.
+/// a filled square appears behind the glyph using the `controlHoverFill` token
+/// (a clearly-grey tile against the pure-white chrome).
 public struct LutinIconButton: View {
     let symbol: Image
     let accessibilityLabel: String
@@ -36,7 +37,10 @@ public struct LutinIconButton: View {
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
         .modifier(ControlInteractionState(onChange: { state in interaction = state }))
-        .focusEffectDisabled()
+        // 28×28 frame already meets `Tokens.Size.controlHeight`; this is
+        // mainly here for the rectangular `contentShape` — clicks at the
+        // exact corner of the square otherwise miss the SF Symbol path.
+        .lutinHitTarget()
     }
 
     /// Resolves the current icon fill from interaction state and system appearance.
@@ -53,6 +57,6 @@ public struct LutinIconButton: View {
     }
 
     var restFillKey: Tokens.Key? { nil }
-    var interactionFillKey: Tokens.Key { .surfaceElevated }
+    var interactionFillKey: Tokens.Key { .controlHoverFill }
     func invokeForTest() { action() }
 }

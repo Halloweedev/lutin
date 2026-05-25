@@ -9,7 +9,7 @@ public enum LayersOrdering {
         public let displayName: String
         public let hidden: Bool
     }
-    public enum Kind { case item, image, arrow }
+    public enum Kind { case item, image }
 
     public static func rows(from config: LutinConfig) -> [Row] {
         var rows: [Row] = []
@@ -26,14 +26,6 @@ public enum LayersOrdering {
                 id: .image(index: i),
                 kind: .image,
                 displayName: "image: \(basename)",
-                hidden: deco.hidden ?? false))
-        }
-        for deco in (config.decorations ?? []) where deco.type == "arrow" {
-            guard let from = deco.from, let to = deco.to else { continue }
-            rows.append(Row(
-                id: .arrow(from: from, to: to),
-                kind: .arrow,
-                displayName: "\(from) → \(to)",
                 hidden: deco.hidden ?? false))
         }
         return rows

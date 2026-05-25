@@ -125,7 +125,12 @@ public struct BackgroundEditor: View {
             }
             SettingsField("Corner radius") {
                 HStack(spacing: Tokens.spacing(.sm)) {
-                    Text("\(bg.cornerRadius ?? 0) pt").font(Typography.chromeSmall)
+                    // `fixedSize` keeps "32 pt" on one line — without it
+                    // SwiftUI breaks at the space when the column narrows.
+                    Text("\(bg.cornerRadius ?? 0) pt")
+                        .font(Typography.chromeSmall)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                     LutinStepper(value: Binding(
                         get: { bg.cornerRadius ?? 0 },
                         set: { var b = bg; b.cornerRadius = $0; try? document.apply(.setBackground(b)) }),
@@ -157,12 +162,33 @@ public struct BackgroundEditor: View {
         switch bg.type {
         case "solid": return .solid
         case "gradient": return .gradient
-        case "image": return .image
+        case "image":
+            // Fall back to `.solid` when the image variant has no
+            // path on file. Without this, opening a project whose
+            // YAML reads `type: image, path: nil` (set partially by
+            // a YAML edit, or stranded by a cancelled file picker)
+            // shows "Image" highlighted in the variant picker even
+            // though the renderer can't draw anything from it — and
+            // the canvas surfaces a hard error. Mirroring the
+            // renderer's fallback here keeps both layers consistent.
+            return (bg.path ?? "").isEmpty ? .solid : .image
         default: return .solid  // legacy "generated" + nil → solid in the UI
         }
     }
 
     private func selectVariant(_ v: Variant) {
+        // Image variant requires a path — without one, the renderer
+        // refuses to render and the canvas surfaces a confusing
+        // "background.type is 'image' but background.path is not set"
+        // error. So if the user switches to Image with no path on
+        // file, open the picker first and only commit the variant
+        // switch if they actually pick something. Cancelling leaves
+        // the previous variant intact instead of stranding the
+        // config in an invalid "type=image, path=nil" state.
+        if v == .image && (bg.path ?? "").isEmpty {
+            pickImage()
+            return
+        }
         var b = bg
         b.type = v.rawValue
         switch v {
@@ -187,8 +213,13 @@ public struct BackgroundEditor: View {
         panel.allowedContentTypes = [.png, .jpeg]
         guard panel.runModal() == .OK, let url = panel.url else { return }
         var b = bg
+        // Commit both `type` and `path` atomically so the config can't
+        // end up in the half-set "type=image, path=nil" state that
+        // makes the renderer fail.
+        b.type = Variant.image.rawValue
         b.path = url.path
         b.template = nil; b.colorA = nil; b.colorB = nil
+        b.angle = nil; b.noise = nil
         try? document.apply(.setBackground(b))
     }
 }

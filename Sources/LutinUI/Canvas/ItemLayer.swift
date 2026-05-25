@@ -9,8 +9,6 @@ public struct ItemLayer: View {
     @Bindable var selectionModel: CanvasSelectionModel
     let guideState: CanvasGuideState
     @Environment(PreferencesStore.self) private var preferences
-    @State private var hoveredID: String?
-    @State private var connectorDrag: ConnectorDragState = .idle
     @State private var editingID: String?
 
     public init(document: LutinProjectDocument,
@@ -35,31 +33,11 @@ public struct ItemLayer: View {
                             selectionModel.select(.item(id: item.id))
                         }
                     }
-                    .onHover { hovering in
-                        hoveredID = hovering ? item.id : (hoveredID == item.id ? nil : hoveredID)
-                    }
-                    .overlay {
-                        if hoveredID == item.id {
-                            ConnectorHandles(document: document, item: item,
-                                             dragState: $connectorDrag)
-                        }
-                    }
                     .draggableItem(document: document,
                                    selectionModel: selectionModel,
                                    id: .item(id: item.id),
                                    snapGrid: preferences.preferences.snapGridSize,
                                    guideState: guideState)
-            }
-        }
-        .onChange(of: connectorDrag) { _, newValue in
-            if case .ended(let src, let pt) = newValue {
-                let items = document.config.items ?? []
-                let iconSize = document.config.window?.iconSize ?? 96
-                if let target = ConnectorResolver.itemAt(point: pt, items: items, iconSize: iconSize),
-                   target.id != src {
-                    try? document.apply(.addArrow(from: src, to: target.id, label: nil))
-                }
-                connectorDrag = .idle
             }
         }
     }
@@ -68,6 +46,16 @@ public struct ItemLayer: View {
         let isSelected: Bool = selectionModel.selection.contains(.item(id: item.id))
         let iconSize = CGFloat(document.config.window?.iconSize ?? 96)
         return ZStack {
+            // Hover detection moved out of the item view 2026-05-25.
+            // Per-view `.onHover` couldn't see through the opaque
+            // iconArtwork — Color.clear catchers behind the icon only
+            // fired when the cursor was in the label band beneath
+            // the glyph. Hover is now driven by `.onContinuousHover`
+            // on the canvas in `CanvasView.body`, which hit-tests
+            // against the same `boundingBox(for:iconSize:)` used for
+            // measurements — so the hover region exactly matches the
+            // measurement region by construction, with no view
+            // hierarchy interference.
             iconArtwork(for: item, size: iconSize)
                 .frame(width: iconSize, height: iconSize)
                 .scaleEffect(isSelected ? 1.03 : 1.0)

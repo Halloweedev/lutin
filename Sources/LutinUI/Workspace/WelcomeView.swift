@@ -8,6 +8,7 @@ import LutinDocument
 /// plain placeholder shown when no project is loaded.
 public struct WelcomeView: View {
     @Environment(RegistryStore.self) private var registryStore
+    @Environment(CredentialsStore.self) private var credentialsStore
     let onCreateNew: () -> Void
     let onOpenExisting: () -> Void
     let onSelectRecent: (String) -> Void
@@ -29,6 +30,7 @@ public struct WelcomeView: View {
             VStack(spacing: Tokens.spacing(.xl)) {
                 header
                 ctaCard
+                credentialsBanner
                 recents
             }
             .frame(maxWidth: 520)
@@ -129,6 +131,41 @@ public struct WelcomeView: View {
         }
     }
 
+    /// Subtle banner shown when the user has no Developer ID Application
+    /// certificate in their Keychain. Hidden once at least one is
+    /// present. Notary-profile presence isn't checked here — Lutin
+    /// can't enumerate notarytool's keychain entries (ACL-restricted to
+    /// its signing team), so we'd have to either guess or harass. The
+    /// notary side is surfaced inside the Release tab where the user
+    /// can either type a name + press Test, or create one with the
+    /// in-app sheet.
+    @ViewBuilder
+    private var credentialsBanner: some View {
+        if credentialsStore.hasNoDeveloperIDIdentity {
+            HStack(alignment: .top, spacing: Tokens.spacing(.sm)) {
+                // Status glyph + color sourced from the shared
+                // `StatusKind.warn` token — same icon/color the Doctor
+                // sheet draws for an equivalent warning.
+                Image(systemName: StatusKind.warn.systemImage)
+                    .font(.system(size: 13))
+                    .foregroundStyle(StatusKind.warn.color)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("No Developer ID Application certificate found")
+                        .font(Typography.chromeSmall.weight(.medium))
+                        .foregroundStyle(Tokens.color(.textPrimary))
+                    Text("You can still Build unsigned DMGs. Release-mode builds (signed + notarized) require a Developer ID Application certificate from developer.apple.com — import it via Keychain Access, then come back here.")
+                        .font(Typography.chromeSmall)
+                        .foregroundStyle(Tokens.color(.textSecondary))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(Tokens.spacing(.md))
+            .overlay(SquareShape().stroke(Tokens.color(.logProgress).opacity(0.4),
+                                          lineWidth: Tokens.Size.hairline))
+        }
+    }
+
     @ViewBuilder
     private var recents: some View {
         let entries = Array(
@@ -139,8 +176,7 @@ public struct WelcomeView: View {
         if !entries.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Recent")
-                    .font(Typography.chromeSmall)
-                    .textCase(.uppercase)
+                    .font(Typography.chromeSmall.weight(.medium))
                     .foregroundStyle(Tokens.color(.textSecondary))
                     .padding(.horizontal, Tokens.spacing(.md))
                     .padding(.bottom, Tokens.spacing(.xs))

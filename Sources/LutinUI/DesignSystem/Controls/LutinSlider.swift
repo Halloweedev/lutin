@@ -32,6 +32,12 @@ public struct LutinSlider: View {
                     .frame(width: 12, height: 12)
                     .offset(x: max(0, w * progress) - 6)
             }
+            // The hit area is the full row height (`Tokens.Size.controlHeight`
+            // = 28pt); the visible chrome is only 4pt track + 12pt thumb.
+            // Grabbing the thumb directly was finicky, especially for the
+            // 0-noise case where the thumb sits at the left edge. `contentShape`
+            // tells SwiftUI to hit-test the whole row, not just the painted
+            // pixels — clicks anywhere in the row drag the slider.
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -43,7 +49,7 @@ public struct LutinSlider: View {
                     }
             )
         }
-        .frame(height: 20)
+        .frame(height: Tokens.Size.controlHeight)
     }
 
     func setForTest(_ raw: Double) {

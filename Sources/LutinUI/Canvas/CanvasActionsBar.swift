@@ -2,9 +2,18 @@ import SwiftUI
 import LutinRelease
 import LutinDocument
 
-/// Horizontal cluster of action buttons (Build / Preview / Release / Doctor)
+/// Horizontal cluster of action buttons (Preview / Build / Release / Doctor)
 /// anchored to the bottom-leading corner of the canvas, adjacent to the zoom
 /// controls row.
+///
+/// Order is iteration-frequency, not pipeline-chronology: Preview is the
+/// most-used action while a user is laying out a DMG, so it sits leftmost.
+/// Build (artifact-only, no Finder mount) sits next to it because the two
+/// share 99% of the pipeline; Release (signed + notarized) and Doctor
+/// (read-only environment checks) follow.
+///
+/// Build uses `hammer.fill` — `play.fill` here was misleading since "play"
+/// reads as "run / preview", which is literally what the Preview button does.
 ///
 /// Note: LutinIconButton does not currently propagate the visual disabled state
 /// when wrapped with SwiftUI's `.disabled(_:)` modifier — follow-up needed in
@@ -24,15 +33,15 @@ public struct CanvasActionsBar: View {
 
     public var body: some View {
         HStack(spacing: Tokens.spacing(.xs)) {
-            LutinIconButton(systemName: "play.fill",
-                            accessibilityLabel: "Build",
-                            action: { Task { await runner.run(mode: .build,
-                                                              config: document.config,
-                                                              projectDirectory: document.projectDirectory) } })
-                .disabled(isRunning)
             LutinIconButton(systemName: "eye.fill",
                             accessibilityLabel: "Preview",
                             action: { Task { await runner.run(mode: .preview,
+                                                              config: document.config,
+                                                              projectDirectory: document.projectDirectory) } })
+                .disabled(isRunning)
+            LutinIconButton(systemName: "hammer.fill",
+                            accessibilityLabel: "Build",
+                            action: { Task { await runner.run(mode: .build,
                                                               config: document.config,
                                                               projectDirectory: document.projectDirectory) } })
                 .disabled(isRunning)

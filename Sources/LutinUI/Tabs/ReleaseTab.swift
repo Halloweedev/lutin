@@ -6,8 +6,13 @@ import LutinDocument
 
 public struct ReleaseTab: View {
     @Bindable var document: LutinProjectDocument
-    @State private var identities: [IdentityProbe.Identity] = []
-    @State private var notaryProfiles: [String] = []
+    /// App-level credentials cache. Populated at launch and refreshed
+    /// automatically on app activation (see `CredentialsStore`); there's
+    /// no manual refresh affordance in this tab anymore — the New-profile
+    /// sheet writes its result back via its callback, and bringing Lutin
+    /// to the front re-probes identities.
+    @Environment(CredentialsStore.self) private var credentialsStore
+    @State private var showingCreateProfile = false
 
     public init(document: LutinProjectDocument) { self.document = document }
 
@@ -15,166 +20,292 @@ public struct ReleaseTab: View {
         TabBody {
             signingSection
             notarizationSection
-            sparkleSection
         }
-        .task {
-            identities = IdentityProbe.run()
-            notaryProfiles = NotaryProbe.run()
+        .sheet(isPresented: $showingCreateProfile) {
+            NotaryProfileSheet { newName in
+                // Auto-select the just-created profile in the
+                // Notarization field. The sheet already persisted the
+                // name to `knownNotaryProfiles`, so writing it here
+                // makes the dropdown light up and the field's "saved"
+                // flash fire — no retyping.
+                var n = currentNotarization(); n.profile = newName
+                try? document.apply(.setNotarization(n))
+            }
+        }
+    }
+
+    private var identities: [IdentityProbe.Identity] { credentialsStore.identities }
+
+    /// Hands off to Keychain Access — the canonical place to import a
+    /// Developer ID Application certificate. Lutin can't safely become
+    /// a CA / cert-importer (private-key handling is delicate); the
+    /// honest path is to deep-link the user to the system tool that
+    /// owns this flow.
+    ///
+    /// Resolves the app via LaunchServices' bundle-identifier lookup
+    /// rather than a hardcoded path. Earlier hardcoded
+    /// `/System/Applications/Utilities/Keychain Access.app`, which is
+    /// where it lived through macOS 14 Sonoma — macOS 15 Sequoia
+    /// relocated it to `/System/Library/CoreServices/Applications/` and
+    /// the hardcoded path silently no-ops. Bundle-id lookup is
+    /// version-agnostic.
+    private func openKeychainAccess() {
+        let id = "com.apple.keychainaccess"
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) {
+            NSWorkspace.shared.open(url)
+            return
+        }
+        // Fallback chain in case bundle-id lookup fails (a stripped
+        // installation that hasn't registered the app with
+        // LaunchServices, etc.). Listed newest path first.
+        for candidate in [
+            "/System/Library/CoreServices/Applications/Keychain Access.app",
+            "/System/Applications/Utilities/Keychain Access.app",
+            "/Applications/Utilities/Keychain Access.app",
+        ] {
+            if FileManager.default.fileExists(atPath: candidate) {
+                NSWorkspace.shared.open(URL(fileURLWithPath: candidate))
+                return
+            }
         }
     }
 
     // MARK: - Signing
 
+    private var signingEnabled: Bool { document.config.signing?.enabled ?? false }
+
     private var signingSection: some View {
-        SettingsSection("Signing") {
-            SettingsRow(icon: "checkmark.seal", "Enabled") {
-                LutinToggle("", isOn: Binding(
-                    get: { document.config.signing?.enabled ?? false },
-                    set: { v in
-                        var s = currentSigning(); s.enabled = v
-                        try? document.apply(.setSigning(s))
-                    }))
-            }
-            SettingsField("Identity",
-                          helper: identities.isEmpty
-                          ? "No Developer ID identities found in the Keychain."
-                          : nil) {
-                LutinPicker(
-                    selection: Binding(
-                        get: { document.config.signing?.identity ?? "" },
+        SettingsSection("Signing", headerTrailing: {
+            // Enabled toggle pulled into the header — "Signing" already
+            // names the section, so an "Enabled" row underneath was
+            // redundant labelling. On first enable we auto-fill the
+            // identity if exactly one Developer ID is in the keychain —
+            // the overwhelmingly common case for solo developers, and
+            // it shaves a deliberate picker tap.
+            LutinToggle("", isOn: Binding(
+                get: { signingEnabled },
+                set: { v in
+                    var s = currentSigning()
+                    s.enabled = v
+                    if v, (s.identity ?? "").isEmpty {
+                        let devIDs = identities.filter {
+                            $0.name.contains("Developer ID Application:")
+                        }
+                        if devIDs.count == 1 { s.identity = devIDs[0].name }
+                    }
+                    try? document.apply(.setSigning(s))
+                }))
+        }) {
+            // Order within the Group is value-fields first, then a
+            // toggle cluster, then status. Toggles read together as
+            // a single "what flags apply to this signing run" block
+            // rather than interleaved between configuration fields —
+            // shorter eye travel when scanning the section.
+            // The whole group is gated on `signingEnabled` (disabled
+            // + dimmed); the status row stays at full opacity so the
+            // red/green dot remains readable on an inactive section.
+            Group {
+                SettingsField("Identity",
+                              helper: identities.isEmpty
+                              ? "No Developer ID identities found in the Keychain."
+                              : nil) {
+                    HStack(spacing: Tokens.spacing(.sm)) {
+                        LutinPicker(
+                            selection: Binding(
+                                get: { document.config.signing?.identity ?? "" },
+                                set: { v in
+                                    var s = currentSigning(); s.identity = v.isEmpty ? nil : v
+                                    try? document.apply(.setSigning(s))
+                                }),
+                            options: [.init(id: "", label: "Not set")]
+                                + identities.map { .init(id: $0.name, label: $0.name) }
+                        )
+                        // Keychain escape hatch only when there's
+                        // nothing to pick — once identities exist,
+                        // the picker is the affordance and a separate
+                        // button is visual noise.
+                        if identities.isEmpty {
+                            LutinButton("Open Keychain") { openKeychainAccess() }
+                        }
+                    }
+                }
+                SettingsField("Entitlements") {
+                    HStack(spacing: Tokens.spacing(.sm)) {
+                        PathPickerRow(value: entitlementsDisplayPath,
+                                      placeholder: "No .entitlements file",
+                                      onPick: pickEntitlements)
+                        // Clear is a one-click escape from a chosen
+                        // path back to the "no .entitlements file"
+                        // empty state — only useful when something is
+                        // set, so hidden otherwise.
+                        if !(document.config.signing?.entitlements ?? "").isEmpty {
+                            LutinIconButton(systemName: "xmark.circle",
+                                            accessibilityLabel: "Clear entitlements") {
+                                var s = currentSigning(); s.entitlements = nil
+                                try? document.apply(.setSigning(s))
+                            }
+                        }
+                    }
+                }
+                // Toggle cluster — flush-stacked at the bottom of the
+                // section's value-fields.
+                SettingsRow(icon: "lock.shield", "Hardened runtime") {
+                    LutinToggle("", isOn: Binding(
+                        get: { document.config.signing?.hardenedRuntime ?? false },
                         set: { v in
-                            var s = currentSigning(); s.identity = v.isEmpty ? nil : v
+                            var s = currentSigning(); s.hardenedRuntime = v
                             try? document.apply(.setSigning(s))
-                        }),
-                    options: [.init(id: "", label: "Not set")]
-                        + identities.map { .init(id: $0.name, label: $0.name) }
-                )
+                        }))
+                }
+                // `externaldrive.fill` reads as "the DMG once it mounts"
+                // — DMGs surface in Finder as external volumes. The
+                // previous `doc.zipper` glyph read as "compressed
+                // document", a different artifact entirely.
+                SettingsRow(icon: "externaldrive.fill", "Sign DMG") {
+                    LutinToggle("", isOn: Binding(
+                        get: { document.config.signing?.signDmg ?? false },
+                        set: { v in
+                            var s = currentSigning(); s.signDmg = v
+                            try? document.apply(.setSigning(s))
+                        }))
+                }
             }
-            SettingsRow(icon: "lock.shield", "Hardened runtime") {
-                LutinToggle("", isOn: Binding(
-                    get: { document.config.signing?.hardenedRuntime ?? false },
-                    set: { v in
-                        var s = currentSigning(); s.hardenedRuntime = v
-                        try? document.apply(.setSigning(s))
-                    }))
-            }
-            SettingsField("Entitlements") {
-                PathPickerRow(value: document.config.signing?.entitlements ?? "",
-                              placeholder: "No .entitlements file",
-                              onPick: pickEntitlements)
-            }
-            SettingsRow(icon: "doc.zipper", "Sign DMG") {
-                LutinToggle("", isOn: Binding(
-                    get: { document.config.signing?.signDmg ?? false },
-                    set: { v in
-                        var s = currentSigning(); s.signDmg = v
-                        try? document.apply(.setSigning(s))
-                    }))
-            }
-            doctorRow(label: "Signing status",
-                      ok: (document.config.signing?.enabled ?? false) &&
-                          !(document.config.signing?.identity?.isEmpty ?? true))
+            .disabled(!signingEnabled)
+            .opacity(signingEnabled ? 1.0 : 0.45)
+
+            signingStatusRow
         }
     }
 
     // MARK: - Notarization
 
+    private var notarizationEnabled: Bool { document.config.notarization?.enabled ?? false }
+
     private var notarizationSection: some View {
-        SettingsSection("Notarization") {
-            SettingsRow(icon: "checkmark.seal", "Enabled") {
-                LutinToggle("", isOn: Binding(
-                    get: { document.config.notarization?.enabled ?? false },
-                    set: { v in
-                        var n = currentNotarization(); n.enabled = v
-                        try? document.apply(.setNotarization(n))
-                    }))
-            }
-            SettingsField("Profile",
-                          helper: notaryProfiles.isEmpty
-                          ? "Couldn't list profiles via `xcrun notarytool`. Type one manually."
-                          : nil) {
-                if notaryProfiles.isEmpty {
-                    SettingsTextField("ci-notary", text: Binding(
-                        get: { document.config.notarization?.profile ?? "" },
-                        set: { v in
-                            var n = currentNotarization(); n.profile = v.isEmpty ? nil : v
-                            try? document.apply(.setNotarization(n))
-                        }))
-                } else {
-                    LutinPicker(
-                        selection: Binding(
+        SettingsSection("Notarization", headerTrailing: {
+            LutinToggle("", isOn: Binding(
+                get: { notarizationEnabled },
+                set: { v in
+                    var n = currentNotarization()
+                    n.enabled = v
+                    // First-enable default: switch Staple on if the
+                    // user hasn't expressed an opinion yet. Stapling
+                    // is what every shipping artifact needs (chrome
+                    // status reflects this); defaulting to off forced
+                    // a second deliberate toggle to reach a green
+                    // state, which read as a footgun.
+                    if v, n.staple == nil { n.staple = true }
+                    try? document.apply(.setNotarization(n))
+                }))
+        }) {
+            Group {
+                SettingsField("Profile") {
+                    NotaryProfileField(
+                        name: Binding(
                             get: { document.config.notarization?.profile ?? "" },
                             set: { v in
                                 var n = currentNotarization(); n.profile = v.isEmpty ? nil : v
                                 try? document.apply(.setNotarization(n))
                             }),
-                        options: [.init(id: "", label: "Not set")]
-                            + notaryProfiles.map { .init(id: $0, label: $0) }
+                        onCreateNew: { showingCreateProfile = true }
                     )
                 }
+                SettingsRow(icon: "paperclip", "Staple") {
+                    LutinToggle("", isOn: Binding(
+                        get: { document.config.notarization?.staple ?? false },
+                        set: { v in
+                            var n = currentNotarization(); n.staple = v
+                            try? document.apply(.setNotarization(n))
+                        }))
+                }
             }
-            SettingsRow(icon: "paperclip", "Staple") {
-                LutinToggle("", isOn: Binding(
-                    get: { document.config.notarization?.staple ?? false },
-                    set: { v in
-                        var n = currentNotarization(); n.staple = v
-                        try? document.apply(.setNotarization(n))
-                    }))
-            }
-            doctorRow(label: "Notarization status",
-                      ok: (document.config.notarization?.enabled ?? false) &&
-                          !(document.config.notarization?.profile?.isEmpty ?? true))
-        }
-    }
+            .disabled(!notarizationEnabled)
+            .opacity(notarizationEnabled ? 1.0 : 0.45)
 
-    // MARK: - Sparkle
-
-    private var sparkleSection: some View {
-        SettingsSection("Sparkle") {
-            SettingsRow(icon: "checkmark.seal", "Enabled") {
-                LutinToggle("", isOn: Binding(
-                    get: { document.config.sparkle?.enabled ?? false },
-                    set: { v in
-                        var sp = currentSparkle(); sp.enabled = v
-                        try? document.apply(.setSparkle(sp))
-                    }))
-            }
-            SettingsField("Appcast path") {
-                PathPickerRow(value: document.config.sparkle?.appcastPath ?? "",
-                              placeholder: "No appcast.xml chosen",
-                              onPick: pickAppcast)
-            }
-            SettingsField("Release notes directory") {
-                PathPickerRow(value: document.config.sparkle?.releaseNotesDirectory ?? "",
-                              placeholder: "No folder chosen",
-                              onPick: pickReleaseNotesDir)
-            }
-            SettingsField("Download base URL",
-                          helper: "Where new builds will live, e.g. https://example.com/releases") {
-                SettingsTextField("https://example.com/releases", text: Binding(
-                    get: { document.config.sparkle?.downloadBaseURL ?? "" },
-                    set: { v in
-                        var sp = currentSparkle(); sp.downloadBaseURL = v.isEmpty ? nil : v
-                        try? document.apply(.setSparkle(sp))
-                    }))
-            }
-            doctorRow(label: "Sparkle status",
-                      ok: (document.config.sparkle?.enabled ?? false) &&
-                          URL(string: document.config.sparkle?.downloadBaseURL ?? "")?.scheme != nil)
+            notarizationStatusRow
         }
     }
 
     // MARK: - Helpers
+    //
+    // The Sparkle section was removed 2026-05-24. It captured four
+    // fields (enabled / appcastPath / releaseNotesDirectory /
+    // downloadBaseURL) but the release pipeline never read them —
+    // `ReleasePipeline.swift` has no consumer for `config.sparkle`. No
+    // appcast XML was generated, no EdDSA signing performed, no upload.
+    // Proper Sparkle integration is a separate workstream (key
+    // generation + EdDSA signing + appcast XML serialization + upload
+    // to the download URL). The config struct and intent stayed for
+    // YAML round-trip compatibility but are no longer surfaced.
 
-    private func doctorRow(label: String, ok: Bool) -> some View {
-        HStack(spacing: 8) {
-            Circle().fill(ok ? Tokens.color(.logSuccess) : Tokens.color(.logProgress))
-                .frame(width: 8, height: 8)
-            Text(label).font(Typography.chromeSmall)
-                .foregroundStyle(Tokens.color(.textSecondary))
-            Spacer()
+    /// Computed section status — see the shared `StatusRow` /
+    /// `StatusKind` in `TabComponents.swift`. Each property below
+    /// returns a fully-built `StatusRow` so the section just renders
+    /// `signingStatusRow` / `notarizationStatusRow` without knowing
+    /// about the kind enum or the fix wiring.
+    ///
+    /// Notarization rolls in two cross-section requirements:
+    ///
+    ///   • Hardened runtime — Apple will reject any submission without
+    ///     it (`codesign --options runtime`), so it's a hard block. We
+    ///     attach a one-click "Enable" fix so the user doesn't need to
+    ///     scroll up into Signing to flip it.
+    ///   • Staple — not Apple-enforced, but a notarized-without-staple
+    ///     artifact makes the user's Mac phone Apple on first launch
+    ///     instead of verifying offline. First-time notarization
+    ///     enable defaults Staple to on, so this branch mostly fires
+    ///     when the user has deliberately flipped it off.
+    private var signingStatusRow: StatusRow {
+        let s = document.config.signing
+        let enabled = s?.enabled ?? false
+        let identity = (s?.identity ?? "").trimmingCharacters(in: .whitespaces)
+        if !enabled { return StatusRow(.inactive, "Signing disabled") }
+        if identity.isEmpty { return StatusRow(.blocked, "Signing needs an identity") }
+        return StatusRow(.ok, "Signing ready")
+    }
+
+    private var notarizationStatusRow: StatusRow {
+        let n = document.config.notarization
+        let enabled = n?.enabled ?? false
+        let profile = (n?.profile ?? "").trimmingCharacters(in: .whitespaces)
+        let staple = n?.staple ?? false
+        let hardened = document.config.signing?.hardenedRuntime ?? false
+        if !enabled { return StatusRow(.inactive, "Notarization disabled") }
+        if profile.isEmpty { return StatusRow(.blocked, "Notary profile required") }
+        if !hardened {
+            return StatusRow(.blocked, "Hardened runtime required for notarization",
+                             fix: .init(label: "Enable") {
+                var s = currentSigning()
+                s.hardenedRuntime = true
+                if !s.enabled { s.enabled = true }
+                try? document.apply(.setSigning(s))
+            })
         }
-        .padding(.top, 4)
+        if !staple {
+            return StatusRow(.blocked, "Stapling recommended — disable only if intentional",
+                             fix: .init(label: "Enable") {
+                var n = currentNotarization()
+                n.staple = true
+                try? document.apply(.setNotarization(n))
+            })
+        }
+        return StatusRow(.ok, "Notarization ready")
+    }
+
+    /// Entitlements path shown in the picker: relative to the project
+    /// directory when possible so a path like
+    /// `/Users/me/Projects/MyApp/build/MyApp.entitlements` reads as
+    /// `build/MyApp.entitlements` instead of the verbose absolute
+    /// form. Falls back to the absolute path for entitlements stored
+    /// outside the project tree (rare but valid).
+    private var entitlementsDisplayPath: String {
+        let raw = document.config.signing?.entitlements ?? ""
+        guard !raw.isEmpty else { return "" }
+        let projectPath = document.projectDirectory.path
+        if raw.hasPrefix(projectPath + "/") {
+            return String(raw.dropFirst(projectPath.count + 1))
+        }
+        return raw
     }
 
     private func currentSigning() -> LutinConfig.SigningInfo {
@@ -186,11 +317,6 @@ public struct ReleaseTab: View {
         document.config.notarization ?? LutinConfig.NotarizationInfo(
             enabled: false, profile: nil, staple: nil)
     }
-    private func currentSparkle() -> LutinConfig.SparkleInfo {
-        document.config.sparkle ?? LutinConfig.SparkleInfo(
-            enabled: false, appcastPath: nil,
-            releaseNotesDirectory: nil, downloadBaseURL: nil)
-    }
 
     private func pickEntitlements() {
         let panel = NSOpenPanel()
@@ -200,19 +326,5 @@ public struct ReleaseTab: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         var s = currentSigning(); s.entitlements = url.path
         try? document.apply(.setSigning(s))
-    }
-    private func pickAppcast() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.xml]
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        var sp = currentSparkle(); sp.appcastPath = url.path
-        try? document.apply(.setSparkle(sp))
-    }
-    private func pickReleaseNotesDir() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false; panel.canChooseDirectories = true
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        var sp = currentSparkle(); sp.releaseNotesDirectory = url.path
-        try? document.apply(.setSparkle(sp))
     }
 }

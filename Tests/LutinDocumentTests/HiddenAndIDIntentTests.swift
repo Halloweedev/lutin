@@ -15,7 +15,6 @@ final class HiddenAndIDIntentTests: XCTestCase {
         - {type: app, id: a, x: 1, y: 1}
         - {type: applications, id: b, x: 2, y: 2}
         decorations:
-        - {type: arrow, from: a, to: b}
         - {type: image, path: ./i.png, x: 5, y: 5, width: 10}
         """.write(to: tmp, atomically: true, encoding: .utf8)
         return try LutinProjectDocument(configURL: tmp)
@@ -31,17 +30,14 @@ final class HiddenAndIDIntentTests: XCTestCase {
 
     func testSetImageHiddenTogglesField() throws {
         let doc = try makeDoc()
-        try doc.apply(.setImageHidden(index: 1, hidden: true))
-        XCTAssertEqual(doc.config.decorations?[1].hidden, true)
+        try doc.apply(.setImageHidden(index: 0, hidden: true))
+        XCTAssertEqual(doc.config.decorations?[0].hidden, true)
     }
 
-    func testSetItemIDRenamesAndCascadesArrows() throws {
+    func testSetItemIDRenames() throws {
         let doc = try makeDoc()
         try doc.apply(.setItemID(old: "a", new: "lutin"))
         XCTAssertEqual(doc.config.items?.first?.id, "lutin")
-        let arrow = doc.config.decorations?.first(where: { $0.type == "arrow" })
-        XCTAssertEqual(arrow?.from, "lutin", "arrow.from must follow the rename")
-        XCTAssertEqual(arrow?.to, "b")
     }
 
     func testSetItemIDCollisionRejected() throws {

@@ -56,12 +56,18 @@ public struct PipelineDrawer: View {
         .padding(.vertical, Tokens.spacing(.sm))
     }
 
+    /// Status glyphs sourced from the shared `StatusKind` token —
+    /// `succeeded` → `ok`, `failed` → `blocked`. `idle` keeps its
+    /// muted-secondary `circle` (no kind in the enum maps to it
+    /// without overloading meaning); `running` is a spinner.
     @ViewBuilder private var statusIcon: some View {
         switch runner.state {
         case .idle:        Image(systemName: "circle").foregroundStyle(.secondary)
         case .running:     ProgressView().controlSize(.small)
-        case .succeeded:   Image(systemName: "checkmark.circle.fill").foregroundStyle(Tokens.color(.logSuccess))
-        case .failed:      Image(systemName: "xmark.octagon.fill").foregroundStyle(Tokens.color(.logError))
+        case .succeeded:   Image(systemName: StatusKind.ok.systemImage)
+                               .foregroundStyle(StatusKind.ok.color)
+        case .failed:      Image(systemName: StatusKind.blocked.systemImage)
+                               .foregroundStyle(StatusKind.blocked.color)
         }
     }
 

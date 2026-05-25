@@ -1,10 +1,19 @@
 import Foundation
 import Observation
+import LutinDocument
 
 @Observable
 public final class CanvasGuideState {
     public var guideX: Int?  // a vertical line at this x
     public var guideY: Int?  // a horizontal line at this y
+
+    /// Element under the mouse pointer. Set/cleared by `.onHover`
+    /// handlers in `ItemLayer` / `ImageDecorationLayer`. Drives the
+    /// Figma-style Option-hover measurement overlay — when the user
+    /// is holding Option, the canvas shows the gap between the
+    /// selection and *this* element instead of the canvas edges.
+    /// Nil when the pointer isn't over any item.
+    public var hoveredID: CanvasSelectionID?
 
     /// When an item being dragged sits midway between two others on an
     /// axis, we publish the two outer item positions + the snapped

@@ -30,8 +30,10 @@ final class RenderedBackgroundTests: XCTestCase {
                               grid: false, noise: 0, cornerRadius: 0),
             items: [.init(type: "app", id: "app", x: 180, y: 220, label: "Barry"),
                     .init(type: "applications", id: "applications", x: 500, y: 220, label: nil)],
-            decorations: [.init(type: "arrow", from: "app", to: "applications",
-                                label: "Drag to install")],
+            // Drawn arrows were removed — render the background without
+            // any decorations. The pipeline still exercises the full
+            // build path (mount → DS_Store → unmount → convert).
+            decorations: nil,
             signing: nil, notarization: nil, sparkle: nil)
 
         // Ensure the URL is flagged as a directory so that relative paths like

@@ -16,7 +16,6 @@ public struct InspectorView: View {
             switch selection {
             case .none: projectSection
             case .some(.item(let id)): itemSection(id: id)
-            case .some(.arrow(let from, let to)): arrowSection(from: from, to: to)
             case .some(.image): Text("Image overlay selected")
             }
         }
@@ -82,16 +81,4 @@ public struct InspectorView: View {
         }
     }
 
-    private func arrowSection(from: String, to: String) -> some View {
-        Section("Arrow") {
-            LabeledContent("From", value: from)
-            LabeledContent("To", value: to)
-            if let arrow = document.config.decorations?.first(where: {
-                $0.type == "arrow" && $0.from == from && $0.to == to }) {
-                LutinTextField("Label", text: Binding(
-                    get: { arrow.label ?? "" },
-                    set: { try? document.apply(.renameArrowLabel(from: from, to: to, label: $0.isEmpty ? nil : $0)) }))
-            }
-        }
-    }
 }

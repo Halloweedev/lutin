@@ -46,25 +46,6 @@ public enum ConfigValidator {
 
         for (idx, decoration) in (config.decorations ?? []).enumerated() {
             switch decoration.type {
-            case "arrow":
-                if let from = decoration.from, !from.trimmingCharacters(in: .whitespaces).isEmpty {
-                    if !seenIds.contains(from) {
-                        error("decorations[\(idx)].from",
-                              "Decoration references unknown item id '\(from)'.")
-                    }
-                } else {
-                    error("decorations[\(idx)].from",
-                          "An arrow decoration requires a 'from' item id.")
-                }
-                if let to = decoration.to, !to.trimmingCharacters(in: .whitespaces).isEmpty {
-                    if !seenIds.contains(to) {
-                        error("decorations[\(idx)].to",
-                              "Decoration references unknown item id '\(to)'.")
-                    }
-                } else {
-                    error("decorations[\(idx)].to",
-                          "An arrow decoration requires a 'to' item id.")
-                }
             case "image":
                 if (decoration.path ?? "").trimmingCharacters(in: .whitespaces).isEmpty {
                     error("decorations[\(idx)].path",
@@ -80,7 +61,7 @@ public enum ConfigValidator {
                 }
             default:
                 error("decorations[\(idx)].type",
-                      "Unknown decoration type '\(decoration.type)'. Use 'arrow' or 'image'.")
+                      "Unknown decoration type '\(decoration.type)'. Only 'image' is supported.")
             }
         }
         return issues

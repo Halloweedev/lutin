@@ -21,10 +21,12 @@ public struct PreferencesWindow: View {
     }
 
     private var generalTab: some View {
+        // The "Autosave" toggle was removed in 2026-05-25 — autosave is
+        // now unconditional. The side-panel tabs read like settings
+        // surfaces; making "did this stick?" depend on a hidden pref
+        // was a footgun, and the prefs JSON's `autosave` field is now
+        // ignored on decode and dropped on the next save.
         Form {
-            LutinToggle("Autosave", isOn: Binding(
-                get: { store.preferences.autosave },
-                set: { v in try? store.update { $0.autosave = v } }))
             LabeledContent("Snap grid") {
                 HStack(spacing: Tokens.spacing(.sm)) {
                     Text("\(store.preferences.snapGridSize) pt").font(Typography.chromeSmall)

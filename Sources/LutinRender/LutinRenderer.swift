@@ -45,21 +45,27 @@ public enum LutinRenderer {
         // at exactly that size. Growing the .DS_Store WindowBounds to
         // accommodate Finder chrome happens in LayoutResolver.
 
+        // `type: image` with an empty `path` falls back to solid here
+        // — same defensive behaviour the `BackgroundEditor` variant
+        // picker uses. This avoids stranding the canvas on a hard
+        // error when the YAML is in a half-set state (e.g., the
+        // user picked the Image variant and didn't choose a file
+        // before closing, or an agent wrote the type without the
+        // path yet). The user can correct the state by picking an
+        // image in the Design tab or by switching to another
+        // variant — both paths overwrite `type` cleanly.
         let kind: BackgroundSpec.Kind
+        let imagePath = (bg?.path ?? "").trimmingCharacters(in: .whitespaces)
         switch bg?.type {
-        case "image":    kind = .image
+        case "image":    kind = imagePath.isEmpty ? .solid : .image
         case "gradient": kind = .gradient
         case "solid":    kind = .solid
         default:         kind = .solid   // legacy "generated" + nil → solid fallback
         }
         var imageURL: URL?
         if kind == .image {
-            guard let path = bg?.path, !path.isEmpty else {
-                throw LutinError(
-                    code: "render_failed",
-                    message: "background.type is 'image' but background.path is not set.")
-            }
-            let resolved = URL(fileURLWithPath: path, relativeTo: projectDirectory)
+            // `imagePath` is guaranteed non-empty by the switch above.
+            let resolved = URL(fileURLWithPath: imagePath, relativeTo: projectDirectory)
                 .standardizedFileURL
             imageURL = resolved
             warnIfWrongSize(resolved, expectedW: widthPoints * scale,
@@ -95,23 +101,9 @@ public enum LutinRenderer {
     /// Maps config `decorations` onto renderer-local `RenderDecoration` values.
     private static func resolveDecorations(config: LutinConfig,
                                            projectDirectory: URL) throws -> [RenderDecoration] {
-        let items = config.items ?? []
-        func point(forItemId id: String?) -> RenderPoint? {
-            guard let id, let item = items.first(where: { $0.id == id }) else { return nil }
-            return RenderPoint(x: item.x, y: item.y)
-        }
         var result: [RenderDecoration] = []
         for decoration in config.decorations ?? [] {
             switch decoration.type {
-            case "arrow":
-                guard let from = point(forItemId: decoration.from),
-                      let to = point(forItemId: decoration.to) else {
-                    throw LutinError(
-                        code: "render_failed",
-                        message: "An arrow decoration references an item id that "
-                               + "is not in `items`.")
-                }
-                result.append(.arrow(from: from, to: to, label: decoration.label))
             case "image":
                 guard let path = decoration.path, !path.isEmpty,
                       let x = decoration.x, let y = decoration.y else {

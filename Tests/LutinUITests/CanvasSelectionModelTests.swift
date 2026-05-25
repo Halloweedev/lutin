@@ -33,10 +33,11 @@ final class CanvasSelectionModelTests: XCTestCase {
         m.clear()
         XCTAssertTrue(m.selection.isEmpty)
     }
-    func testMoveableSubset() {
+    /// Both selection kinds (items, images) are moveable. Arrows used
+    /// to be a third case; the linked-arrow form is gone.
+    func testMoveableSubsetIncludesEverything() {
         let m = CanvasSelectionModel()
-        m.replace(with: [.item(id: "a"), .arrow(from: "a", to: "b"), .image(index: 0)])
+        m.replace(with: [.item(id: "a"), .image(index: 0)])
         XCTAssertEqual(m.moveableIDs.count, 2)
-        XCTAssertFalse(m.moveableIDs.contains(.arrow(from: "a", to: "b")))
     }
 }

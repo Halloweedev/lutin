@@ -1,21 +1,12 @@
 import Foundation
 import CoreGraphics
-import CoreText
 import ImageIO
 import LutinCore
 
-/// A point in window-point coordinates (top-left origin), as used by `lutin.yml`.
-struct RenderPoint: Equatable {
-    let x: Int
-    let y: Int
-}
-
-/// A renderer-local decoration. `LutinRenderer` builds these from config so the
-/// compositor never depends on `LutinConfig`.
+/// A renderer-local decoration. `LutinRenderer` builds these from config
+/// so the compositor never depends on `LutinConfig`. Drawn arrows were
+/// dropped — the only decoration is a user-supplied overlay image.
 enum RenderDecoration {
-    /// An install arrow between two icon centres.
-    case arrow(from: RenderPoint, to: RenderPoint, label: String?)
-    /// A user-supplied overlay image at an absolute position.
     case image(url: URL, x: Int, y: Int, widthPoints: Int?)
 }
 
@@ -23,11 +14,13 @@ enum RenderDecoration {
 struct DecorationCompositor {
     /// - Parameters:
     ///   - base: the rendered background.
-    ///   - decorations: arrows and image overlays, in draw order.
-    ///   - iconSizePoints: icon edge length, so arrows start clear of the icons.
+    ///   - decorations: image overlays, in draw order.
+    ///   - iconSizePoints: icon edge length, reserved for future overlap
+    ///     math against icons (kept for ABI parity).
     ///   - scale: points-to-pixels multiplier.
     func composite(base: CGImage, decorations: [RenderDecoration],
                    iconSizePoints: Int, scale: Int) throws -> CGImage {
+        _ = iconSizePoints
         if decorations.isEmpty { return base }
         let s = CGFloat(max(1, scale))
         let w = base.width, h = base.height
@@ -40,20 +33,14 @@ struct DecorationCompositor {
             throw LutinError(code: "render_failed",
                              message: "Could not create a \(w)x\(h) composite surface.")
         }
-        // This plain CGContext has y=0 at the bottom (bottom-up).
-        // drawArrow uses `point.y * scale` directly as the context y-coordinate; in a
-        // bottom-up context that places the stroke at pixel-buffer row (h - 1 - point.y*scale),
-        // which is top-left y = point.y*scale — matching the config convention. ✓
-        // drawImage positions a rect whose origin is its bottom-left corner in the bottom-up
-        // context, so it must compute rectY = h - y*scale - drawH to land at the same top-left
-        // y = y*scale.  Both functions are consistent with the top-left config origin.
+        // Bottom-up CGContext: y=0 at the bottom. drawImage positions a
+        // rect whose origin is its bottom-left corner, so it computes
+        // rectY = h - y*scale - drawH to land the image at top-left
+        // y = y*scale (the config convention).
         cg.draw(base, in: CGRect(x: 0, y: 0, width: w, height: h))
 
         for decoration in decorations {
             switch decoration {
-            case let .arrow(from, to, label):
-                drawArrow(in: cg, from: from, to: to, label: label,
-                          iconSizePoints: iconSizePoints, scale: s)
             case let .image(url, x, y, widthPoints):
                 try drawImage(in: cg, imageHeight: h, url: url, x: x, y: y,
                               widthPoints: widthPoints, scale: s)
@@ -63,70 +50,6 @@ struct DecorationCompositor {
             throw LutinError(code: "render_failed", message: "Could not snapshot composite.")
         }
         return result
-    }
-
-    private func drawArrow(in cg: CGContext,
-                           from: RenderPoint, to: RenderPoint,
-                           label: String?, iconSizePoints: Int, scale: CGFloat) {
-        // Bottom-up CGContext: context y = point.y * scale → pixel-buffer row = h-1-point.y*scale
-        // → top-left y = point.y*scale.  No additional flip is needed here; the bottom-up
-        // context's y-inversion does the equivalent work.  drawImage, which positions a rect
-        // rather than a point, applies an explicit rectY = h - y*scale - drawH for the same reason.
-        let p0 = CGPoint(x: CGFloat(from.x) * scale, y: CGFloat(from.y) * scale)
-        let p1 = CGPoint(x: CGFloat(to.x) * scale, y: CGFloat(to.y) * scale)
-        let dx = p1.x - p0.x, dy = p1.y - p0.y
-        let length = max(1, hypot(dx, dy))
-        let ux = dx / length, uy = dy / length
-        // Inset both ends past the icon edge plus a small gap.
-        let inset = (CGFloat(iconSizePoints) / 2 + 12) * scale
-        let start = CGPoint(x: p0.x + ux * inset, y: p0.y + uy * inset)
-        let end = CGPoint(x: p1.x - ux * inset, y: p1.y - uy * inset)
-        let color = CGColor(srgbRed: 0.35, green: 0.47, blue: 0.78, alpha: 0.95)
-
-        cg.setStrokeColor(color)
-        cg.setLineWidth(3 * scale)
-        cg.setLineCap(.round)
-        cg.move(to: start)
-        cg.addLine(to: end)
-        cg.strokePath()
-
-        // Solid triangular arrowhead at `end`.
-        let head = 11 * scale
-        let nx = -uy, ny = ux       // perpendicular
-        cg.setFillColor(color)
-        cg.move(to: end)
-        cg.addLine(to: CGPoint(x: end.x - ux * head + nx * head * 0.6,
-                               y: end.y - uy * head + ny * head * 0.6))
-        cg.addLine(to: CGPoint(x: end.x - ux * head - nx * head * 0.6,
-                               y: end.y - uy * head - ny * head * 0.6))
-        cg.closePath()
-        cg.fillPath()
-
-        if let label, !label.isEmpty {
-            let mid = CGPoint(x: (start.x + end.x) / 2,
-                              y: (start.y + end.y) / 2 + 16 * scale)
-            drawLabel(in: cg, text: label, centeredAt: mid, scale: scale, color: color)
-        }
-    }
-
-    /// Draws centred text using Core Text (no AppKit dependency).
-    private func drawLabel(in cg: CGContext, text: String, centeredAt: CGPoint,
-                           scale: CGFloat, color: CGColor) {
-        let font = CTFontCreateWithName("Helvetica" as CFString, 13 * scale, nil)
-        // CoreText attribute keys (no AppKit dependency).
-        let attributes: [NSAttributedString.Key: Any] = [
-            NSAttributedString.Key(kCTFontAttributeName as String): font,
-            NSAttributedString.Key(kCTForegroundColorAttributeName as String): color,
-        ]
-        let attributed = NSAttributedString(string: text, attributes: attributes)
-        let line = CTLineCreateWithAttributedString(attributed)
-        let bounds = CTLineGetImageBounds(line, cg)
-        cg.saveGState()
-        // Core Text draws in the current coordinate system (bottom-up).
-        cg.textMatrix = .identity
-        cg.textPosition = CGPoint(x: centeredAt.x - bounds.width / 2 - bounds.origin.x, y: centeredAt.y)
-        CTLineDraw(line, cg)
-        cg.restoreGState()
     }
 
     private func drawImage(in cg: CGContext, imageHeight: Int, url: URL, x: Int, y: Int,

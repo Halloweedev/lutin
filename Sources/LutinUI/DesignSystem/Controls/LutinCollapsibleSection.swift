@@ -27,7 +27,11 @@ public struct LutinCollapsibleSection<Header: View, Content: View>: View {
                     action: { isExpanded.wrappedValue.toggle() }
                 )
             }
-            .padding(.horizontal, Tokens.spacing(.sm))
+            // Horizontal `md` matches the section rows below (LayersSection,
+            // InspectorCategory) so the chevron sits flush with the row's
+            // trailing icon (eye, etc.). Was `sm` and the chevron drifted
+            // ~6pt right of the eyes — visually noisy.
+            .padding(.horizontal, Tokens.spacing(.md))
             .padding(.vertical, Tokens.spacing(.xs))
             .contentShape(Rectangle())
             .onTapGesture { isExpanded.wrappedValue.toggle() }

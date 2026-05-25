@@ -14,8 +14,13 @@ public struct ErrorSheet: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: Tokens.spacing(.lg)) {
             HStack {
-                Image(systemName: "xmark.octagon.fill")
-                    .foregroundStyle(Tokens.color(.logError))
+                // Error glyph via the shared `StatusKind.blocked` token
+                // — same icon/color the Doctor sheet uses for failed
+                // checks, the Release tab's status row uses for
+                // blocked-build conditions, and any future error
+                // surface will inherit by default.
+                Image(systemName: StatusKind.blocked.systemImage)
+                    .foregroundStyle(StatusKind.blocked.color)
                     .font(.title)
                 Text(error.code).font(.headline.monospaced())
             }

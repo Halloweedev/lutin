@@ -10,9 +10,9 @@ final class LutinIconButtonTests: XCTestCase {
         XCTAssertNil(view.restFillKey)
     }
 
-    func testInteractionFillIsSurfaceElevated() {
+    func testInteractionFillIsControlHoverFill() {
         let view = LutinIconButton(systemName: "plus", accessibilityLabel: "Add", action: {})
-        XCTAssertEqual(view.interactionFillKey, .surfaceElevated)
+        XCTAssertEqual(view.interactionFillKey, .controlHoverFill)
     }
 
     func testActionFires() {

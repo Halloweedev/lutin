@@ -8,6 +8,7 @@ public struct WorkspaceShell: View {
     @State private var registryStore = RegistryStore()
     @State private var preferencesStore = PreferencesStore()
     @State private var editorStateStore = EditorStateStore()
+    @State private var credentialsStore = CredentialsStore()
     @State private var selectedEntryName: String?
     @State private var document: LutinProjectDocument?
     @State private var loadError: String?
@@ -21,6 +22,13 @@ public struct WorkspaceShell: View {
 
     public var body: some View {
         VStack(spacing: 0) {
+            // 14pt traffic-light strip — paired with the
+            // `TrafficLightPositioner` below to nudge the standard
+            // window buttons up by ~6pt so the 12pt glyphs fit inside
+            // the strip and clear its bottom hairline. The strip
+            // preserves the title-zone separation; halving from 22pt
+            // → 14pt saves 8pt of top chrome without losing the
+            // visual break.
             AppHeaderBar()
             Group {
                 if let document {
@@ -52,6 +60,12 @@ public struct WorkspaceShell: View {
                 .keyboardShortcut("n", modifiers: .command)
                 .opacity(0)
                 .frame(width: 0, height: 0)
+            // Shift the macOS standard window buttons up by ~6pt so
+            // they fit inside the 14pt AppHeaderBar (default position
+            // assumes a 22pt title bar). See `TrafficLightPositioner`
+            // — re-applies on every window state change.
+            TrafficLightPositioner(buttonOriginY: 9)
+                .frame(width: 0, height: 0)
         }
         .sheet(isPresented: $showSwitcher) {
             ProjectSwitcherModal(
@@ -73,6 +87,7 @@ public struct WorkspaceShell: View {
         .environment(registryStore)
         .environment(preferencesStore)
         .environment(editorStateStore)
+        .environment(credentialsStore)
         .task {
             try? registryStore.reload()
             try? preferencesStore.reload()
@@ -90,8 +105,26 @@ public struct WorkspaceShell: View {
         }
     }
 
+    /// Display name for the side-panel project switcher.
+    ///
+    /// Prefers the loaded document's `config.project.name` so that edits
+    /// made in the Project tab (or anywhere else that calls
+    /// `.setProjectName` / `.setProjectMetadata`) update the visible label
+    /// immediately. Falls back to the registry entry name when no document
+    /// is loaded yet (welcome screen, mid-switch). Falls back to the
+    /// placeholder when neither is known.
+    ///
+    /// The registry entry's own `name` field is the lookup key used by
+    /// `loadDocument(named:)` to find the YAML on disk — it is *not*
+    /// re-synced from `config.project.name` here. Renaming via the
+    /// Inspector or Project tab updates the visible label and the YAML
+    /// contents; bringing the registry/filesystem along is a separate
+    /// "rename project" affordance (not yet wired).
     private var currentProjectName: String {
-        selectedEntryName ?? "No project"
+        if let document, !document.config.project.name.isEmpty {
+            return document.config.project.name
+        }
+        return selectedEntryName ?? "No project"
     }
 
     private func loadDocument(named name: String?) {
@@ -102,7 +135,6 @@ public struct WorkspaceShell: View {
         let url = URL(fileURLWithPath: entry.configPath)
         do {
             document = try LutinProjectDocument(configURL: url)
-            document?.autosaveEnabled = preferencesStore.preferences.autosave
             loadError = nil
         } catch let error as LutinError {
             document = nil; loadError = error.message
@@ -120,17 +152,30 @@ private struct ProjectWorkspace: View {
     @Binding var sidePanelHidden: Bool
     @State private var selectionModel = CanvasSelectionModel()
     @State private var pipelineRunner = PipelineRunner()
+    /// Brief "Reloaded from disk" badge surfaced after an external
+    /// rewrite of the project's `lutin.yml` (typically an agent or
+    /// CLI). Without it the canvas would silently update and the user
+    /// would wonder if anything changed — see `ConfigFileWatcher`.
+    @State private var showReloadBadge = false
+    @State private var reloadBadgeTask: Task<Void, Never>?
 
     var body: some View {
         HStack(spacing: 0) {
-            EditorRail(selectedTab: $editorState.selectedTab,
-                       onOpenSwitcher: {
-                           NotificationCenter.default.post(name: .lutinOpenSwitcher, object: nil)
-                       })
+            EditorRail(selectedTab: $editorState.selectedTab)
             if !sidePanelHidden {
                 SidePanel(width: $editorState.sidePanelWidth) {
                     VStack(spacing: 0) {
-                        // Project switcher + collapse control
+                        // Project switcher + collapse control. Sits
+                        // immediately below the AppHeaderBar (14pt
+                        // traffic-light strip). Height matches the
+                        // EditorRail's `LogoSlot` (= `railWidth`)
+                        // so the logo cell on the left and the
+                        // project switcher cell on the right share
+                        // the same baseline — one continuous 44pt
+                        // top-toolbar row across rail + side panel.
+                        // Horizontal padding is `md` (14pt) to align
+                        // with `TabBody`, so the project name's left
+                        // edge sits flush under each tab title.
                         HStack(spacing: Tokens.spacing(.sm)) {
                             LutinButton(role: .secondary, action: {
                                 NotificationCenter.default.post(name: .lutinOpenSwitcher, object: nil)
@@ -153,8 +198,8 @@ private struct ProjectWorkspace: View {
                                             accessibilityLabel: "Hide sidebar",
                                             action: { sidePanelHidden = true })
                         }
-                        .padding(.horizontal, Tokens.spacing(.sm))
-                        .padding(.vertical, Tokens.spacing(.xs))
+                        .padding(.horizontal, Tokens.spacing(.md))
+                        .frame(height: Tokens.Size.railWidth)
                         .background(Tokens.color(.panelBackground))
                         .overlay(alignment: .bottom) {
                             Rectangle()
@@ -193,12 +238,53 @@ private struct ProjectWorkspace: View {
         .onReceive(NotificationCenter.default.publisher(for: .lutinClearSelection)) { _ in
             selectionModel.clear()
         }
+        // Hot-reload signal — only react if the notification's source
+        // document is *this* one (an open multi-document setup would
+        // otherwise see every project's reload).
+        .onReceive(NotificationCenter.default.publisher(
+            for: .lutinDocumentReloadedFromDisk)
+        ) { note in
+            guard (note.object as AnyObject?) === document else { return }
+            flashReloadBadge()
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if showReloadBadge {
+                Text("Reloaded from disk")
+                    .font(Typography.chromeSmall)
+                    .foregroundStyle(Tokens.color(.textPrimary))
+                    .padding(.horizontal, Tokens.spacing(.md))
+                    .padding(.vertical, Tokens.spacing(.xs))
+                    .background(SquareShape().fill(Tokens.color(.surfaceElevated)))
+                    .overlay(SquareShape().stroke(Tokens.color(.divider),
+                                                  lineWidth: Tokens.Size.hairline))
+                    .padding(Tokens.spacing(.lg))
+                    .transition(.opacity)
+            }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if pipelineRunner.state != .idle {
                 PipelineDrawer(runner: pipelineRunner)
             }
         }
         .animation(.spring(response: 0.42, dampingFraction: 0.86), value: pipelineRunner.state)
+    }
+
+    /// Shows the "Reloaded from disk" badge and schedules it to fade
+    /// out. Cancels any in-flight hide so back-to-back external writes
+    /// (an agent making a flurry of edits) don't expire the badge
+    /// early — each reload re-extends the visible window.
+    private func flashReloadBadge() {
+        reloadBadgeTask?.cancel()
+        withAnimation(.easeOut(duration: 0.15)) {
+            showReloadBadge = true
+        }
+        reloadBadgeTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.8))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.35)) {
+                showReloadBadge = false
+            }
+        }
     }
 }
 

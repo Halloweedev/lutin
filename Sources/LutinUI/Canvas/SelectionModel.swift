@@ -39,8 +39,7 @@ public final class CanvasSelectionModel {
         guard !selection.isEmpty else { return }
         let targets: [DocumentIntent.DeleteTarget] = selection.map { id in
             switch id {
-            case .item(let i): return .item(id: i)
-            case .arrow(let f, let t): return .arrow(from: f, to: t)
+            case .item(let i):  return .item(id: i)
             case .image(let i): return .imageDecoration(index: i)
             }
         }
@@ -48,7 +47,9 @@ public final class CanvasSelectionModel {
         clear()
     }
 
-    /// Duplicate selected items and image decorations (arrows skipped).
+    /// Duplicate selected items and image decorations. New copies land
+    /// 16 pt offset from the original so they're visually distinct
+    /// after the duplicate.
     public func duplicate(in document: LutinProjectDocument) throws {
         guard !selection.isEmpty else { return }
         for id in selection {
@@ -66,7 +67,6 @@ public final class CanvasSelectionModel {
                                                        x: (d.x ?? 0) + 16,
                                                        y: (d.y ?? 0) + 16,
                                                        width: d.width ?? 100))
-            case .arrow: continue
             }
         }
     }

@@ -22,18 +22,6 @@ public enum MarqueeSelection {
             if rect.intersects(bbox) { result.insert(.image(index: i)) }
         }
 
-        for deco in (config.decorations ?? []) where deco.type == "arrow" {
-            guard let from = deco.from, let to = deco.to,
-                  let fromItem = config.items?.first(where: { $0.id == from }),
-                  let toItem = config.items?.first(where: { $0.id == to }) else { continue }
-            let bbox = CGRect(
-                x: min(CGFloat(fromItem.x), CGFloat(toItem.x)) - 4,
-                y: min(CGFloat(fromItem.y), CGFloat(toItem.y)) - 4,
-                width: abs(CGFloat(toItem.x - fromItem.x)) + 8,
-                height: abs(CGFloat(toItem.y - fromItem.y)) + 8)
-            if rect.intersects(bbox) { result.insert(.arrow(from: from, to: to)) }
-        }
-
         return result
     }
 }

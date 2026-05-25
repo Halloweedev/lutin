@@ -60,20 +60,9 @@ final class EditorEndToEndTests: XCTestCase {
         try doc.apply(.moveItem(id: "app", x: 250, y: 250))
         try doc.apply(.renameItemLabel(id: "app", label: "E2E App"))
         try doc.apply(.setItemHidden(id: "applications", hidden: true))
-        // Add an arrow explicitly — the starter config no longer seeds one.
-        try doc.apply(.addArrow(from: "app", to: "applications", label: nil))
         try doc.apply(.setItemID(old: "applications", new: "apps"))
-        // The arrow that referenced "applications" should now point at "apps".
-        let arrow = doc.config.decorations?.first(where: { $0.type == "arrow" })
-        XCTAssertEqual(arrow?.to, "apps", "setItemID must cascade into arrows")
-
-        // ── Design tab: arrows ───────────────────────────────────────
-        try doc.apply(.renameArrowLabel(from: "app", to: "apps", label: "Drag here"))
-        try doc.apply(.setArrowHidden(from: "app", to: "apps", hidden: false))
-        try doc.apply(.swapArrow(from: "app", to: "apps"))
-        XCTAssertEqual(doc.config.decorations?.first?.from, "apps",
-                       "swapArrow must reverse endpoints")
-        try doc.apply(.swapArrow(from: "apps", to: "app"))   // undo
+        // Drawn arrows were removed — to put an arrow on the canvas the
+        // user adds an image decoration of an arrow asset.
 
         // ── Design tab: image decorations ────────────────────────────
         try doc.apply(.addImageDecoration(path: "./logo.png", x: 100, y: 100, width: 80))
@@ -119,8 +108,6 @@ final class EditorEndToEndTests: XCTestCase {
                        "https://example.com/releases")
         XCTAssertEqual(reloaded.config.items?.first?.label, "E2E App")
         XCTAssertEqual(reloaded.config.items?.first(where: { $0.id == "apps" })?.hidden, true)
-        let reloadedArrow = reloaded.config.decorations?.first(where: { $0.type == "arrow" })
-        XCTAssertEqual(reloadedArrow?.label, "Drag here")
     }
 
     // MARK: - Undo discipline: a complex sequence rolls back cleanly
@@ -155,18 +142,19 @@ final class EditorEndToEndTests: XCTestCase {
 
     // MARK: - Delete cascade keeps the document consistent
 
-    func testDeleteSelectionCascadesArrows() throws {
+    /// Deleting an item used to cascade into linked arrows. Drawn arrows
+    /// are gone (image decorations only), so image decorations stay put
+    /// when their visually-adjacent item is deleted.
+    func testDeleteItemLeavesImageDecorations() throws {
         let (_, doc) = try bootstrap()
         XCTAssertEqual(doc.config.items?.count, 2)
-        // Starter no longer seeds an arrow — add one explicitly to test
-        // the cascade.
-        try doc.apply(.addArrow(from: "app", to: "applications", label: nil))
+        try doc.apply(.addImageDecoration(path: "./arrow.png",
+                                          x: 250, y: 250, width: 120))
         XCTAssertEqual(doc.config.decorations?.count, 1)
 
-        // Deleting "app" should remove the arrow that referenced it.
         try doc.apply(.deleteSelection(targets: [.item(id: "app")]))
         XCTAssertEqual(doc.config.items?.count, 1)
-        XCTAssertEqual(doc.config.decorations?.filter { $0.type == "arrow" }.count, 0,
-                       "arrow with deleted endpoint must cascade out")
+        XCTAssertEqual(doc.config.decorations?.filter { $0.type == "image" }.count, 1,
+                       "image decorations survive item deletion")
     }
 }

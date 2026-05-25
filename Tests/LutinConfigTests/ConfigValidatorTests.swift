@@ -29,11 +29,14 @@ final class ConfigValidatorTests: XCTestCase {
         XCTAssertTrue(issues.contains { $0.severity == .error && $0.path == "items[].id" })
     }
 
-    func testDecorationReferencingUnknownItemIsError() throws {
+    /// Drawn arrows were removed — `type: arrow` is no longer valid and
+    /// surfaces an unknown-type error.
+    func testArrowTypeIsRejected() throws {
         var config = try baseConfig()
-        config.items = [.init(type: "app", id: "app", x: 0, y: 0, label: nil)]
-        config.decorations = [.init(type: "arrow", from: "app", to: "ghost", label: nil)]
+        config.decorations = [.init(type: "arrow")]
         let issues = ConfigValidator.validate(config)
-        XCTAssertTrue(issues.contains { $0.severity == .error && $0.path == "decorations[0].to" })
+        XCTAssertTrue(issues.contains {
+            $0.severity == .error && $0.path == "decorations[0].type"
+        })
     }
 }

@@ -14,10 +14,12 @@ public struct LayersSection: View {
 
     public var body: some View {
         LutinCollapsibleSection(isExpanded: $isExpanded) {
-            Text("Layers").font(Typography.chromeSmall)
+            // No horizontal padding here — `LutinCollapsibleSection` already
+            // pads its header HStack at `md`, matching the side panel's
+            // baseline x. Adding `md` again pushed the text to 28pt while
+            // every other label sat at 14pt.
+            Text("Layers").font(Typography.chromeSmall.weight(.medium))
                 .foregroundStyle(Tokens.color(.textSecondary))
-                .textCase(.uppercase)
-                .padding(.horizontal, Tokens.spacing(.md))
                 .padding(.top, Tokens.spacing(.sm))
         } content: {
             VStack(spacing: 0) {
@@ -46,9 +48,9 @@ public struct LayersSection: View {
                             accessibilityLabel: "Toggle layer visibility") { toggleHidden(row) }
         }
         .padding(.horizontal, Tokens.spacing(.md))
-        .padding(.vertical, 4)
+        .padding(.vertical, Tokens.spacing(.xs))
         .background(isSelected ? Tokens.color(.brandAccentMuted) : Color.clear)
-        .contentShape(Rectangle())
+        .lutinHitTarget()
         .onTapGesture {
             if NSEvent.modifierFlags.contains(.command) {
                 selectionModel.toggle(row.id)
@@ -59,7 +61,7 @@ public struct LayersSection: View {
     }
 
     private func glyph(for kind: LayersOrdering.Kind) -> String {
-        switch kind { case .item: "app"; case .image: "photo"; case .arrow: "arrow.right" }
+        switch kind { case .item: "app"; case .image: "photo" }
     }
 
     private func toggleHidden(_ row: LayersOrdering.Row) {
@@ -69,8 +71,6 @@ public struct LayersSection: View {
                 try document.apply(.setItemHidden(id: id, hidden: !row.hidden))
             case .image(let i):
                 try document.apply(.setImageHidden(index: i, hidden: !row.hidden))
-            case .arrow(let from, let to):
-                try document.apply(.setArrowHidden(from: from, to: to, hidden: !row.hidden))
             }
         } catch { /* surfaced upstream */ }
     }

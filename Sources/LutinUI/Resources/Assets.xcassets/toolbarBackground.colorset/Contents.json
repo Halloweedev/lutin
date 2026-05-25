@@ -5,7 +5,7 @@
       "idiom": "universal",
       "color": {
         "color-space": "srgb",
-        "components": {"red": "0.960", "green": "0.960", "blue": "0.970", "alpha": "1.000"}
+        "components": {"red": "1.000", "green": "1.000", "blue": "1.000", "alpha": "1.000"}
       }
     },
     {

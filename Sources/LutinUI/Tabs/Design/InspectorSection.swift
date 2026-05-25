@@ -14,10 +14,11 @@ public struct InspectorSection: View {
 
     public var body: some View {
         LutinCollapsibleSection(isExpanded: $isExpanded) {
-            Text("Inspector").font(Typography.chromeSmall)
+            // No horizontal padding here — `LutinCollapsibleSection` already
+            // pads its header HStack at `md`, matching the side panel's
+            // baseline x. See LayersSection for the same fix.
+            Text("Inspector").font(Typography.chromeSmall.weight(.medium))
                 .foregroundStyle(Tokens.color(.textSecondary))
-                .textCase(.uppercase)
-                .padding(.horizontal, Tokens.spacing(.md))
                 .padding(.top, Tokens.spacing(.sm))
         } content: {
             content
@@ -35,18 +36,18 @@ public struct InspectorSection: View {
         }
     }
 
+    // Empty-selection state: only the background editor.
+    //
+    // Used to also surface a "Project name" row here, but that field's
+    // canonical home is the Project tab — having it in two places meant
+    // edits were silently duplicated (and the side-panel label read from
+    // a third source — see ProjectWorkspace's `projectName` binding). The
+    // Inspector's job is per-selection design properties, plus the
+    // background when nothing is selected; project metadata is its own
+    // tab.
     private var projectAndBackgroundForm: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            InspectorCategory {
-                LabeledField(label: "Project name") {
-                    LutinTextField("", text: Binding(
-                        get: { document.config.project.name },
-                        set: { try? document.apply(.setProjectName($0)) }))
-                }
-            }
-            InspectorCategory {
-                BackgroundEditor(document: document)
-            }
+        InspectorCategory {
+            BackgroundEditor(document: document)
         }
     }
 
@@ -55,8 +56,6 @@ public struct InspectorSection: View {
         InspectorCategory {
             switch id {
             case .item(let itemID): ItemInspector(document: document, itemID: itemID)
-            case .arrow(let from, let to):
-                ArrowInspector(document: document, from: from, to: to)
             case .image(let i): ImageInspector(document: document, index: i)
             }
         }
@@ -78,8 +77,7 @@ public struct InspectorSection: View {
         for id in selectionModel.selection {
             do {
                 switch id {
-                case .item(let i): try document.apply(.setItemHidden(id: i, hidden: hidden))
-                case .arrow(let f, let t): try document.apply(.setArrowHidden(from: f, to: t, hidden: hidden))
+                case .item(let i):  try document.apply(.setItemHidden(id: i, hidden: hidden))
                 case .image(let i): try document.apply(.setImageHidden(index: i, hidden: hidden))
                 }
             } catch { /* surfaced */ }

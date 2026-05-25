@@ -116,8 +116,6 @@ public struct ItemDragController: ViewModifier {
             guard let decos = document.config.decorations,
                   idx >= 0, idx < decos.count else { return nil }
             return (decos[idx].x ?? 0, decos[idx].y ?? 0)
-        case .arrow:
-            return nil
         }
     }
 
@@ -140,9 +138,8 @@ public struct ItemDragController: ViewModifier {
                               dx: Int, dy: Int) -> [DocumentIntent.MoveTarget] {
         sel.compactMap { id in
             switch id {
-            case .item(let i): return .init(target: .item(id: i), dx: dx, dy: dy)
+            case .item(let i):  return .init(target: .item(id: i),               dx: dx, dy: dy)
             case .image(let i): return .init(target: .imageDecoration(index: i), dx: dx, dy: dy)
-            case .arrow: return nil
             }
         }
     }

@@ -21,7 +21,7 @@ final class HiddenAngleSchemaTests: XCTestCase {
         app: {path: ./x.app}
         output: {directory: out, dmgName: t.dmg, volumeName: T}
         decorations:
-        - {type: arrow, from: a, to: b, hidden: true}
+        - {type: image, path: ./a.png, x: 0, y: 0, width: 10, hidden: true}
         """
         let cfg = try YAMLDecoder().decode(LutinConfig.self, from: yaml.data(using: .utf8)!)
         XCTAssertEqual(cfg.decorations?.first?.hidden, true)
@@ -86,9 +86,8 @@ final class HiddenAngleSchemaTests: XCTestCase {
     }
 
     func testDecorationHiddenFalseEmitsNoKey() throws {
-        var deco = LutinConfig.Decoration(type: "arrow")
-        deco.from = "a"
-        deco.to = "b"
+        var deco = LutinConfig.Decoration(type: "image",
+                                          path: "./a.png", x: 0, y: 0, width: 10)
         deco.hidden = false
         let encoder = YAMLEncoder()
         encoder.options.sortKeys = false
@@ -98,9 +97,8 @@ final class HiddenAngleSchemaTests: XCTestCase {
     }
 
     func testDecorationHiddenTrueEmitsKey() throws {
-        var deco = LutinConfig.Decoration(type: "arrow")
-        deco.from = "a"
-        deco.to = "b"
+        var deco = LutinConfig.Decoration(type: "image",
+                                          path: "./a.png", x: 0, y: 0, width: 10)
         deco.hidden = true
         let encoder = YAMLEncoder()
         encoder.options.sortKeys = false

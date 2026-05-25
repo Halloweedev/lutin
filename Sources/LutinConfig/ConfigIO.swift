@@ -3,7 +3,12 @@ import Yams
 import LutinCore
 
 extension LutinConfig {
-    /// Loads and decodes a `lutin.yml` file.
+    /// Loads and decodes a `lutin.yml` file. Legacy `type: arrow`
+    /// decorations are silently dropped at load — drawn arrows are no
+    /// longer a thing, the only supported decoration is `image`. The yml
+    /// file isn't rewritten until the user saves; loading a project that
+    /// still has arrows leaves them on disk but invisible until the
+    /// first save commits the cleaned `decorations` list.
     public static func load(from url: URL) throws -> LutinConfig {
         guard let data = try? Data(contentsOf: url) else {
             throw LutinError(
@@ -13,7 +18,9 @@ extension LutinConfig {
             )
         }
         do {
-            return try YAMLDecoder().decode(LutinConfig.self, from: data)
+            var config = try YAMLDecoder().decode(LutinConfig.self, from: data)
+            config.decorations = config.decorations?.filter { $0.type == "image" }
+            return config
         } catch {
             throw LutinError(
                 code: "invalid_config",

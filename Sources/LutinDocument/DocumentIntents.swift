@@ -9,9 +9,6 @@ public enum DocumentIntent: Equatable {
     case renameItemLabel(id: String, label: String?)
     case addItem(LutinConfig.Item)
     case deleteItem(id: String)
-    case addArrow(from: String, to: String, label: String?)
-    case deleteArrow(from: String, to: String)
-    case renameArrowLabel(from: String, to: String, label: String?)
     case setProjectName(String)
     case setOutputDirectory(String)
     case setBackgroundTemplate(String)
@@ -26,7 +23,6 @@ public enum DocumentIntent: Equatable {
     case moveImageDecoration(index: Int, x: Int, y: Int, width: Int)
     case reorderItem(id: String, toIndex: Int)
     case reorderImageDecoration(fromIndex: Int, toIndex: Int)
-    case swapArrow(from: String, to: String)
     case setWindow(width: Int?, height: Int?, iconSize: Int?,
                    textSize: Int?, showToolbar: Bool?, showSidebar: Bool?)
     case setProjectMetadata(name: String, bundleId: String)
@@ -36,12 +32,10 @@ public enum DocumentIntent: Equatable {
     case setSigning(LutinConfig.SigningInfo)
     case setNotarization(LutinConfig.NotarizationInfo)
     case setSparkle(LutinConfig.SparkleInfo)
-    case setArrowHidden(from: String, to: String, hidden: Bool)
 }
 
 public extension DocumentIntent {
     /// A single move delta applied as part of a `moveMany` batch.
-    /// Arrows have no own (x, y); they are never valid targets.
     struct MoveTarget: Equatable, Sendable {
         public enum Kind: Equatable, Sendable {
             case item(id: String)
@@ -57,7 +51,6 @@ public extension DocumentIntent {
 
     enum DeleteTarget: Equatable, Sendable {
         case item(id: String)
-        case arrow(from: String, to: String)
         case imageDecoration(index: Int)
     }
 }

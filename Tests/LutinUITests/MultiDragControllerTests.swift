@@ -3,10 +3,9 @@ import XCTest
 import LutinDocument
 
 final class MultiDragControllerTests: XCTestCase {
-    func testDeltasIncludeOnlyMoveable() {
+    func testDeltasIncludeEveryKind() {
         let sel: Set<CanvasSelectionID> = [
             .item(id: "a"),
-            .arrow(from: "a", to: "b"),
             .image(index: 0),
         ]
         let deltas = ItemDragController.deltas(forSelection: sel, dx: 5, dy: 7)

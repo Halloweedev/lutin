@@ -15,23 +15,17 @@ final class DecorationImageTests: XCTestCase {
             signing: nil, notarization: nil, sparkle: nil)
     }
 
-    func testValidArrowDecorationHasNoIssues() {
-        let config = baseConfig(decorations: [
-            .init(type: "arrow", from: "app", to: "applications", label: "Drag to install")])
-        XCTAssertTrue(ConfigValidator.validate(config).isEmpty)
-    }
-
     func testValidImageDecorationHasNoIssues() {
         let config = baseConfig(decorations: [
             .init(type: "image", path: "assets/arrow.png", x: 300, y: 220, width: 120)])
         XCTAssertTrue(ConfigValidator.validate(config).isEmpty)
     }
 
-    func testArrowMissingEndpointsIsAnError() {
+    /// Drawn arrows were removed — `type: arrow` is rejected as unknown.
+    func testArrowTypeIsAnError() {
         let config = baseConfig(decorations: [.init(type: "arrow")])
         let issues = ConfigValidator.validate(config)
-        XCTAssertTrue(issues.contains { $0.path == "decorations[0].from" })
-        XCTAssertTrue(issues.contains { $0.path == "decorations[0].to" })
+        XCTAssertTrue(issues.contains { $0.path == "decorations[0].type" })
     }
 
     func testImageMissingPathAndPositionIsAnError() {

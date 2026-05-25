@@ -147,44 +147,43 @@ public struct LutinConfig: Codable, Equatable {
     }
 
     public struct Decoration: Codable, Equatable {
-        public var type: String                // "arrow" | "image"
-        public var from: String?               // arrow: source item id
-        public var to: String?                 // arrow: target item id
-        public var label: String?              // arrow: optional text
+        /// Only `"image"` is supported. Drawn arrows are gone — ship the
+        /// arrow as an image (user-supplied today; built-in templates
+        /// later). The field stays a String for forward-compat with
+        /// future decoration types.
+        public var type: String
         public var path: String?               // image: overlay file (project-relative)
         public var x: Int?                     // image: position, window points
         public var y: Int?                     // image: position, window points
         public var width: Int?                 // image: drawn width, window points
+        public var label: String?              // optional text near the midpoint
         public var hidden: Bool?
-        public init(type: String, from: String? = nil, to: String? = nil,
-                    label: String? = nil, path: String? = nil,
-                    x: Int? = nil, y: Int? = nil, width: Int? = nil, hidden: Bool? = nil) {
+        public init(type: String,
+                    path: String? = nil,
+                    x: Int? = nil, y: Int? = nil, width: Int? = nil,
+                    label: String? = nil, hidden: Bool? = nil) {
             self.type = type
-            self.from = from
-            self.to = to
-            self.label = label
             self.path = path
             self.x = x
             self.y = y
             self.width = width
+            self.label = label
             self.hidden = hidden
         }
 
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(type, forKey: .type)
-            if from != nil { try container.encode(from, forKey: .from) }
-            if to != nil { try container.encode(to, forKey: .to) }
-            if label != nil { try container.encode(label, forKey: .label) }
             if path != nil { try container.encode(path, forKey: .path) }
             if x != nil { try container.encode(x, forKey: .x) }
             if y != nil { try container.encode(y, forKey: .y) }
             if width != nil { try container.encode(width, forKey: .width) }
+            if label != nil { try container.encode(label, forKey: .label) }
             if hidden == true { try container.encode(true, forKey: .hidden) }
         }
 
         enum CodingKeys: String, CodingKey {
-            case type, from, to, label, path, x, y, width, hidden
+            case type, path, x, y, width, label, hidden
         }
     }
 
