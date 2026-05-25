@@ -28,6 +28,7 @@ public final class CredentialsStore {
     public private(set) var identities: [IdentityProbe.Identity] = []
     public private(set) var lastProbedAt: Date?
     public private(set) var isProbing: Bool = false
+    public private(set) var hasCodesign: Bool = false
     //
     // Notary profile discovery deliberately omitted. We can't probe it
     // reliably — notarytool stores credentials with an ACL restricted
@@ -43,6 +44,7 @@ public final class CredentialsStore {
         // Eager initial probe — the @Observable framework lets late
         // subscribers see the latest value even if they bind after the
         // probe finishes, so we don't need to defer until first read.
+        hasCodesign = Self.probeCodesignAvailability()
         Task { await refresh() }
         observeAppActivation()
     }
@@ -103,6 +105,22 @@ public final class CredentialsStore {
                 }
                 await self.refresh()
             }
+        }
+    }
+
+    private static func probeCodesignAvailability() -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        process.arguments = ["--version"]
+        let nullHandle = FileHandle(forWritingAtPath: "/dev/null")
+        process.standardOutput = nullHandle
+        process.standardError = nullHandle
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            return false
         }
     }
 }

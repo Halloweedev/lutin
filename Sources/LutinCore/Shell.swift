@@ -61,12 +61,16 @@ public enum Shell {
 
         let result = ShellResult(exitCode: process.terminationStatus, stdout: stdout, stderr: stderr)
         if checkExit && result.exitCode != 0 {
+            // Some tools (notably /usr/bin/codesign) print failure messages to
+            // stdout, others to stderr. Pass both through so the caller can
+            // surface whichever holds the diagnostic.
             throw LutinError(
                 code: "command_failed",
                 message: "`\(executable)` exited with code \(result.exitCode).",
                 details: [
                     "executable": executable,
                     "exitCode": String(result.exitCode),
+                    "stdout": stdout.trimmingCharacters(in: .whitespacesAndNewlines),
                     "stderr": stderr.trimmingCharacters(in: .whitespacesAndNewlines),
                 ]
             )

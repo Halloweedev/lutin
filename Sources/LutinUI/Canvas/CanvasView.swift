@@ -40,6 +40,8 @@ public struct CanvasView: View {
     @Bindable var runner: PipelineRunner
     @Binding var showingDoctor: Bool
     @Binding var sidePanelHidden: Bool
+    let projectName: String?
+    let registryStore: RegistryStore?
     @State private var backgroundImage: CGImage?
     @State private var renderError: String?
     @State private var renderTask: Task<Void, Never>?
@@ -58,13 +60,17 @@ public struct CanvasView: View {
                 editorState: EditorState,
                 runner: PipelineRunner,
                 showingDoctor: Binding<Bool>,
-                sidePanelHidden: Binding<Bool>) {
+                sidePanelHidden: Binding<Bool>,
+                projectName: String? = nil,
+                registryStore: RegistryStore? = nil) {
         self.document = document
         self.selectionModel = selectionModel
         self.editorState = editorState
         self.runner = runner
         self._showingDoctor = showingDoctor
         self._sidePanelHidden = sidePanelHidden
+        self.projectName = projectName
+        self.registryStore = registryStore
     }
 
     public var body: some View {
@@ -238,7 +244,9 @@ public struct CanvasView: View {
             .overlay(alignment: .bottomLeading) {
                 CanvasActionsBar(document: document,
                                  runner: runner,
-                                 showingDoctor: $showingDoctor)
+                                 showingDoctor: $showingDoctor,
+                                 projectName: projectName,
+                                 registryStore: registryStore)
                     .padding(Tokens.spacing(.md))
             }
             // Bottom-trailing: zoom controls. Split from the action bar

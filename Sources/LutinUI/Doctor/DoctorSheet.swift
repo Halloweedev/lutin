@@ -5,14 +5,14 @@ import LutinNotarization
 import LutinDocument
 
 public struct DoctorSheet: View {
-    let document: LutinProjectDocument
+    let document: LutinProjectDocument?
     @Environment(\.dismiss) private var dismiss
     @Environment(CredentialsStore.self) private var credentialsStore
     @Environment(PreferencesStore.self) private var preferencesStore
     @State private var results: [Check] = []
     @State private var running: Bool = false
 
-    public init(document: LutinProjectDocument) {
+    public init(document: LutinProjectDocument?) {
         self.document = document
     }
 
@@ -54,14 +54,16 @@ public struct DoctorSheet: View {
         collected.append(signingCheck())
         collected.append(notaryCheck())
 
-        let appURL = URL(fileURLWithPath: document.config.app.path,
-                         relativeTo: document.projectDirectory)
-        if FileManager.default.fileExists(atPath: appURL.path) {
-            collected.append(.init(title: "App bundle exists",
-                                   detail: appURL.path, status: .ok))
-        } else {
-            collected.append(.init(title: "App bundle missing",
-                                   detail: "Expected at \(appURL.path)", status: .blocked))
+        if let document {
+            let appURL = URL(fileURLWithPath: document.config.app.path,
+                             relativeTo: document.projectDirectory)
+            if FileManager.default.fileExists(atPath: appURL.path) {
+                collected.append(.init(title: "App bundle exists",
+                                       detail: appURL.path, status: .ok))
+            } else {
+                collected.append(.init(title: "App bundle missing",
+                                       detail: "Expected at \(appURL.path)", status: .blocked))
+            }
         }
 
         results = collected
@@ -74,8 +76,25 @@ public struct DoctorSheet: View {
     /// identities; pick one), unconfigured-and-empty (Keychain is bare;
     /// import a `.cer`).
     private func signingCheck() -> Check {
-        let signing = document.config.signing
         let availableNames = credentialsStore.identities.map(\.name)
+        let developerIDNames = availableNames.filter {
+            $0.contains("Developer ID Application:")
+        }
+
+        guard let document else {
+            if developerIDNames.isEmpty {
+                return .init(
+                    title: "No Developer ID identity available",
+                    detail: "No Developer ID Application identities found in the Keychain.",
+                    status: .warn)
+            }
+            return .init(
+                title: "Developer ID identity available",
+                detail: "\(developerIDNames.count) Developer ID identity \(developerIDNames.count == 1 ? "is" : "are") available in your Keychain.",
+                status: .ok)
+        }
+
+        let signing = document.config.signing
 
         if let signing, signing.enabled, let identity = signing.identity {
             if availableNames.contains(identity) {
@@ -115,8 +134,22 @@ public struct DoctorSheet: View {
     /// gets a yellow warn with a clear "this might be fine, press
     /// Test to confirm" hint.
     private func notaryCheck() -> Check {
-        let notary = document.config.notarization
         let known = preferencesStore.preferences.knownNotaryProfiles
+
+        guard let document else {
+            if known.isEmpty {
+                return .init(
+                    title: "No notary profile remembered",
+                    detail: "Lutin has not observed any notary profile creations on this machine.",
+                    status: .warn)
+            }
+            return .init(
+                title: "Notary profile remembered",
+                detail: "Lutin remembers these profiles: \(known.joined(separator: ", ")).",
+                status: .ok)
+        }
+
+        let notary = document.config.notarization
 
         if let notary, notary.enabled,
            let profile = notary.profile, !profile.isEmpty {

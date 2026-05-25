@@ -1,6 +1,14 @@
 import Foundation
 import LutinCore
 
+/// Outcome of the most recent build the user ran for this project.
+/// Surfaced as the build-status pill on the welcome page.
+public enum BuildOutcome: String, Codable, Equatable {
+    case succeeded
+    case failed
+    case unsigned
+}
+
 /// One remembered project. `lutin.yml` is the source of truth; this is a cache.
 public struct RegistryEntry: Codable, Equatable {
     public var name: String
@@ -8,17 +16,20 @@ public struct RegistryEntry: Codable, Equatable {
     public var appPath: String
     public var lastDetectedVersion: String?
     public var lastReleaseStatus: String?
+    public var lastBuildOutcome: BuildOutcome?
     public var createdDate: Date
     public var lastOpenedDate: Date
 
     public init(name: String, configPath: String, appPath: String,
                 lastDetectedVersion: String?, lastReleaseStatus: String?,
+                lastBuildOutcome: BuildOutcome? = nil,
                 createdDate: Date, lastOpenedDate: Date) {
         self.name = name
         self.configPath = configPath
         self.appPath = appPath
         self.lastDetectedVersion = lastDetectedVersion
         self.lastReleaseStatus = lastReleaseStatus
+        self.lastBuildOutcome = lastBuildOutcome
         self.createdDate = createdDate
         self.lastOpenedDate = lastOpenedDate
     }

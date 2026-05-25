@@ -43,6 +43,15 @@ public final class RegistryStore {
         try reload()
     }
 
+    /// Updates the recorded build outcome for a registered project.
+    /// Silently no-ops when the project is not in the registry.
+    public func recordBuildOutcome(name: String, outcome: BuildOutcome) throws {
+        guard var entry = try registry.find(name: name) else { return }
+        entry.lastBuildOutcome = outcome
+        try registry.upsert(entry)
+        try reload()
+    }
+
     /// Convenience: add a project from a `lutin.yml` URL. Derives the name
     /// from the parent directory (matching the CLI `add` convention).
     public func add(configURL: URL) throws {

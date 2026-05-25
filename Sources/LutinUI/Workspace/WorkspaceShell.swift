@@ -34,6 +34,8 @@ public struct WorkspaceShell: View {
                 if let document {
                     ProjectWorkspace(document: document,
                                      projectName: currentProjectName,
+                                     registryEntryName: selectedEntryName ?? currentProjectName,
+                                     registryStore: registryStore,
                                      editorState: editorStateStore.state(forConfigPath: document.configURL.path),
                                      showingDoctor: $showingDoctor,
                                      sidePanelHidden: $sidePanelHidden)
@@ -47,7 +49,12 @@ public struct WorkspaceShell: View {
                         onDropApp: { url in
                             preselectedDropURL = url
                             showCreateNew = true
-                        })
+                        },
+                        onPickApp: { url in
+                            preselectedDropURL = url
+                            showCreateNew = true
+                        },
+                        onOpenDoctor: { showingDoctor = true })
                 }
             }
         }
@@ -83,6 +90,12 @@ public struct WorkspaceShell: View {
                 try? registryStore.add(configURL: url)
                 selectedEntryName = entryName
             }
+        }
+        .sheet(isPresented: Binding(
+            get: { showingDoctor && document == nil },
+            set: { if !$0 { showingDoctor = false } }
+        )) {
+            DoctorSheet(document: nil)
         }
         .environment(registryStore)
         .environment(preferencesStore)
@@ -147,6 +160,8 @@ public struct WorkspaceShell: View {
 private struct ProjectWorkspace: View {
     let document: LutinProjectDocument
     let projectName: String
+    let registryEntryName: String
+    let registryStore: RegistryStore
     @Bindable var editorState: EditorState
     @Binding var showingDoctor: Bool
     @Binding var sidePanelHidden: Bool
@@ -219,7 +234,9 @@ private struct ProjectWorkspace: View {
                        editorState: editorState,
                        runner: pipelineRunner,
                        showingDoctor: $showingDoctor,
-                       sidePanelHidden: $sidePanelHidden)
+                       sidePanelHidden: $sidePanelHidden,
+                       projectName: registryEntryName,
+                       registryStore: registryStore)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Tokens.color(.canvasBackground))
         }

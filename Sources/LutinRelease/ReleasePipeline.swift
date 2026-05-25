@@ -47,6 +47,11 @@ public enum ReleasePipeline {
                                  message: "signing.identity is required when signing.enabled is true.")
             }
             try CodeSigner.verifyIdentityExists(identity, runner: runner)
+            // Some inputs (notably SwiftPM-built apps) end up with resource
+            // bundles at the root of the .app instead of inside Contents/.
+            // codesign rejects that with "unsealed contents present in the
+            // bundle root" — fix up the layout before we attempt to sign.
+            try BundleNormalizer.normalize(appURL, onOutput: onOutput)
             let entitlements = signing.entitlements.map {
                 URL(fileURLWithPath: $0, relativeTo: projectDirectory).path
             }

@@ -22,13 +22,19 @@ public struct CanvasActionsBar: View {
     @Bindable var document: LutinProjectDocument
     @Bindable var runner: PipelineRunner
     @Binding var showingDoctor: Bool
+    let projectName: String?
+    let registryStore: RegistryStore?
 
     public init(document: LutinProjectDocument,
                 runner: PipelineRunner,
-                showingDoctor: Binding<Bool>) {
+                showingDoctor: Binding<Bool>,
+                projectName: String? = nil,
+                registryStore: RegistryStore? = nil) {
         self.document = document
         self.runner = runner
         self._showingDoctor = showingDoctor
+        self.projectName = projectName
+        self.registryStore = registryStore
     }
 
     public var body: some View {
@@ -37,19 +43,25 @@ public struct CanvasActionsBar: View {
                             accessibilityLabel: "Preview",
                             action: { Task { await runner.run(mode: .preview,
                                                               config: document.config,
-                                                              projectDirectory: document.projectDirectory) } })
+                                                              projectDirectory: document.projectDirectory,
+                                                              projectName: projectName,
+                                                              registryStore: registryStore) } })
                 .disabled(isRunning)
             LutinIconButton(systemName: "hammer.fill",
                             accessibilityLabel: "Build",
                             action: { Task { await runner.run(mode: .build,
                                                               config: document.config,
-                                                              projectDirectory: document.projectDirectory) } })
+                                                              projectDirectory: document.projectDirectory,
+                                                              projectName: projectName,
+                                                              registryStore: registryStore) } })
                 .disabled(isRunning)
             LutinIconButton(systemName: "shippingbox.fill",
                             accessibilityLabel: "Release",
                             action: { Task { await runner.run(mode: .release,
                                                               config: document.config,
-                                                              projectDirectory: document.projectDirectory) } })
+                                                              projectDirectory: document.projectDirectory,
+                                                              projectName: projectName,
+                                                              registryStore: registryStore) } })
                 .disabled(isRunning)
             LutinIconButton(systemName: "stethoscope",
                             accessibilityLabel: "Doctor",

@@ -83,13 +83,11 @@ struct NotaryProfileField: View {
         Menu {
             if !saved.isEmpty {
                 ForEach(saved, id: \.self) { profile in
-                    // allow-menu-button: Menu pop-up item
-                    SwiftUI.Button(profile) { name = profile }
+                    SwiftUI.Button(profile) { name = profile } // allow-menu-button: Menu pop-up item
                 }
                 Divider()
             }
-            // allow-menu-button: Menu pop-up item
-            SwiftUI.Button("New profile…") { onCreateNew() }
+            SwiftUI.Button("New profile…") { onCreateNew() } // allow-menu-button: Menu pop-up item
         } label: {
             Image(systemName: "chevron.down")
                 .font(.system(size: 10, weight: .medium))

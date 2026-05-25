@@ -2,7 +2,9 @@ import Foundation
 import Observation
 import LutinCore
 import LutinConfig
+import LutinRegistry
 import LutinRelease
+import LutinAppKit
 
 @Observable
 public final class PipelineRunner {
@@ -57,7 +59,9 @@ public final class PipelineRunner {
     @MainActor
     public func run(mode: ReleasePipeline.Mode,
                     config: LutinConfig,
-                    projectDirectory: URL) async {
+                    projectDirectory: URL,
+                    projectName: String? = nil,
+                    registryStore: RegistryStore? = nil) async {
         state = .running(stage: "Starting", progress: 0)
         log.removeAll()
         let runner = ShellCommandRunner()
@@ -76,6 +80,23 @@ public final class PipelineRunner {
             }.value
             lastSummary = result.summary
             append(LogLine(kind: .success, text: "✓ Wrote \(result.dmgPath.path)"))
+            // Stamp the produced .dmg with the app's icon so Finder shows it
+            // instead of the generic disk-image card. The mounted-volume
+            // icon is already handled by DMGBuilder (.VolumeIcon.icns), but
+            // the file-level icon needs a resource-fork xattr — only NSWorkspace
+            // can write that, hence the GUI-side step.
+            let appURL = URL(fileURLWithPath: config.app.path,
+                             relativeTo: projectDirectory).standardizedFileURL
+            if let iconURL = ReleasePipeline.resolveVolumeIcon(
+                projectDirectory: projectDirectory, appBundle: appURL),
+               DMGIcon.apply(iconURL: iconURL, to: result.dmgPath) {
+                append(LogLine(kind: .stage,
+                               text: "Applied custom icon to \(result.dmgPath.lastPathComponent)"))
+            }
+            recordBuildOutcomeIfNeeded(mode: mode,
+                                       signingStatus: result.summary.signingStatus,
+                                       projectName: projectName,
+                                       registryStore: registryStore)
 
             // Preview mode mirrors the CLI: mount the produced DMG and open
             // its volume in Finder so the user gets the real Finder-rendered
@@ -92,10 +113,39 @@ public final class PipelineRunner {
             }
             state = .succeeded(dmgPath: result.dmgPath.path)
         } catch let error as LutinError {
+            recordBuildOutcomeIfNeeded(mode: mode,
+                                       signingStatus: nil,
+                                       projectName: projectName,
+                                       registryStore: registryStore,
+                                       failed: true)
             fail(error)
         } catch {
+            recordBuildOutcomeIfNeeded(mode: mode,
+                                       signingStatus: nil,
+                                       projectName: projectName,
+                                       registryStore: registryStore,
+                                       failed: true)
             fail(LutinError(code: SP4ErrorCodes.guiRendererFailed,
                             message: error.localizedDescription))
         }
+    }
+
+    private func recordBuildOutcomeIfNeeded(mode: ReleasePipeline.Mode,
+                                            signingStatus: String?,
+                                            projectName: String?,
+                                            registryStore: RegistryStore?,
+                                            failed: Bool = false) {
+        guard mode == .build || mode == .release,
+              let projectName,
+              let registryStore else { return }
+        let outcome: BuildOutcome
+        if failed {
+            outcome = .failed
+        } else if mode == .release, signingStatus == "signed" {
+            outcome = .succeeded
+        } else {
+            outcome = .unsigned
+        }
+        try? registryStore.recordBuildOutcome(name: projectName, outcome: outcome)
     }
 }

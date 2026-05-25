@@ -253,9 +253,23 @@ enum CommandLogic {
     // MARK: build / release
 
     static func build(configURL: URL, dryRun: Bool,
+                      registry: Registry = Registry(),
+                      registryEntryName: String? = nil,
                       onOutput: ((String) -> Void)? = nil) throws -> BuildResult {
-        let rawConfig = try LutinConfig.load(from: configURL)
-        let config = try Templates.applyDefaults(to: rawConfig)
+        let config: LutinConfig
+        do {
+            let rawConfig = try LutinConfig.load(from: configURL)
+            config = try Templates.applyDefaults(to: rawConfig)
+        } catch {
+            if !dryRun {
+                recordBuildOutcome(
+                    configURL: configURL,
+                    registryEntryName: registryEntryName,
+                    outcome: .failed,
+                    registry: registry)
+            }
+            throw error
+        }
         let projectDir = configURL.deletingLastPathComponent()
 
         if dryRun {
@@ -280,25 +294,90 @@ enum CommandLogic {
             return try DMGBuilder.build(request, dryRun: true)
         }
 
-        let result = try ReleasePipeline.run(
-            config: config, projectDirectory: projectDir,
-            mode: .build, runner: ShellCommandRunner(),
-            onOutput: onOutput)
-        return BuildResult(
-            dryRun: false, plannedSteps: result.plannedSteps,
-            dmgPath: result.dmgPath,
-            sizeBytes: result.summary.dmgSizeBytes,
-            sha256: result.summary.sha256)
+        do {
+            let result = try ReleasePipeline.run(
+                config: config, projectDirectory: projectDir,
+                mode: .build, runner: ShellCommandRunner(),
+                onOutput: onOutput)
+            recordBuildOutcome(
+                configURL: configURL,
+                registryEntryName: registryEntryName,
+                outcome: .unsigned,
+                registry: registry)
+            return BuildResult(
+                dryRun: false, plannedSteps: result.plannedSteps,
+                dmgPath: result.dmgPath,
+                sizeBytes: result.summary.dmgSizeBytes,
+                sha256: result.summary.sha256)
+        } catch {
+            recordBuildOutcome(
+                configURL: configURL,
+                registryEntryName: registryEntryName,
+                outcome: .failed,
+                registry: registry)
+            throw error
+        }
     }
 
-    static func release(configURL: URL) throws -> ReleaseSummary {
-        let rawConfig = try LutinConfig.load(from: configURL)
-        let config = try Templates.applyDefaults(to: rawConfig)
+    static func release(configURL: URL,
+                        registry: Registry = Registry(),
+                        registryEntryName: String? = nil) throws -> ReleaseSummary {
+        let config: LutinConfig
+        do {
+            let rawConfig = try LutinConfig.load(from: configURL)
+            config = try Templates.applyDefaults(to: rawConfig)
+        } catch {
+            recordBuildOutcome(
+                configURL: configURL,
+                registryEntryName: registryEntryName,
+                outcome: .failed,
+                registry: registry)
+            throw error
+        }
         let projectDir = configURL.deletingLastPathComponent()
-        let result = try ReleasePipeline.run(
-            config: config, projectDirectory: projectDir,
-            mode: .release, runner: ShellCommandRunner())
-        return result.summary
+        do {
+            let result = try ReleasePipeline.run(
+                config: config, projectDirectory: projectDir,
+                mode: .release, runner: ShellCommandRunner())
+            let outcome: BuildOutcome = result.summary.signingStatus == "signed"
+                ? .succeeded
+                : .unsigned
+            recordBuildOutcome(
+                configURL: configURL,
+                registryEntryName: registryEntryName,
+                outcome: outcome,
+                registry: registry)
+            return result.summary
+        } catch {
+            recordBuildOutcome(
+                configURL: configURL,
+                registryEntryName: registryEntryName,
+                outcome: .failed,
+                registry: registry)
+            throw error
+        }
+    }
+
+    private static func recordBuildOutcome(configURL: URL,
+                                           registryEntryName: String?,
+                                           outcome: BuildOutcome,
+                                           registry: Registry) {
+        let standardizedConfigPath = configURL.standardizedFileURL.path
+        let entries = (try? registry.allEntries().filter {
+            URL(fileURLWithPath: $0.configPath).standardizedFileURL.path == standardizedConfigPath
+        }) ?? []
+        let targets: [RegistryEntry]
+        if let registryEntryName {
+            targets = entries.filter { $0.name == registryEntryName }
+        } else {
+            targets = entries
+        }
+
+        for entry in targets {
+            var updated = entry
+            updated.lastBuildOutcome = outcome
+            try? registry.upsert(updated)
+        }
     }
 
     struct PreviewResult: Encodable {
@@ -356,8 +435,9 @@ enum CommandLogic {
 // MARK: - CLI commands
 
 /// Resolves the target config URL from common options, using the registry.
-private func resolveConfigURL(config: String?, name: String?) throws -> URL {
-    let registry = Registry()
+private func resolveConfigURL(config: String?,
+                              name: String?,
+                              registry: Registry = Registry()) throws -> URL {
     return try ProjectResolver.resolve(
         explicitConfig: config,
         projectName: name,
@@ -526,10 +606,13 @@ struct Build: ParsableCommand {
 
     func run() throws {
         let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
+        let registry = Registry()
         do {
-            let url = try resolveConfigURL(config: config, name: name)
+            let url = try resolveConfigURL(config: config, name: name, registry: registry)
             let result = try CommandLogic.build(
                 configURL: url, dryRun: common.dryRun,
+                registry: registry,
+                registryEntryName: name,
                 onOutput: { renderer.verboseLine($0) })
             let human: String
             if result.dryRun {
@@ -555,15 +638,18 @@ struct Release: ParsableCommand {
 
     func run() throws {
         let renderer = OutputRenderer(json: common.json, verbose: common.verbose)
+        let registry = Registry()
         do {
-            let url = try resolveConfigURL(config: config, name: name)
+            let url = try resolveConfigURL(config: config, name: name, registry: registry)
             if common.dryRun {
                 renderer.success(EmptyPayload(),
                                  human: "Dry run — `release` would build, sign, "
                                       + "notarize, and staple the DMG.")
                 return
             }
-            let summary = try CommandLogic.release(configURL: url)
+            let summary = try CommandLogic.release(configURL: url,
+                                                   registry: registry,
+                                                   registryEntryName: name)
             let human = "Released \(summary.dmgPath)\n"
                       + "  version: \(summary.version)  size: \(summary.dmgSizeBytes) bytes\n"
                       + "  signing: \(summary.signingStatus)  "
