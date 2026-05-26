@@ -93,12 +93,17 @@ public struct WelcomeView: View {
     private var brandMark: some View {
         VStack(spacing: Tokens.spacing(.xs)) {
             appGlyph
+            Text("WELCOME BACK")
+                .font(.system(size: 10, weight: .medium))
+                .tracking(0.8)
+                .foregroundStyle(Tokens.color(.textTertiary))
             Text("Lutin")
-                .font(.system(size: 26, weight: .light))
+                .font(.system(size: 32, weight: .ultraLight))
+                .tracking(-0.5)
                 .foregroundStyle(Tokens.color(.textPrimary))
             Text("Visual editor for macOS DMG layouts")
                 .font(Typography.chromeSmall)
-                .foregroundStyle(Tokens.color(.textSecondary))
+                .foregroundStyle(Tokens.color(.textTertiary))
         }
     }
 
