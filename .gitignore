@@ -1,7 +1,20 @@
 /.build/
 .DS_Store
 *.xcodeproj
+.swiftpm/
 .superpowers/
 
 # Packaged .app output from scripts/dev-app.sh and release-app.sh.
 /Apps/LutinApp/build/
+
+# Personal Claude Code settings — never check these in.
+.claude/
+
+# Release artifacts: produced by `lutin release` / scripts/release-app.sh.
+# Ship binaries via GitHub Releases, not git history.
+/release/
+*.dmg
+
+# Internal planning docs (specs, plans, runbooks, screenshots).
+# Kept locally for context but not part of the public repo.
+/docs/superpowers/

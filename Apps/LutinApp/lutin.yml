@@ -45,11 +45,14 @@ decorations:
   from: app
   to: applications
   label: Drag to install
+# Replace the identity below with your own "Developer ID Application: …"
+# string from `security find-identity -p codesigning`, and the profile with
+# the name you used in `lutin notary setup --profile NAME`.
 signing:
   enabled: true
-  identity: "Developer ID Application: Nicolas Demanez (GJFYJDKWX9)"
+  identity: "Developer ID Application: Your Name (TEAMID)"
   signDmg: true
 notarization:
   enabled: true
-  profile: barry-notarize     # reuses an existing notarytool credential
+  profile: your-notary-profile
   staple: true
