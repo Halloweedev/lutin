@@ -124,8 +124,8 @@ public struct WorkspaceShell: View {
     /// made in the Project tab (or anywhere else that calls
     /// `.setProjectName` / `.setProjectMetadata`) update the visible label
     /// immediately. Falls back to the registry entry name when no document
-    /// is loaded yet (welcome screen, mid-switch). Falls back to the
-    /// placeholder when neither is known.
+    /// is loaded yet (welcome screen, mid-switch), then to "No project"
+    /// when neither is known.
     ///
     /// The registry entry's own `name` field is the lookup key used by
     /// `loadDocument(named:)` to find the YAML on disk — it is *not*
@@ -305,8 +305,7 @@ private struct ProjectWorkspace: View {
     }
 }
 
-/// Per-tab body. Phase 2 ships placeholders so the shell compiles and tabs
-/// visibly switch — real content arrives in later phases.
+/// Per-tab body for the active editor section.
 private struct TabPanelHost: View {
     let document: LutinProjectDocument
     @Bindable var editorState: EditorState

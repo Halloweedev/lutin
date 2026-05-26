@@ -36,6 +36,16 @@ final class SignAppTests: XCTestCase {
         XCTAssertTrue(appSign.arguments.contains("runtime"))
     }
 
+    func testHardenedRuntimeCanBeDisabled() throws {
+        let app = try makeBundle()
+        let fake = FakeCommandRunner()
+        try CodeSigner.signApp(app, identity: "ID", entitlements: nil,
+                               hardenedRuntime: false, runner: fake)
+        let signCalls = fake.invocations.filter { $0.executable.hasSuffix("codesign") }
+        XCTAssertFalse(signCalls.contains { $0.arguments.contains("--options") })
+        XCTAssertFalse(signCalls.contains { $0.arguments.contains("runtime") })
+    }
+
     func testEntitlementsPassedWhenProvided() throws {
         let app = try makeBundle()
         let fake = FakeCommandRunner()

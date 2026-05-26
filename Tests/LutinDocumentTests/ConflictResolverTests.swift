@@ -45,4 +45,14 @@ final class ConflictResolverTests: XCTestCase {
         let diff = try resolver.computeDiff()
         XCTAssertFalse(diff.hunks.isEmpty)
     }
+
+    func testReloadFromDiskWhenDirtyPreservesMemoryAndStoresPendingConflict() throws {
+        let (doc, _) = try setupDirtyDocWithExternalEdit()
+
+        try doc.reloadFromDisk()
+
+        XCTAssertEqual(doc.config.items?.first { $0.id == "app" }?.x, 333)
+        XCTAssertTrue(doc.isDirty)
+        XCTAssertNotNil(doc.pendingConflict)
+    }
 }

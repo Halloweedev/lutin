@@ -32,12 +32,30 @@ public enum ReleasePipeline {
         let appURL = URL(fileURLWithPath: config.app.path, relativeTo: projectDirectory)
             .standardizedFileURL
         let info = try InfoPlistReader.read(appBundle: appURL)
+        var buildAppURL = appURL
+        var stagingDirectory: URL?
+        defer {
+            if let stagingDirectory {
+                try? FileManager.default.removeItem(at: stagingDirectory)
+            }
+        }
         let tokenContext = TokenResolver.Context(version: info.shortVersion,
-                                                 name: config.project.name)
+                                                 name: config.project.name,
+                                                 build: info.bundleVersion)
         let dmgName = TokenResolver.resolve(config.output.dmgName, tokenContext)
         let volumeName = TokenResolver.resolve(config.output.volumeName, tokenContext)
         let outDir = URL(fileURLWithPath: config.output.directory,
                          relativeTo: projectDirectory).standardizedFileURL
+
+        if mode == .release, let notarization = config.notarization,
+           notarization.enabled {
+            guard let signing = config.signing, signing.enabled,
+                  signing.signDmg == true else {
+                throw LutinError(
+                    code: "invalid_config",
+                    message: "notarization.enabled requires signing.enabled and signing.signDmg to both be true.")
+            }
+        }
 
         // release mode: sign the app first (inner-to-outer).
         var signingStatus = "skipped"
@@ -47,22 +65,31 @@ public enum ReleasePipeline {
                                  message: "signing.identity is required when signing.enabled is true.")
             }
             try CodeSigner.verifyIdentityExists(identity, runner: runner)
+            let stage = FileManager.default.temporaryDirectory
+                .appendingPathComponent("lutin-release-\(UUID().uuidString)", isDirectory: true)
+            try FileManager.default.createDirectory(at: stage, withIntermediateDirectories: true)
+            stagingDirectory = stage
+            buildAppURL = stage.appendingPathComponent(appURL.lastPathComponent)
+            try FileManager.default.copyItem(at: appURL, to: buildAppURL)
             // Some inputs (notably SwiftPM-built apps) end up with resource
             // bundles at the root of the .app instead of inside Contents/.
             // codesign rejects that with "unsealed contents present in the
             // bundle root" — fix up the layout before we attempt to sign.
-            try BundleNormalizer.normalize(appURL, onOutput: onOutput)
+            try BundleNormalizer.normalize(buildAppURL, onOutput: onOutput)
             let entitlements = signing.entitlements.map {
                 URL(fileURLWithPath: $0, relativeTo: projectDirectory).path
             }
-            try CodeSigner.signApp(appURL, identity: identity,
-                                   entitlements: entitlements, runner: runner)
+            try CodeSigner.signApp(buildAppURL, identity: identity,
+                                   entitlements: entitlements,
+                                   hardenedRuntime: signing.hardenedRuntime ?? true,
+                                   runner: runner)
+            try CodeSigner.verifySignature(of: buildAppURL, runner: runner)
             signingStatus = "signed"
         }
 
         // Resolve layout + background, then build the DMG (real hdiutil).
         let layout = try LayoutResolver.resolve(config: config,
-                                                appFileName: appURL.lastPathComponent)
+                                                appFileName: buildAppURL.lastPathComponent)
         let background = try renderedBackground(config: config,
                                                 projectDirectory: projectDirectory,
                                                 onOutput: onOutput)
@@ -77,9 +104,9 @@ public enum ReleasePipeline {
                     url.lastPathComponent.hasPrefix("lutin-render-")) ? url : nil
         }
         let volumeIcon = resolveVolumeIcon(projectDirectory: projectDirectory,
-                                           appBundle: appURL)
+                                           appBundle: buildAppURL)
         let request = BuildRequest(
-            appBundle: appURL, outputDirectory: outDir, dmgName: dmgName,
+            appBundle: buildAppURL, outputDirectory: outDir, dmgName: dmgName,
             volumeName: volumeName, layout: layout, backgroundImage: background,
             volumeIcon: volumeIcon)
         let build = try DMGBuilder.build(request, dryRun: false, runner: dmgRunner, onOutput: onOutput)
@@ -103,6 +130,7 @@ public enum ReleasePipeline {
                 }
                 try CodeSigner.signDMG(dmgPath, identity: identity,
                                        runner: runner)
+                try CodeSigner.verifySignature(of: dmgPath, runner: runner)
             }
             if let notarization = config.notarization, notarization.enabled {
                 guard let profile = notarization.profile, !profile.isEmpty else {
@@ -120,6 +148,8 @@ public enum ReleasePipeline {
             }
         }
 
+        let finalMetadata = try ArtifactMetadata.read(from: dmgPath)
+
         // Build the summary; write it for release mode.
         let formatter = ISO8601DateFormatter()
         let summary = ReleaseSummary(
@@ -129,8 +159,8 @@ public enum ReleasePipeline {
             version: info.shortVersion,
             buildNumber: info.bundleVersion,
             dmgPath: dmgPath.path,
-            dmgSizeBytes: build.sizeBytes ?? 0,
-            sha256: build.sha256 ?? "",
+            dmgSizeBytes: finalMetadata.sizeBytes,
+            sha256: finalMetadata.sha256,
             signingStatus: signingStatus,
             notarizationStatus: notarizationStatus,
             timestamp: formatter.string(from: Date()))

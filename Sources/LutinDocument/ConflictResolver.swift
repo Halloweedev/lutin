@@ -14,11 +14,12 @@ public final class ConflictResolver {
     /// Discard the on-disk file's contents. Next save overwrites disk.
     public func keepMine() throws {
         // No-op on the in-memory state. The doc is still dirty; ⌘S will overwrite disk.
+        document.clearPendingConflict()
     }
 
     /// Replace the in-memory config with the on-disk version. Marks clean.
     public func takeDisk() throws {
-        try document.reloadFromDisk()
+        try document.forceReloadFromDisk()
     }
 
     /// Returns a UnifiedDiff comparing the on-disk YAML to the in-memory YAML.

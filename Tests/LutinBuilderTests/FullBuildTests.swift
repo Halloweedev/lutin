@@ -49,7 +49,7 @@ final class FullBuildTests: XCTestCase {
         XCTAssertEqual(Array(bytes[4..<8]), Array("Bud1".utf8),
                        ".DS_Store bytes 4-7 must be 'Bud1' magic")
         XCTAssertTrue(fm.fileExists(atPath: mount.mountPoint
-            .appendingPathComponent(".background/background.png").path))
+            .appendingPathComponent(".background.png").path))
     }
 
     func testVolumeIconFileIsCopiedIntoTheVolume() throws {

@@ -44,19 +44,27 @@ public enum CodeSigner {
     /// itself with hardened runtime and optional entitlements.
     public static func signApp(_ appBundle: URL, identity: String,
                                entitlements: String?,
+                               hardenedRuntime: Bool = true,
                                runner: CommandRunning) throws {
-        // Nested items: deepest first, no entitlements, with hardened runtime.
+        // Nested items: deepest first, no entitlements, same runtime policy.
         for item in nestedCodePaths(in: appBundle) {
-            try sign(item, identity: identity, entitlements: nil, runner: runner)
+            try sign(item, identity: identity, entitlements: nil,
+                     hardenedRuntime: hardenedRuntime, runner: runner)
         }
         // Top-level app last, with entitlements if given.
-        try sign(appBundle, identity: identity, entitlements: entitlements, runner: runner)
+        try sign(appBundle, identity: identity, entitlements: entitlements,
+                 hardenedRuntime: hardenedRuntime, runner: runner)
     }
 
-    /// Signs one item with `codesign`, always forcing hardened runtime.
+    /// Signs one item with `codesign`.
     static func sign(_ target: URL, identity: String, entitlements: String?,
+                     hardenedRuntime: Bool = true,
                      runner: CommandRunning) throws {
-        var args = ["--force", "--sign", identity, "--options", "runtime", "--timestamp"]
+        var args = ["--force", "--sign", identity]
+        if hardenedRuntime {
+            args += ["--options", "runtime"]
+        }
+        args.append("--timestamp")
         if let entitlements {
             args += ["--entitlements", entitlements]
         }

@@ -1,5 +1,4 @@
 import Foundation
-import CryptoKit
 import LutinCore
 
 /// Inputs for a full laid-out DMG build. All token resolution and layout
@@ -200,16 +199,13 @@ public enum DMGBuilder {
         try DiskImage.convertToCompressed(source: rwDMG, destination: dmgPath, runner: runner)
 
         // 7. Size + SHA-256.
-        let attrs = try fm.attributesOfItem(atPath: dmgPath.path)
-        let size = (attrs[.size] as? Int) ?? 0
-        // Maps the whole DMG into memory — acceptable for typical app-DMG sizes;
-        // revisit if targeting multi-GB payloads.
-        let digest = SHA256.hash(data: try Data(contentsOf: dmgPath))
-        let hex = digest.map { String(format: "%02x", $0) }.joined()
+        let metadata = try ArtifactMetadata.read(from: dmgPath)
         onOutput?("Built \(dmgPath.lastPathComponent)")
 
         return BuildResult(dryRun: false, plannedSteps: steps,
-                           dmgPath: dmgPath, sizeBytes: size, sha256: hex)
+                           dmgPath: dmgPath,
+                           sizeBytes: metadata.sizeBytes,
+                           sha256: metadata.sha256)
     }
 
     /// Recursive byte size of a directory tree.

@@ -5,6 +5,7 @@ import LutinConfig
 import LutinRegistry
 import LutinBuilder
 import LutinRelease
+import LutinSigning
 
 // MARK: - Shared options
 
@@ -225,10 +226,8 @@ enum CommandLogic {
         // signingIdentity — only when signing is enabled.
         if let config = loaded, let signing = config.signing, signing.enabled {
             let identity = signing.identity ?? ""
-            let found = (try? runner.runAllowingFailure(
-                "/usr/bin/security",
-                ["find-identity", "-v", "-p", "codesigning"]).stdout) ?? ""
-            let ok = !identity.isEmpty && found.contains(identity)
+            let ok = !identity.isEmpty
+                && ((try? CodeSigner.verifyIdentityExists(identity, runner: runner)) != nil)
             checks.append(DoctorCheck(name: "signingIdentity", ok: ok,
                 detail: ok ? "signing identity found in the Keychain"
                             : "signing identity '\(identity)' not found in the Keychain"))
@@ -276,7 +275,8 @@ enum CommandLogic {
             let appURL = URL(fileURLWithPath: config.app.path, relativeTo: projectDir)
             let info = try InfoPlistReader.read(appBundle: appURL)
             let context = TokenResolver.Context(version: info.shortVersion,
-                                                name: config.project.name)
+                                                name: config.project.name,
+                                                build: info.bundleVersion)
             let layout = try LayoutResolver.resolve(config: config,
                                                     appFileName: appURL.lastPathComponent)
             let outURL = URL(fileURLWithPath: config.output.directory,
@@ -358,6 +358,22 @@ enum CommandLogic {
         }
     }
 
+    static func releaseDryRun(configURL: URL) throws -> BuildResult {
+        let buildPlan = try build(configURL: configURL, dryRun: true)
+        return BuildResult(
+            dryRun: true,
+            plannedSteps: buildPlan.plannedSteps + [
+                "Sign app if configured",
+                "Sign DMG if configured",
+                "Submit for notarization if configured",
+                "Staple notarization ticket if configured",
+                "Write release summary",
+            ],
+            dmgPath: nil,
+            sizeBytes: nil,
+            sha256: nil)
+    }
+
     private static func recordBuildOutcome(configURL: URL,
                                            registryEntryName: String?,
                                            outcome: BuildOutcome,
@@ -399,11 +415,16 @@ enum CommandLogic {
             mode: .preview, runner: ShellCommandRunner())
 
         // Detach a stale preview of the same volume, if any, then mount fresh.
+        let appURL = URL(fileURLWithPath: config.app.path, relativeTo: projectDir)
+        let info = try InfoPlistReader.read(appBundle: appURL)
         let volume = "/Volumes/" + TokenResolver.resolve(config.output.volumeName,
-            TokenResolver.Context(version: "", name: config.project.name))
+            TokenResolver.Context(version: info.shortVersion,
+                                  name: config.project.name,
+                                  build: info.bundleVersion))
         _ = try? opener.runAllowingFailure("/usr/bin/hdiutil", ["detach", volume, "-force"])
 
-        let mount = try DiskImage.mount(result.dmgPath, runner: ShellCommandRunner())
+        let mount = try DiskImage.mount(result.dmgPath, runner: ShellCommandRunner(),
+                                        autoOpen: true)
         _ = try? opener.runAllowingFailure("/usr/bin/open", [mount.mountPoint.path])
         return PreviewResult(dmgPath: result.dmgPath.path,
                              mountPath: mount.mountPoint.path, dryRun: false)
@@ -642,9 +663,10 @@ struct Release: ParsableCommand {
         do {
             let url = try resolveConfigURL(config: config, name: name, registry: registry)
             if common.dryRun {
-                renderer.success(EmptyPayload(),
-                                 human: "Dry run — `release` would build, sign, "
-                                      + "notarize, and staple the DMG.")
+                let result = try CommandLogic.releaseDryRun(configURL: url)
+                renderer.success(result,
+                                 human: "Dry run — planned steps:\n"
+                                      + result.plannedSteps.map { "  • \($0)" }.joined(separator: "\n"))
                 return
             }
             let summary = try CommandLogic.release(configURL: url,

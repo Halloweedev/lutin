@@ -151,40 +151,6 @@ public struct ItemDragController: ViewModifier {
     }
 }
 
-/// Legacy single-item modifier kept for any call sites that haven't migrated.
-/// New code should use `ItemDragController` via `draggableItem(document:selectionModel:id:snapGrid:)`.
-public struct ItemDragModifier: ViewModifier {
-    @Bindable var document: LutinProjectDocument
-    let itemID: String
-    let snapGrid: Int
-
-    @State private var translation: CGSize = .zero
-    @State private var baseX: Int = 0
-    @State private var baseY: Int = 0
-
-    public func body(content: Content) -> some View {
-        content
-            .offset(translation)
-            .gesture(
-                DragGesture()
-                    .onChanged { value in
-                        if translation == .zero {
-                            let item = document.config.items?.first { $0.id == itemID }
-                            baseX = item?.x ?? 0
-                            baseY = item?.y ?? 0
-                        }
-                        translation = value.translation
-                    }
-                    .onEnded { value in
-                        let newX = DragMath.snap(CGFloat(baseX) + value.translation.width, grid: snapGrid)
-                        let newY = DragMath.snap(CGFloat(baseY) + value.translation.height, grid: snapGrid)
-                        try? document.apply(.moveItem(id: itemID, x: newX, y: newY))
-                        translation = .zero
-                    }
-            )
-    }
-}
-
 public extension View {
     /// Multi-select aware drag: commits a `moveMany` intent for the full
     /// moveable selection when the drag ends.

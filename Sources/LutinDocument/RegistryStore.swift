@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import LutinCore
+import LutinConfig
 import LutinRegistry
 
 /// App-wide observable wrapper over the on-disk `LutinRegistry`. The sidebar
@@ -52,14 +53,17 @@ public final class RegistryStore {
         try reload()
     }
 
-    /// Convenience: add a project from a `lutin.yml` URL. Derives the name
-    /// from the parent directory (matching the CLI `add` convention).
+    /// Convenience: add a project from a `lutin.yml` URL. Mirrors the CLI
+    /// `add` command by reading the project name and resolving the app path
+    /// from the config.
     public func add(configURL: URL) throws {
-        let name = configURL.deletingLastPathComponent().lastPathComponent
+        let config = try LutinConfig.load(from: configURL)
+        let projectDir = configURL.deletingLastPathComponent()
+        let appURL = URL(fileURLWithPath: config.app.path, relativeTo: projectDir)
         let entry = RegistryEntry(
-            name: name,
+            name: config.project.name,
             configPath: configURL.path,
-            appPath: "",
+            appPath: appURL.path,
             lastDetectedVersion: nil,
             lastReleaseStatus: nil,
             createdDate: Date(),

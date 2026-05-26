@@ -151,7 +151,7 @@ public struct WelcomeView: View {
 
     private func quietLink(icon: String, title: String, shortcut: String,
                            action: @escaping () -> Void) -> some View {
-        SwiftUI.Button(action: action) {
+        LutinButton(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 11, weight: .medium))
@@ -164,7 +164,6 @@ public struct WelcomeView: View {
             .foregroundStyle(Tokens.color(.brandAccent))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
     }
 
     private func revealInFinder(_ entry: RegistryEntry) {

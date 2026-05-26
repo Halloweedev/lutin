@@ -43,7 +43,7 @@ struct WelcomeRecentsGrid: View {
     }
 
     private var newProjectCard: some View {
-        SwiftUI.Button(action: onCreateNew) {
+        LutinButton(action: onCreateNew) {
             VStack(spacing: Tokens.spacing(.xs)) {
                 Image(systemName: "plus")
                     .font(.system(size: 22, weight: .regular))
@@ -60,6 +60,5 @@ struct WelcomeRecentsGrid: View {
                         style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
     }
 }

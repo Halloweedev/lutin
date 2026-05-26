@@ -10,6 +10,7 @@ public final class LutinProjectDocument: Identifiable {
     public let configURL: URL
     public let projectDirectory: URL
     public private(set) var isDirty: Bool = false
+    public private(set) var pendingConflict: ConflictResolver?
 
     @ObservationIgnored
     public let undoManager = UndoManager()
@@ -373,6 +374,10 @@ public final class LutinProjectDocument: Identifiable {
     }
 
     public func save() throws {
+        if pendingConflict != nil {
+            throw LutinError(code: SP4ErrorCodes.documentConflictUnresolved,
+                             message: "Resolve the external file conflict before saving.")
+        }
         // Mark before the atomic rotate so the watcher's dispatch
         // source ignores the event our own write generates. Must run
         // BEFORE `replaceItemAt`, not after, because the kernel
@@ -383,6 +388,7 @@ public final class LutinProjectDocument: Identifiable {
             try config.save(to: tmp)
             _ = try FileManager.default.replaceItemAt(configURL, withItemAt: tmp)
             isDirty = false
+            pendingConflict = nil
         } catch let error as LutinError {
             try? FileManager.default.removeItem(at: tmp)
             throw error
@@ -394,9 +400,24 @@ public final class LutinProjectDocument: Identifiable {
     }
 
     public func reloadFromDisk() throws {
+        if isDirty {
+            autosaveTimer?.invalidate()
+            autosaveTimer = nil
+            pendingConflict = ConflictResolver(document: self)
+            return
+        }
+        try forceReloadFromDisk()
+    }
+
+    public func forceReloadFromDisk() throws {
         config = try LutinConfig.load(from: configURL)
         isDirty = false
+        pendingConflict = nil
         undoManager.removeAllActions()
+    }
+
+    func clearPendingConflict() {
+        pendingConflict = nil
     }
 
     public func replaceConfig(_ newConfig: LutinConfig, dirty: Bool) {

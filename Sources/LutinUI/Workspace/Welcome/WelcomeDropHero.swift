@@ -10,7 +10,7 @@ struct WelcomeDropHero: View {
     @State private var isHovering = false
 
     var body: some View {
-        SwiftUI.Button(action: openPanel) {
+        LutinButton(action: openPanel) {
             VStack(spacing: Tokens.spacing(.xs)) {
                 Image(systemName: "arrow.down.app")
                     .font(.system(size: 28, weight: .light))
@@ -37,7 +37,6 @@ struct WelcomeDropHero: View {
             )
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
         .onHover { isHovering = $0 }
     }
 

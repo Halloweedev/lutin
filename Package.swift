@@ -63,7 +63,7 @@ let package = Package(
 
         .executableTarget(name: "LutinCLIExe", dependencies: ["LutinCLI"], path: "Apps/LutinCLI"),
         .executableTarget(name: "LutinAppExe", dependencies: ["LutinUI"], path: "Apps/LutinApp",
-                          exclude: ["lutin.yml"]),
+                          exclude: ["lutin.yml", "build"]),
         .executableTarget(name: "LutinAppPackagerExe", dependencies: [
             "LutinAppPackagerCore",
         ], path: "Apps/LutinAppPackager"),

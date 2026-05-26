@@ -59,16 +59,12 @@ public struct EditorRail: View {
     }
 }
 
-/// Brand-logo placeholder pinned at the top of the rail. Renders a
-/// brand-accent rounded square with a white "L" — a temporary mark
-/// that occupies the slot the real Lutin logo will fill later. Not
-/// interactive (no hover, no action) — adding behaviour would
-/// pre-commit to what the logo does on click; better to wire that
-/// when the real logo design lands.
+/// Brand mark pinned at the top of the rail. Renders a brand-accent
+/// square with a white "L" and stays non-interactive so navigation
+/// affordances remain limited to the tab buttons and project switcher.
 ///
 /// The slot is `railWidth × railWidth` so it shares the rail's grid
-/// with the tab buttons below it — swap to an `Image(...)` of the same
-/// frame to ship the real logo without disturbing layout.
+/// with the tab buttons below it.
 private struct LogoSlot: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 6)

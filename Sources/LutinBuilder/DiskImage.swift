@@ -39,11 +39,13 @@ public enum DiskImage {
 
     /// Mounts an image and returns its device + mount point.
     /// Parses `hdiutil attach -plist` output for the mount point.
-    public static func mount(_ url: URL, runner: CommandRunning) throws -> MountedImage {
+    public static func mount(_ url: URL, runner: CommandRunning,
+                             autoOpen: Bool = false) throws -> MountedImage {
         let result: ShellResult
         do {
+            let openFlag = autoOpen ? "-autoopen" : "-noautoopen"
             result = try runner.run(hdiutil, [
-                "attach", url.path, "-nobrowse", "-noverify", "-noautoopen", "-plist",
+                "attach", url.path, "-nobrowse", "-noverify", openFlag, "-plist",
             ])
         } catch let error as LutinError {
             throw LutinError(code: "mount_failed",

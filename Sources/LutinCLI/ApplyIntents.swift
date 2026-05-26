@@ -20,12 +20,13 @@ struct ApplyIntents: ParsableCommand {
     var json: Bool = false
 
     func run() throws {
+        let renderer = OutputRenderer(json: json, verbose: false)
         let configURL = URL(fileURLWithPath: config)
         let document: LutinProjectDocument
         do {
             document = try LutinProjectDocument(configURL: configURL)
         } catch let error as LutinError {
-            OutputRenderer(json: json, verbose: false).failure(error)
+            renderer.failure(error)
             throw ExitCode(1)
         }
         let data: Data
@@ -35,7 +36,7 @@ struct ApplyIntents: ParsableCommand {
             } catch {
                 let lutinError = LutinError(code: "intent_file_unreadable",
                                             message: "Cannot read intents file: \(file)")
-                OutputRenderer(json: json, verbose: false).failure(lutinError)
+                renderer.failure(lutinError)
                 throw ExitCode(1)
             }
         } else {
@@ -45,16 +46,16 @@ struct ApplyIntents: ParsableCommand {
             try IntentBridge.applySequence(jsonData: data, to: document)
             try document.save()
         } catch let error as LutinError {
-            OutputRenderer(json: json, verbose: false).failure(error)
+            renderer.failure(error)
             throw ExitCode(1)
         } catch {
             let lutinError = LutinError(code: "intent_apply_failed",
                                         message: error.localizedDescription)
-            OutputRenderer(json: json, verbose: false).failure(lutinError)
+            renderer.failure(lutinError)
             throw ExitCode(1)
         }
         if json {
-            print(#"{"ok": true}"#)
+            renderer.success(EmptyPayload(), human: "")
         }
     }
 }

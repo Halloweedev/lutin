@@ -46,7 +46,7 @@ final class RenderedBackgroundTests: XCTestCase {
 
         let mount = try DiskImage.mount(result.dmgPath, runner: ShellCommandRunner())
         defer { try? DiskImage.unmount(mount, runner: ShellCommandRunner()) }
-        let bg = mount.mountPoint.appendingPathComponent(".background/background.png")
+        let bg = mount.mountPoint.appendingPathComponent(".background.png")
         XCTAssertTrue(fm.fileExists(atPath: bg.path),
                       "the renderer must have produced a background")
         let src = CGImageSourceCreateWithURL(bg as CFURL, nil)

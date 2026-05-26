@@ -15,7 +15,7 @@ struct WelcomeRecentCard: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            SwiftUI.Button(action: onSelect) {
+            LutinButton(action: onSelect) {
                 VStack(spacing: Tokens.spacing(.xs)) {
                     iconTile
                     Text(entry.name)
@@ -34,7 +34,6 @@ struct WelcomeRecentCard: View {
                             lineWidth: Tokens.Size.hairline))
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
 
             overflowMenu
                 .padding(.top, 4)

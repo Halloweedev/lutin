@@ -16,12 +16,13 @@ cp "$SRC" "$CLI_DIR/lutin.yml"
 
 echo "→ build"
 swift build -c release --product lutin --product lutin-app-headless 2>/dev/null
+PRODUCT_DIR="$(swift build --show-bin-path -c release)"
 
 echo "→ GUI replay (lutin-app-headless)"
-"$REPO_ROOT/.build/release/lutin-app-headless" "$GUI_DIR/lutin.yml" "$INTENTS"
+"$PRODUCT_DIR/lutin-app-headless" "$GUI_DIR/lutin.yml" "$INTENTS"
 
 echo "→ CLI replay (lutin apply-intents)"
-"$REPO_ROOT/.build/release/lutin" apply-intents \
+"$PRODUCT_DIR/lutin" apply-intents \
     --config "$CLI_DIR/lutin.yml" \
     --file "$INTENTS"
 

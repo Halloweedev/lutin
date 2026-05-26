@@ -34,4 +34,16 @@ final class ReleaseCommandTests: XCTestCase {
         XCTAssertTrue(fm.fileExists(atPath: projectDir
             .appendingPathComponent("release/release-summary.json").path))
     }
+
+    func testReleaseDryRunLoadsConfigAndPlansBuildAndReleaseSteps() throws {
+        let result = try CommandLogic.releaseDryRun(configURL: Fixtures.barryConfig)
+
+        XCTAssertTrue(result.dryRun)
+        XCTAssertTrue(result.plannedSteps.contains {
+            $0.contains("Validate app bundle")
+        })
+        XCTAssertTrue(result.plannedSteps.contains("Sign DMG if configured"))
+        XCTAssertTrue(result.plannedSteps.contains("Submit for notarization if configured"))
+        XCTAssertTrue(result.plannedSteps.contains("Staple notarization ticket if configured"))
+    }
 }
