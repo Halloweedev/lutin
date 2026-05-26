@@ -21,11 +21,33 @@ public final class RegistryStore {
 
     public func reload() throws {
         do {
+            try healOrphanedAppPaths()
             entries = try registry.list()
             lastError = nil
         } catch let error as LutinError {
             lastError = error
             throw error
+        }
+    }
+
+    /// Older registry entries (pre-2026-05-26) were written with an
+    /// empty `appPath` because the CLI's `init` / `add` paths didn't
+    /// populate it. The welcome page's app-icon thumbnails need a real
+    /// path to call `AppIconLoader.appBundleIcon(at:)`, so on reload
+    /// we re-resolve the app path from each project's `lutin.yml` and
+    /// persist the patched entry. Silent on per-entry failure — the
+    /// gradient placeholder still renders when a project's YAML is
+    /// unreachable or malformed.
+    private func healOrphanedAppPaths() throws {
+        let snapshot = try registry.allEntries()
+        for entry in snapshot where entry.appPath.isEmpty {
+            let configURL = URL(fileURLWithPath: entry.configPath)
+            guard let config = try? LutinConfig.load(from: configURL) else { continue }
+            let projectDir = configURL.deletingLastPathComponent()
+            let appURL = URL(fileURLWithPath: config.app.path, relativeTo: projectDir)
+            var patched = entry
+            patched.appPath = appURL.path
+            try? registry.upsert(patched)
         }
     }
 

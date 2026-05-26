@@ -108,19 +108,15 @@ public final class CredentialsStore {
         }
     }
 
+    /// `codesign` ships with macOS itself (no Xcode/CLT required), so a
+    /// simple "is the binary present and executable" check is the right
+    /// probe. The previous implementation ran `codesign --version`,
+    /// which has never been a valid flag — codesign exited with
+    /// status 2 ("unrecognized option") and the probe always reported
+    /// false. Deeper validation (can the user actually sign with a
+    /// given identity?) happens at sign time via `IdentityProbe` and
+    /// the real release pipeline.
     private static func probeCodesignAvailability() -> Bool {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
-        process.arguments = ["--version"]
-        let nullHandle = FileHandle(forWritingAtPath: "/dev/null")
-        process.standardOutput = nullHandle
-        process.standardError = nullHandle
-        do {
-            try process.run()
-            process.waitUntilExit()
-            return process.terminationStatus == 0
-        } catch {
-            return false
-        }
+        FileManager.default.isExecutableFile(atPath: "/usr/bin/codesign")
     }
 }

@@ -1,17 +1,24 @@
 import SwiftUI
 import LutinRegistry
+import LutinAppKit
 
-/// One card in the recents grid. Renders a rounded square icon
-/// (initial + deterministic gradient from the project name),
-/// the project name, and a status dot with last-built / last-opened
-/// info. The whole card is the project-open button; a small
-/// overflow `Menu` in the corner exposes Reveal / Remove.
+/// One card in the recents grid. Renders the real `.app` Finder icon
+/// when the bundle is reachable, otherwise falls back to an initial +
+/// deterministic gradient keyed by the project name. Followed by the
+/// project name and a status dot with last-built / last-opened info.
+/// The whole card is the project-open button; a small overflow `Menu`
+/// in the corner exposes Reveal / Remove.
 struct WelcomeRecentCard: View {
     let entry: RegistryEntry
     let isMissingOnDisk: Bool
     let onSelect: () -> Void
     let onReveal: () -> Void
     let onRemove: () -> Void
+
+    /// Loaded .app icon, or `nil` until the `.task` finishes / when the
+    /// bundle isn't reachable. The view shows the gradient placeholder
+    /// in either case.
+    @State private var appIcon: CGImage?
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -42,6 +49,27 @@ struct WelcomeRecentCard: View {
     }
 
     private var iconTile: some View {
+        Group {
+            if let appIcon {
+                // Real .app icon. CGImage doesn't carry scale info, so
+                // tell SwiftUI it's @2x (we requested 88px backing for
+                // a 44pt frame) — yields crisp Retina rendering.
+                // No shadow — macOS app icons bake their own depth in.
+                Image(decorative: appIcon, scale: 2, orientation: .up)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 44, height: 44)
+            } else {
+                placeholderTile
+            }
+        }
+        .task(id: entry.appPath) {
+            let url = URL(fileURLWithPath: entry.appPath)
+            appIcon = AppIconLoader.appBundleIcon(at: url, sizePoints: 88)
+        }
+    }
+
+    private var placeholderTile: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Self.gradient(for: entry.name))

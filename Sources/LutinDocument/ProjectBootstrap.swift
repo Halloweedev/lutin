@@ -12,14 +12,26 @@ public enum ProjectBootstrap {
         public let appPath: String        // absolute path to the .app bundle
         public let windowWidth: Int
         public let windowHeight: Int
+        /// Default Developer ID identity to seed `signing.identity`.
+        /// When non-nil, the starter config gets a `signing:` block
+        /// with `enabled: true`.
+        public let defaultSigningIdentity: String?
+        /// Default `notarytool` keychain profile to seed
+        /// `notarization.profile`. When non-nil, the starter config
+        /// gets a `notarization:` block with `enabled: true`.
+        public let defaultNotaryProfile: String?
 
         public init(projectName: String, bundleId: String, appPath: String,
-                    windowWidth: Int = 600, windowHeight: Int = 400) {
+                    windowWidth: Int = 600, windowHeight: Int = 400,
+                    defaultSigningIdentity: String? = nil,
+                    defaultNotaryProfile: String? = nil) {
             self.projectName = projectName
             self.bundleId = bundleId
             self.appPath = appPath
             self.windowWidth = windowWidth
             self.windowHeight = windowHeight
+            self.defaultSigningIdentity = defaultSigningIdentity
+            self.defaultNotaryProfile = defaultNotaryProfile
         }
     }
 
@@ -104,6 +116,13 @@ public enum ProjectBootstrap {
         // Seeded layout is just the two items. Arrows are decorative and
         // most projects don't need one — the user can drag-to-connect
         // from the canvas if they want.
+        let signing: LutinConfig.SigningInfo? = inputs.defaultSigningIdentity.map { identity in
+            LutinConfig.SigningInfo(enabled: true, identity: identity,
+                                    hardenedRuntime: nil, entitlements: nil, signDmg: true)
+        }
+        let notarization: LutinConfig.NotarizationInfo? = inputs.defaultNotaryProfile.map { profile in
+            LutinConfig.NotarizationInfo(enabled: true, profile: profile, staple: true)
+        }
         return LutinConfig(
             project: project,
             app: app,
@@ -112,8 +131,8 @@ public enum ProjectBootstrap {
             background: background,
             items: [appItem, applicationsItem],
             decorations: nil,
-            signing: nil,
-            notarization: nil,
+            signing: signing,
+            notarization: notarization,
             sparkle: nil)
     }
 

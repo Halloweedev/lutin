@@ -13,11 +13,13 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
         .package(url: "https://github.com/jpsim/Yams.git", from: "5.0.6"),
+        .package(url: "https://github.com/Halloweedev/keylight-swift.git", from: "0.3.0"),
     ],
     targets: [
         .target(name: "LutinCore"),
         .target(name: "LutinConfig", dependencies: ["LutinCore", "Yams"]),
         .target(name: "LutinRegistry", dependencies: ["LutinCore"]),
+        .target(name: "LutinLicense", dependencies: ["LutinCore"]),
         .target(name: "LutinBuilder", dependencies: ["LutinCore", "LutinConfig"]),
         .target(name: "LutinSigning", dependencies: ["LutinCore"]),
         .target(name: "LutinNotarization", dependencies: ["LutinCore"]),
@@ -57,7 +59,8 @@ let package = Package(
         ]),
         .target(name: "LutinUI", dependencies: [
             "LutinCore", "LutinConfig", "LutinDocument", "LutinAppKit", "LutinRender", "LutinRelease",
-            "LutinSigning", "LutinNotarization",
+            "LutinSigning", "LutinNotarization", "LutinLicense",
+            .product(name: "KeylightSDK", package: "keylight-swift"),
         ], resources: [.process("Resources")]),
         .target(name: "LutinAppPackagerCore", dependencies: ["LutinCore", "LutinConfig", "LutinSigning"]),
 
@@ -72,6 +75,7 @@ let package = Package(
         .testTarget(name: "LutinCoreTests", dependencies: ["LutinCore", "TestSupport"]),
         .testTarget(name: "LutinConfigTests", dependencies: ["LutinConfig", "LutinCore", "TestSupport"]),
         .testTarget(name: "LutinRegistryTests", dependencies: ["LutinRegistry", "LutinCore", "TestSupport"]),
+        .testTarget(name: "LutinLicenseTests", dependencies: ["LutinLicense", "LutinCore", "TestSupport"]),
         .testTarget(name: "LutinBuilderTests", dependencies: ["LutinBuilder", "LutinConfig", "LutinCore", "TestSupport"]),
         .testTarget(name: "LutinSigningTests", dependencies: ["LutinSigning", "LutinCore", "TestSupport"]),
         .testTarget(name: "LutinNotarizationTests", dependencies: ["LutinNotarization", "LutinCore", "TestSupport"]),

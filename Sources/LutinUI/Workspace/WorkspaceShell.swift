@@ -3,6 +3,7 @@ import LutinCore
 import LutinConfig
 import LutinRegistry
 import LutinDocument
+import LutinLicense
 
 public struct WorkspaceShell: View {
     @State private var registryStore = RegistryStore()
@@ -15,6 +16,13 @@ public struct WorkspaceShell: View {
     @State private var showSwitcher = false
     @State private var showCreateNew = false
     @State private var preselectedDropURL: URL?
+    /// Set when a free-tier user tried to create a project and was
+    /// bounced to the paywall. If they activate Pro inside the
+    /// paywall, the workspace re-opens `CreateProjectSheet` with this
+    /// URL preselected so the flow they wanted picks up automatically.
+    @State private var pendingDropURLAfterPaywall: URL?
+    @State private var showPaywall = false
+    @State private var showSupportNag = false
     @State private var showingDoctor = false
     @State private var sidePanelHidden = false
 
@@ -30,50 +38,14 @@ public struct WorkspaceShell: View {
             // → 14pt saves 8pt of top chrome without losing the
             // visual break.
             AppHeaderBar()
-            Group {
-                if let document {
-                    ProjectWorkspace(document: document,
-                                     projectName: currentProjectName,
-                                     registryEntryName: selectedEntryName ?? currentProjectName,
-                                     registryStore: registryStore,
-                                     editorState: editorStateStore.state(forConfigPath: document.configURL.path),
-                                     showingDoctor: $showingDoctor,
-                                     sidePanelHidden: $sidePanelHidden)
-                } else if let loadError {
-                    EmptyState(title: "Could not load project", message: loadError, icon: "EmptySelection")
-                } else {
-                    WelcomeView(
-                        onCreateNew: { showCreateNew = true },
-                        onOpenExisting: { showSwitcher = true },
-                        onSelectRecent: { name in selectedEntryName = name },
-                        onDropApp: { url in
-                            preselectedDropURL = url
-                            showCreateNew = true
-                        },
-                        onPickApp: { url in
-                            preselectedDropURL = url
-                            showCreateNew = true
-                        },
-                        onOpenDoctor: { showingDoctor = true })
-                }
-            }
+            rootContent
         }
         .frame(minWidth: 900, minHeight: 600)
         .tint(Tokens.color(.brandAccent))
-        .background {
-            // Hidden button to wire ⌘N globally without claiming a visible
-            // toolbar slot — same pattern other commands use.
-            LutinButton("New project", role: .primary) { showCreateNew = true }
-                .keyboardShortcut("n", modifiers: .command)
-                .opacity(0)
-                .frame(width: 0, height: 0)
-            // Shift the macOS standard window buttons up by ~6pt so
-            // they fit inside the 14pt AppHeaderBar (default position
-            // assumes a 22pt title bar). See `TrafficLightPositioner`
-            // — re-applies on every window state change.
-            TrafficLightPositioner(buttonOriginY: 9)
-                .frame(width: 0, height: 0)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            WorkspaceBottomBar(onOpenDoctor: { showingDoctor = true })
         }
+        .background { hiddenChrome }
         .sheet(isPresented: $showSwitcher) {
             ProjectSwitcherModal(
                 selectedEntryName: $selectedEntryName,
@@ -81,7 +53,7 @@ public struct WorkspaceShell: View {
                     // SwiftUI dismisses the switcher first; defer the
                     // Create sheet by a runloop so the second sheet
                     // doesn't fight the first sheet's dismiss animation.
-                    DispatchQueue.main.async { showCreateNew = true }
+                    DispatchQueue.main.async { requestNewProject() }
                 })
                 .environment(registryStore)
         }
@@ -90,6 +62,12 @@ public struct WorkspaceShell: View {
                 try? registryStore.add(configURL: url)
                 selectedEntryName = entryName
             }
+        }
+        .sheet(isPresented: $showPaywall) { paywallSheet }
+        .sheet(isPresented: $showSupportNag,
+               onDismiss: { recordSupportNagShown() }) {
+            LicenseSupportNagSheet(manager: Licensing.manager,
+                                   onDismiss: { showSupportNag = false })
         }
         .sheet(isPresented: Binding(
             get: { showingDoctor && document == nil },
@@ -104,6 +82,12 @@ public struct WorkspaceShell: View {
         .task {
             try? registryStore.reload()
             try? preferencesStore.reload()
+            // Give `Licensing.manager.checkOnLaunch()` (kicked off by
+            // the @main App) a moment to settle entitlement before we
+            // decide whether to nag. A Pro user with a cached lease
+            // shouldn't see the nag flash on slow networks.
+            try? await Task.sleep(for: .seconds(1))
+            checkSupportNag()
         }
         .onChange(of: selectedEntryName) { _, name in
             loadDocument(named: name)
@@ -115,6 +99,99 @@ public struct WorkspaceShell: View {
         .onReceive(NotificationCenter.default.publisher(for: .lutinRedo)) { _ in document?.redo() }
         .onReceive(NotificationCenter.default.publisher(for: .lutinOpenSwitcher)) { _ in
             showSwitcher = true
+        }
+    }
+
+    // MARK: - Body subviews (extracted to keep the type-checker happy)
+
+    @ViewBuilder
+    private var rootContent: some View {
+        if let document {
+            ProjectWorkspace(document: document,
+                             projectName: currentProjectName,
+                             registryEntryName: selectedEntryName ?? currentProjectName,
+                             registryStore: registryStore,
+                             editorState: editorStateStore.state(forConfigPath: document.configURL.path),
+                             showingDoctor: $showingDoctor,
+                             sidePanelHidden: $sidePanelHidden)
+        } else if let loadError {
+            EmptyState(title: "Could not load project", message: loadError, icon: "EmptySelection")
+        } else {
+            WelcomeView(
+                onOpenExisting: { showSwitcher = true },
+                onSelectRecent: { name in selectedEntryName = name },
+                onDropApp: { url in requestNewProject(preselectedURL: url) },
+                onPickApp: { url in requestNewProject(preselectedURL: url) })
+        }
+    }
+
+    @ViewBuilder
+    private var hiddenChrome: some View {
+        // Shift the macOS standard window buttons up by ~6pt so they
+        // fit inside the 14pt AppHeaderBar (default position assumes a
+        // 22pt title bar). See `TrafficLightPositioner` — re-applies
+        // on every window state change.
+        TrafficLightPositioner(buttonOriginY: 9)
+            .frame(width: 0, height: 0)
+    }
+
+    private var paywallSheet: some View {
+        LicensePaywallSheet(
+            manager: Licensing.manager,
+            onActivated: {
+                // Manager flipped to entitled — close paywall, then
+                // re-open the create flow on the next runloop so
+                // SwiftUI doesn't stack two sheets transitioning at
+                // once. Preserves any preselected drop URL.
+                showPaywall = false
+                let url = pendingDropURLAfterPaywall
+                pendingDropURLAfterPaywall = nil
+                DispatchQueue.main.async {
+                    preselectedDropURL = url
+                    showCreateNew = true
+                }
+            },
+            onCancel: {
+                showPaywall = false
+                pendingDropURLAfterPaywall = nil
+            })
+    }
+
+    /// Funnel for every "create new project" trigger in the workspace
+    /// (Welcome buttons, ⌘N, drag-drop, app picker, switcher's "Add
+    /// new project"). Gates on `LicenseGate.canCreateProject` and
+    /// either opens the create sheet or the paywall accordingly.
+    /// Free-tier cap is 10 projects; Pro is unlimited.
+    private func requestNewProject(preselectedURL: URL? = nil) {
+        let count = registryStore.entries.count
+        let isEntitled = Licensing.manager.isEntitled
+        if LicenseGate.canCreateProject(projectCount: count, isEntitled: isEntitled) {
+            preselectedDropURL = preselectedURL
+            showCreateNew = true
+        } else {
+            pendingDropURLAfterPaywall = preselectedURL
+            showPaywall = true
+        }
+    }
+
+    /// Evaluates whether to show the 30-day support nag. Called from
+    /// `.task` once entitlement has had a moment to settle. Pro users
+    /// and free users within the 30-day window never see it.
+    private func checkSupportNag() {
+        let shouldShow = LicenseGate.shouldShowSupportNag(
+            lastShown: preferencesStore.preferences.licenseSupportNagLastShown,
+            isEntitled: Licensing.manager.isEntitled)
+        if shouldShow {
+            showSupportNag = true
+        }
+    }
+
+    /// Records "user has seen the nag now" regardless of how the sheet
+    /// was dismissed (Maybe later, escape, activation success). Always
+    /// resets the 30-day clock.
+    private func recordSupportNagShown() {
+        try? preferencesStore.update { prefs in
+            prefs.licenseSupportNagLastShown = Date()
         }
     }
 
@@ -332,7 +409,7 @@ struct EmptyState: View {
     let icon: String
     var body: some View {
         VStack(spacing: Tokens.spacing(.md)) {
-            Image(icon, bundle: .module)
+            Image(icon, bundle: LutinAssets.bundle)
                 .resizable().scaledToFit().frame(width: 64, height: 64)
                 .foregroundStyle(.tertiary)
             Text(title).font(.headline)

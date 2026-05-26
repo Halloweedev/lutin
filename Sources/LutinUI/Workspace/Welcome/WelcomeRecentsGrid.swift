@@ -1,12 +1,13 @@
 import SwiftUI
 import LutinRegistry
 
-/// Horizontal row of recent-project cards on the welcome page. A
-/// `+ New project` tile leads the row, followed by up to 10 recents
-/// sorted by `lastOpenedDate`.
+/// Horizontal row of recent-project cards on the welcome page. An
+/// `Open existing…` tile leads the row, followed by up to 10 recents
+/// sorted by `lastOpenedDate`. Project creation lives in the drop
+/// zone above — the recent row is for re-opening, not creating.
 struct WelcomeRecentsGrid: View {
     let entries: [RegistryEntryStatus]
-    let onCreateNew: () -> Void
+    let onOpenExisting: () -> Void
     let onSelect: (String) -> Void
     let onReveal: (RegistryEntry) -> Void
     let onRemove: (String) -> Void
@@ -29,7 +30,7 @@ struct WelcomeRecentsGrid: View {
             .padding(.horizontal, 2)
 
             LazyVGrid(columns: columns, spacing: Tokens.spacing(.sm)) {
-                newProjectCard
+                openExistingCard
                 ForEach(entries, id: \.entry.name) { status in
                     WelcomeRecentCard(
                         entry: status.entry,
@@ -42,13 +43,13 @@ struct WelcomeRecentsGrid: View {
         }
     }
 
-    private var newProjectCard: some View {
-        LutinButton(action: onCreateNew) {
+    private var openExistingCard: some View {
+        LutinButton(action: onOpenExisting) {
             VStack(spacing: Tokens.spacing(.xs)) {
-                Image(systemName: "plus")
+                Image(systemName: "folder")
                     .font(.system(size: 22, weight: .regular))
                     .foregroundStyle(Tokens.color(.brandAccent))
-                Text("New project")
+                Text("Open existing")
                     .font(Typography.chromeSmall.weight(.medium))
                     .foregroundStyle(Tokens.color(.brandAccent))
             }

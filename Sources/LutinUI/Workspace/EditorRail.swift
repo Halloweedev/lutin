@@ -59,22 +59,22 @@ public struct EditorRail: View {
     }
 }
 
-/// Brand mark pinned at the top of the rail. Renders a brand-accent
-/// square with a white "L" and stays non-interactive so navigation
-/// affordances remain limited to the tab buttons and project switcher.
+/// Brand mark pinned at the top of the rail. Renders the Lutin logo
+/// as a template image tinted with `brandAccent` so it stays black on
+/// light surfaces and white in dark mode without per-appearance swaps.
+/// Non-interactive — navigation lives in the tab buttons and project
+/// switcher below.
 ///
 /// The slot is `railWidth × railWidth` so it shares the rail's grid
-/// with the tab buttons below it.
+/// with the tab buttons.
 private struct LogoSlot: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: 6)
-            .fill(Tokens.color(.brandAccent))
+        Image("LutinLogo", bundle: LutinAssets.bundle)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
             .frame(width: 24, height: 24)
-            .overlay {
-                Text("L")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(Tokens.color(.textOnAccent))
-            }
+            .foregroundStyle(Tokens.color(.brandAccent))
             .frame(maxWidth: .infinity)
             .frame(height: Tokens.Size.railWidth)
             .accessibilityLabel("Lutin")

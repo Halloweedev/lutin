@@ -9,6 +9,7 @@ import LutinDocument
 /// workspace via `onCreate`.
 public struct CreateProjectSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(PreferencesStore.self) private var preferencesStore
     let onCreate: (URL, String) -> Void
     let preselectedAppURL: URL?
 
@@ -225,12 +226,15 @@ public struct CreateProjectSheet: View {
     private func create() {
         do {
             let trimmedName = projectName.trimmingCharacters(in: .whitespaces)
+            let prefs = preferencesStore.preferences
             let inputs = ProjectBootstrap.Inputs(
                 projectName: trimmedName,
                 bundleId: bundleId.trimmingCharacters(in: .whitespaces),
                 appPath: appPath,
                 windowWidth: windowWidth,
-                windowHeight: windowHeight)
+                windowHeight: windowHeight,
+                defaultSigningIdentity: prefs.defaultSigningIdentity,
+                defaultNotaryProfile: prefs.defaultNotaryProfile)
             let url = try ProjectBootstrap.create(inputs: inputs)
             onCreate(url, trimmedName)
             dismiss()

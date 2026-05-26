@@ -18,6 +18,17 @@ public struct LutinPreferences: Codable, Equatable {
     /// Keychain Access app. So Lutin tracks creations it observed
     /// firsthand and stays silent about everything else.
     public var knownNotaryProfiles: [String]
+    /// When the 30-day "support development" sheet was last shown to
+    /// this user. `nil` means it has never been shown — show on the
+    /// next free-tier launch.
+    public var licenseSupportNagLastShown: Date?
+    /// Default Developer ID identity name used to seed `signing.identity`
+    /// on newly-created projects. The value is the full identity string
+    /// (e.g. `"Developer ID Application: Name (TEAMID)"`).
+    public var defaultSigningIdentity: String?
+    /// Default `notarytool` keychain profile name used to seed
+    /// `notarization.profile` on newly-created projects.
+    public var defaultNotaryProfile: String?
 
     public enum Theme: String, Codable, Equatable { case system, light, dark }
 
@@ -25,12 +36,18 @@ public struct LutinPreferences: Codable, Equatable {
                 snapGridSize: Int = 4,
                 showAlignmentGuides: Bool = true,
                 theme: Theme = .system,
-                knownNotaryProfiles: [String] = []) {
+                knownNotaryProfiles: [String] = [],
+                licenseSupportNagLastShown: Date? = nil,
+                defaultSigningIdentity: String? = nil,
+                defaultNotaryProfile: String? = nil) {
         self.defaultOutputDirectory = defaultOutputDirectory
         self.snapGridSize = snapGridSize
         self.showAlignmentGuides = showAlignmentGuides
         self.theme = theme
         self.knownNotaryProfiles = knownNotaryProfiles
+        self.licenseSupportNagLastShown = licenseSupportNagLastShown
+        self.defaultSigningIdentity = defaultSigningIdentity
+        self.defaultNotaryProfile = defaultNotaryProfile
     }
 }
 

@@ -10,14 +10,32 @@ public struct PreferencesWindow: View {
     public init(store: PreferencesStore) { self.store = store }
 
     public var body: some View {
-        TabView(selection: $selectedTab) {
-            generalTab.tabItem { Label("General", systemImage: "gearshape") }.tag(Tab.general)
-            buildTab.tabItem { Label("Build", systemImage: "hammer") }.tag(Tab.build)
-            signingTab.tabItem { Label("Signing", systemImage: "checkmark.seal") }.tag(Tab.signing)
-            themeTab.tabItem { Label("Theme", systemImage: "paintbrush") }.tag(Tab.theme)
+        VStack(spacing: Tokens.spacing(.md)) {
+            brandHeader
+            TabView(selection: $selectedTab) {
+                generalTab.tabItem { Label("General", systemImage: "gearshape") }.tag(Tab.general)
+                buildTab.tabItem { Label("Build", systemImage: "hammer") }.tag(Tab.build)
+                signingTab.tabItem { Label("Signing", systemImage: "checkmark.seal") }.tag(Tab.signing)
+                themeTab.tabItem { Label("Theme", systemImage: "paintbrush") }.tag(Tab.theme)
+            }
         }
-        .frame(minWidth: 520, minHeight: 320)
+        .frame(minWidth: 520, minHeight: 360)
         .padding(Tokens.spacing(.xl))
+    }
+
+    private var brandHeader: some View {
+        HStack(spacing: Tokens.spacing(.sm)) {
+            Image("LutinLogo", bundle: LutinAssets.bundle)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 22, height: 22)
+                .foregroundStyle(Tokens.color(.brandAccent))
+            Text("Lutin")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Tokens.color(.textPrimary))
+            Spacer()
+        }
     }
 
     private var generalTab: some View {
