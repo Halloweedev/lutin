@@ -42,26 +42,37 @@ public struct TabBody<Content: View>: View {
 ///     section boundary in every tab.
 ///   • header padding-bottom: 4pt — fixed offset between section title
 ///     and first content row.
-public struct SettingsSection<Content: View, HeaderTrailing: View>: View {
+public struct SettingsSection<Content: View,
+                              HeaderTrailing: View,
+                              HeaderMeta: View>: View {
     let title: String
     let footer: String?
+    /// Read-only meta — pill, path, status — that sits next to the title and
+    /// demotes typographically (`chromeSmall` `textTertiary`). Interactive
+    /// controls go in `headerTrailing` instead.
+    let headerMeta: HeaderMeta
     let headerTrailing: HeaderTrailing
     let content: Content
+
     public init(_ title: String,
                 footer: String? = nil,
+                @ViewBuilder headerMeta: () -> HeaderMeta = { EmptyView() },
                 @ViewBuilder headerTrailing: () -> HeaderTrailing = { EmptyView() },
                 @ViewBuilder content: () -> Content) {
         self.title = title
         self.footer = footer
+        self.headerMeta = headerMeta()
         self.headerTrailing = headerTrailing()
         self.content = content()
     }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: Tokens.spacing(.sm)) {
             HStack(spacing: Tokens.spacing(.sm)) {
                 Text(title)
                     .font(Typography.chromeSmall.weight(.medium))
                     .foregroundStyle(Tokens.color(.textTertiary))
+                headerMeta
                 Spacer()
                 headerTrailing
             }
