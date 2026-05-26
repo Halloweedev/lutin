@@ -15,16 +15,13 @@ struct WelcomeRecentCard: View {
     let onReveal: () -> Void
     let onRemove: () -> Void
 
-    /// Loaded .app icon, or `nil` until the `.task` finishes / when the
-    /// bundle isn't reachable. The view shows the gradient placeholder
-    /// in either case.
-    @State private var appIcon: CGImage?
-
     var body: some View {
         ZStack(alignment: .topTrailing) {
             LutinButton(action: onSelect) {
                 VStack(spacing: Tokens.spacing(.xs)) {
-                    iconTile
+                    ProjectIconTile(name: entry.name,
+                                    appPath: entry.appPath,
+                                    sizePoints: 44)
                     Text(entry.name)
                         .font(Typography.chromeSmall.weight(.medium))
                         .foregroundStyle(Tokens.color(.textPrimary))
@@ -45,39 +42,6 @@ struct WelcomeRecentCard: View {
             overflowMenu
                 .padding(.top, 4)
                 .padding(.trailing, 4)
-        }
-    }
-
-    private var iconTile: some View {
-        Group {
-            if let appIcon {
-                // Real .app icon. CGImage doesn't carry scale info, so
-                // tell SwiftUI it's @2x (we requested 88px backing for
-                // a 44pt frame) — yields crisp Retina rendering.
-                // No shadow — macOS app icons bake their own depth in.
-                Image(decorative: appIcon, scale: 2, orientation: .up)
-                    .resizable()
-                    .interpolation(.high)
-                    .frame(width: 44, height: 44)
-            } else {
-                placeholderTile
-            }
-        }
-        .task(id: entry.appPath) {
-            let url = URL(fileURLWithPath: entry.appPath)
-            appIcon = AppIconLoader.appBundleIcon(at: url, sizePoints: 88)
-        }
-    }
-
-    private var placeholderTile: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Self.gradient(for: entry.name))
-                .frame(width: 44, height: 44)
-                .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
-            Text(String(entry.name.prefix(1)).uppercased())
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(.white)
         }
     }
 
@@ -131,20 +95,4 @@ struct WelcomeRecentCard: View {
         .fixedSize()
     }
 
-    /// Deterministic gradient palette keyed by the project name's
-    /// first character. Keeps the grid visually varied without
-    /// requiring the real .app icon (which isn't always available).
-    private static func gradient(for name: String) -> LinearGradient {
-        let palette: [(Color, Color)] = [
-            (Color(red: 0.77, green: 0.37, blue: 0.16), Color(red: 0.43, green: 0.23, blue: 0.10)), // orange
-            (Color(red: 0.29, green: 0.48, blue: 0.72), Color(red: 0.16, green: 0.29, blue: 0.47)), // blue
-            (Color(red: 0.44, green: 0.58, blue: 0.33), Color(red: 0.25, green: 0.33, blue: 0.19)), // green
-            (Color(red: 0.72, green: 0.53, blue: 0.29), Color(red: 0.48, green: 0.35, blue: 0.16)), // amber
-        ]
-        let key = Int(name.unicodeScalars.first?.value ?? 0)
-        let pick = palette[abs(key) % palette.count]
-        return LinearGradient(colors: [pick.0, pick.1],
-                              startPoint: .topLeading,
-                              endPoint: .bottomTrailing)
-    }
 }
