@@ -18,3 +18,9 @@
 # Internal planning docs (specs, plans, runbooks, screenshots).
 # Kept locally for context but not part of the public repo.
 /docs/superpowers/
+
+# Loose icon-source exports at repo root (Icon Composer / iOS-style
+# raw PNGs). The vector source-of-truth lives at docs/lutin.icon/
+# and the build-needed sizes are in AppIcon.appiconset/; intermediate
+# rasterizations don't belong in git.
+/Icon-*.png
