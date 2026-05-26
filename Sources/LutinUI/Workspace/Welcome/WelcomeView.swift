@@ -85,7 +85,8 @@ public struct WelcomeView: View {
     private var hero: some View {
         VStack(spacing: Tokens.spacing(.lg)) {
             brandMark
-            WelcomeDropHero(onPickApp: onPickApp)
+            WelcomeDropHero(onPickApp: onPickApp,
+                            onOpenExisting: onOpenExisting)
         }
         .frame(maxWidth: 460)
     }
