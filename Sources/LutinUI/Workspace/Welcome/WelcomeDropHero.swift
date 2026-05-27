@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 /// Primary CTA on the welcome page. A heavy dashed rectangle whose title
@@ -52,24 +51,14 @@ struct WelcomeDropHero: View {
                 Text("browse for an app")
                     .font(Typography.chromeSmall.weight(.medium))
                     .foregroundStyle(Tokens.color(.brandAccent))
-                    .contentShape(Rectangle())
-                    .onHover { hovering in
-                        if hovering { NSCursor.pointingHand.push() }
-                        else { NSCursor.pop() }
-                    }
-                    .onTapGesture { openPanel() }
+                    .textLink(action: openPanel)
                 Text("·")
                     .font(Typography.chromeSmall)
                     .foregroundStyle(Tokens.color(.textTertiary))
                 Text("open existing project")
                     .font(Typography.chromeSmall.weight(.medium))
                     .foregroundStyle(Tokens.color(.brandAccent))
-                    .contentShape(Rectangle())
-                    .onHover { hovering in
-                        if hovering { NSCursor.pointingHand.push() }
-                        else { NSCursor.pop() }
-                    }
-                    .onTapGesture { onOpenExisting() }
+                    .textLink(action: onOpenExisting)
             }
             .padding(.top, Tokens.spacing(.sm))
         }

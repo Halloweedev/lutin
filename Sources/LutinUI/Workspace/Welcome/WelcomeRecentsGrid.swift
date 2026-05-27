@@ -1,36 +1,42 @@
 import SwiftUI
 import LutinRegistry
 
-/// Horizontal row of recent-project cards on the welcome page. An
-/// `Open existing…` tile leads the row, followed by up to 10 recents
-/// sorted by `lastOpenedDate`. Project creation lives in the drop
-/// zone above — the recent row is for re-opening, not creating.
+/// Horizontal grid of recent-project cards. The "Open existing" affordance
+/// moved to the drop-hero inline link in 2026-05-26 — this grid is now
+/// purely about recents. 4-column layout (down from 5) so cards breathe.
+/// When more than 4 projects exist, a "See all →" link on the header
+/// opens the switcher modal.
 struct WelcomeRecentsGrid: View {
     let entries: [RegistryEntryStatus]
-    let onOpenExisting: () -> Void
+    let onSeeAll: () -> Void
     let onSelect: (String) -> Void
     let onReveal: (RegistryEntry) -> Void
     let onRemove: (String) -> Void
 
+    private static let maxVisibleCards = 4
+
     private let columns: [GridItem] = Array(
         repeating: GridItem(.flexible(), spacing: Tokens.spacing(.sm)),
-        count: 5)
+        count: WelcomeRecentsGrid.maxVisibleCards)
 
     var body: some View {
         VStack(alignment: .leading, spacing: Tokens.spacing(.xs)) {
             HStack {
-                Text("Recent projects")
-                    .font(Typography.chromeSmall.weight(.medium))
-                    .foregroundStyle(Tokens.color(.textSecondary))
-                Spacer()
-                Text("\(entries.count) projects")
-                    .font(Typography.chromeSmall)
+                Text("RECENT · \(entries.count)")
+                    .font(.system(size: 10, weight: .medium))
+                    .tracking(0.8)
                     .foregroundStyle(Tokens.color(.textTertiary))
+                Spacer()
+                if entries.count > Self.maxVisibleCards {
+                    Text("See all →")
+                        .font(Typography.chromeSmall)
+                        .foregroundStyle(Tokens.color(.brandAccent))
+                        .textLink(action: onSeeAll)
+                }
             }
             .padding(.horizontal, 2)
 
             LazyVGrid(columns: columns, spacing: Tokens.spacing(.sm)) {
-                openExistingCard
                 ForEach(entries, id: \.entry.name) { status in
                     WelcomeRecentCard(
                         entry: status.entry,
@@ -40,26 +46,6 @@ struct WelcomeRecentsGrid: View {
                         onRemove: { onRemove(status.entry.name) })
                 }
             }
-        }
-    }
-
-    private var openExistingCard: some View {
-        LutinButton(action: onOpenExisting) {
-            VStack(spacing: Tokens.spacing(.xs)) {
-                Image(systemName: "folder")
-                    .font(.system(size: 22, weight: .regular))
-                    .foregroundStyle(Tokens.color(.brandAccent))
-                Text("Open existing")
-                    .font(Typography.chromeSmall.weight(.medium))
-                    .foregroundStyle(Tokens.color(.brandAccent))
-            }
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 108)
-            .background(Tokens.color(.brandAccentMuted).opacity(0.35))
-            .overlay(SquareShape()
-                .stroke(Tokens.color(.brandAccent),
-                        style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
-            .contentShape(Rectangle())
         }
     }
 }

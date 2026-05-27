@@ -39,7 +39,7 @@ public struct WelcomeView: View {
                 hero
                 WelcomeRecentsGrid(
                     entries: recentEntries,
-                    onOpenExisting: onOpenExisting,
+                    onSeeAll: onOpenExisting,
                     onSelect: onSelectRecent,
                     onReveal: revealInFinder,
                     onRemove: { name in try? registryStore.remove(name: name) })
