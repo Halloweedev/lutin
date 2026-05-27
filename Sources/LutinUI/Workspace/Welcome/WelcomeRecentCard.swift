@@ -23,7 +23,7 @@ struct WelcomeRecentCard: View {
                                     appPath: entry.appPath,
                                     sizePoints: 44)
                     Text(entry.name)
-                        .font(Typography.chromeSmall.weight(.medium))
+                        .font(Typography.chromeSmall.weight(.semibold))
                         .foregroundStyle(Tokens.color(.textPrimary))
                         .lineLimit(1)
                     statusLine
@@ -52,7 +52,7 @@ struct WelcomeRecentCard: View {
                 .fill(statusColor)
                 .frame(width: 6, height: 6)
             Text(statusText)
-                .font(Typography.chromeSmall)
+                .font(.system(size: 10))
                 .foregroundStyle(Tokens.color(.textTertiary))
                 .lineLimit(1)
         }
