@@ -45,4 +45,19 @@ final class ProjectSwitcherFilterTests: XCTestCase {
         XCTAssertEqual(
             ProjectSwitcherFilter.filter(entries, query: "zzzz").count, 0)
     }
+
+    func testFilterStatusesNameMatch() {
+        let statuses = [
+            RegistryEntryStatus(
+                entry: entry(name: "Luce", path: "/p/lutin.yml"),
+                status: .ok),
+            RegistryEntryStatus(
+                entry: entry(name: "Marfa", path: "/q/lutin.yml"),
+                status: .missing),
+        ]
+        XCTAssertEqual(
+            ProjectSwitcherFilter.filter(statuses, query: "luce").count, 1)
+        XCTAssertEqual(
+            ProjectSwitcherFilter.filter(statuses, query: "").count, 2)
+    }
 }

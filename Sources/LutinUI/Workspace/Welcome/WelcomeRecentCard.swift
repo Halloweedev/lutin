@@ -59,13 +59,9 @@ struct WelcomeRecentCard: View {
     }
 
     private var statusColor: Color {
-        if isMissingOnDisk { return StatusKind.blocked.color }
-        switch entry.lastBuildOutcome {
-        case .succeeded: return StatusKind.ok.color
-        case .failed:    return StatusKind.warn.color
-        case .unsigned:  return Tokens.color(.textTertiary)
-        case .none:      return Tokens.color(.textTertiary)
-        }
+        RegistryEntryStatusKind
+            .resolve(entry: entry, isMissingOnDisk: isMissingOnDisk)
+            .dotColor
     }
 
     private var statusText: String {
