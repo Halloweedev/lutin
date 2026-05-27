@@ -289,7 +289,7 @@ public struct PathPickerRow: View {
     }
     public var body: some View {
         HStack(spacing: Tokens.spacing(.sm)) {
-            Text(value.isEmpty ? placeholder : value)
+            Text(value.isEmpty ? placeholder : value.collapsedHome)
                 .font(Typography.chromeSmall)
                 .foregroundStyle(value.isEmpty
                                  ? Tokens.color(.textTertiary)
