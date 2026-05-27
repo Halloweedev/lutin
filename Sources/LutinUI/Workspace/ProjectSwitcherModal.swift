@@ -71,21 +71,29 @@ public struct ProjectSwitcherModal: View {
             .background(Tokens.color(.sheetBackground))
             Divider().frame(height: Tokens.Size.hairline)
                 .background(Tokens.color(.divider))
-            scopeStrip
+            if !filteredStatuses.isEmpty {
+                scopeStrip
+            }
             ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(filteredStatuses.enumerated()),
-                                id: \.element.entry.name) { idx, status in
-                            entryRow(status, isHighlighted: idx == highlightedIndex)
-                                .id(status.entry.name)
-                                .onTapGesture { open(status.entry.name) }
+                if filteredStatuses.isEmpty {
+                    emptyStateView
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(filteredStatuses.enumerated()),
+                                    id: \.element.entry.name) { idx, status in
+                                entryRow(status,
+                                         isHighlighted: idx == highlightedIndex)
+                                    .id(status.entry.name)
+                                    .onTapGesture { open(status.entry.name) }
+                            }
                         }
                     }
-                }
-                .onChange(of: highlightedIndex) { _, new in
-                    if let target = filteredStatuses[safe: new] {
-                        proxy.scrollTo(target.entry.name, anchor: .center)
+                    .onChange(of: highlightedIndex) { _, new in
+                        if let target = filteredStatuses[safe: new] {
+                            proxy.scrollTo(target.entry.name, anchor: .center)
+                        }
                     }
                 }
             }
@@ -134,7 +142,10 @@ public struct ProjectSwitcherModal: View {
             highlightedIndex = max(0, highlightedIndex - 1); return .handled
         }
         .onKeyPress(.downArrow) {
-            highlightedIndex = min(filteredStatuses.count - 1, highlightedIndex + 1); return .handled
+            highlightedIndex = max(0, min(filteredStatuses.count - 1, highlightedIndex + 1)); return .handled
+        }
+        .onChange(of: filteredStatuses.count) { _, _ in
+            highlightedIndex = 0
         }
         .sheet(item: $deleteCandidate) { request in
             DeleteProjectSheet(entry: request.entry, onConfirm: { alsoTrash in
@@ -157,6 +168,25 @@ public struct ProjectSwitcherModal: View {
         .padding(.horizontal, Tokens.spacing(.md))
         .padding(.top, Tokens.spacing(.sm))
         .padding(.bottom, 4)
+    }
+
+    @ViewBuilder
+    private var emptyStateView: some View {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        VStack(spacing: Tokens.spacing(.sm)) {
+            Image(systemName: q.isEmpty ? "tray" : "questionmark.circle")
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(Tokens.color(.brandAccent))
+            Text(q.isEmpty ? "No projects yet" : "No projects match \"\(q)\"")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Tokens.color(.textPrimary))
+            if q.isEmpty {
+                Text("Drop or pick a .app to start one.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Tokens.color(.textTertiary))
+            }
+        }
+        .padding(.vertical, Tokens.spacing(.xl))
     }
 
     private var filteredStatuses: [RegistryEntryStatus] {
