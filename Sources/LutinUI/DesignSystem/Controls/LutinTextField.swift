@@ -7,13 +7,15 @@ import AppKit
 public struct LutinTextField: View {
     let prompt: String
     public let text: Binding<String>
+    let font: Font
 
     @State private var interaction = ControlInteractionState.State(
         isHovered: false, isPressed: false, isFocused: false)
 
-    public init(_ prompt: String, text: Binding<String>) {
+    public init(_ prompt: String, text: Binding<String>, font: Font = Typography.controlLabel) {
         self.prompt = prompt
         self.text = text
+        self.font = font
     }
 
     public var body: some View {
@@ -22,7 +24,7 @@ public struct LutinTextField: View {
         let fill = interaction.resolvedFill(base: baseFill)
         SwiftUI.TextField(prompt, text: text)  // allow-menu-button: hidden behind LutinTextField
             .textFieldStyle(.plain)
-            .font(Typography.controlLabel)
+            .font(font)
             .foregroundStyle(Tokens.color(.textPrimary))
             .padding(.horizontal, Tokens.spacing(.sm))
             .padding(.vertical, Tokens.spacing(.xs))

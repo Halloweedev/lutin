@@ -42,10 +42,22 @@ public struct ProjectSwitcherModal: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            LutinTextField("Search projects…", text: $query)
-                .padding(Tokens.spacing(.md))
-                .background(Tokens.color(.sheetBackground))
-            Divider().frame(height: Tokens.Size.hairline).background(Tokens.color(.divider))
+            ZStack(alignment: .leading) {
+                // 12pt glyph + ~6pt gap = ~18pt clearance for the text field's content.
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(Tokens.color(.textTertiary))
+                    .allowsHitTesting(false)
+                    .padding(.leading, Tokens.spacing(.md) + 4)
+                LutinTextField("Search projects by name or path…",
+                               text: $query,
+                               font: .system(size: 14))
+                    .padding(.leading, Tokens.spacing(.md) + 22)
+            }
+            .padding(Tokens.spacing(.md))
+            .background(Tokens.color(.sheetBackground))
+            Divider().frame(height: Tokens.Size.hairline)
+                .background(Tokens.color(.divider))
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
