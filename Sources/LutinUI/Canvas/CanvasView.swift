@@ -112,6 +112,24 @@ public struct CanvasView: View {
                             .position(x: configW / 2, y: CGFloat(gy))
                             .allowsHitTesting(false)
                     }
+                    // Canvas-center snap — solid magenta lines at the
+                    // canvas centerlines. Distinct from the Option-hover
+                    // measurement overlay (also magenta) by line style:
+                    // these are solid; the measurement overlay is dashed.
+                    if guideState.canvasCenterX {
+                        Rectangle()
+                            .fill(Tokens.color(.measurementGuide))
+                            .frame(width: Tokens.Size.hairline, height: configH)
+                            .position(x: configW / 2, y: configH / 2)
+                            .allowsHitTesting(false)
+                    }
+                    if guideState.canvasCenterY {
+                        Rectangle()
+                            .fill(Tokens.color(.measurementGuide))
+                            .frame(width: configW, height: Tokens.Size.hairline)
+                            .position(x: configW / 2, y: configH / 2)
+                            .allowsHitTesting(false)
+                    }
                     // Equal-spacing pills — render two distance badges
                     // between the dragged item and its flanking siblings.
                     if let hint = guideState.equalSpacingX {
