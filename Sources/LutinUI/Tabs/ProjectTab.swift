@@ -39,7 +39,7 @@ public struct ProjectTab: View {
                 // was built around" but it doesn't drive anything; the
                 // real identifier lives inside the .app. See helper.
                 SettingsField("Bundle identifier",
-                              helper: "Read from \(document.config.app.path.isEmpty ? "the linked .app" : "the .app")'s Info.plist. Edit it in Xcode → target → Signing & Capabilities, or in the .app's Info.plist directly.") {
+                              helper: "Edit in Xcode → target → Signing & Capabilities, or in the .app's Info.plist.") {
                     BundleIdentifierReadout(
                         appPath: document.config.app.path,
                         projectDirectory: document.projectDirectory,
@@ -117,20 +117,32 @@ private struct BundleIdentifierReadout: View {
     let fallback: String
 
     var body: some View {
-        Text(displayedIdentifier.isEmpty ? "—" : displayedIdentifier)
-            .font(Typography.chromeSmall)
-            .foregroundStyle(displayedIdentifier.isEmpty
-                             ? Tokens.color(.textTertiary)
-                             : Tokens.color(.textPrimary))
-            .lineLimit(1)
-            .truncationMode(.middle)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(SquareShape().fill(Tokens.color(.canvasBackground)))
-            .overlay(SquareShape().stroke(Tokens.color(.divider),
-                                          lineWidth: Tokens.Size.hairline))
-            .textSelection(.enabled)
+        HStack(spacing: Tokens.spacing(.sm)) {
+            Text(displayedIdentifier.isEmpty ? "—" : displayedIdentifier)
+                .font(.system(size: 11.5, design: .monospaced))
+                .foregroundStyle(displayedIdentifier.isEmpty
+                                 ? Tokens.color(.textTertiary)
+                                 : Tokens.color(.textPrimary))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Tokens.color(.canvasBackground))
+                .overlay(SquareShape().stroke(Tokens.color(.divider),
+                                              lineWidth: Tokens.Size.hairline))
+                .textSelection(.enabled)
+            if !displayedIdentifier.isEmpty {
+                Text("from Info.plist")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Tokens.color(.textTertiary))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.6))
+                    .overlay(SquareShape().stroke(Tokens.color(.divider),
+                                                  lineWidth: Tokens.Size.hairline))
+            }
+        }
     }
 
     /// Resolves the `.app` URL and asks `AppBundleInfo` to read its
