@@ -13,7 +13,7 @@ public struct LutinIconButton: View {
         isHovered: false, isPressed: false, isFocused: false)
 
     public init(asset: String, accessibilityLabel: String, action: @escaping () -> Void) {
-        self.symbol = Image(asset, bundle: .module)
+        self.symbol = Image(asset, bundle: LutinAssets.bundle).renderingMode(.template)
         self.accessibilityLabel = accessibilityLabel
         self.action = action
     }

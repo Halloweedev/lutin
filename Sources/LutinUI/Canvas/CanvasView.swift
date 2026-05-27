@@ -240,11 +240,10 @@ public struct CanvasView: View {
                 .padding(Tokens.spacing(.xl))
             }
             .scrollIndicators(.hidden)
-            // Bottom-leading: Preview/Build/Release/Doctor actions.
+            // Bottom-leading: Preview/Build/Release actions.
             .overlay(alignment: .bottomLeading) {
                 CanvasActionsBar(document: document,
                                  runner: runner,
-                                 showingDoctor: $showingDoctor,
                                  projectName: projectName,
                                  registryStore: registryStore)
                     .padding(Tokens.spacing(.md))

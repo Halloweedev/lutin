@@ -11,23 +11,19 @@ public struct WindowTab: View {
         TabBody {
             SettingsSection("Dimensions") {
                 SettingsRow(icon: "arrow.left.and.right", "Width") {
-                    dimensionValueRow(value: "\(window.width ?? 680) pt",
-                                      binding: widthBinding, range: 320...2048, step: 10)
+                    dimensionValueRow(binding: widthBinding, range: 320...2048, step: 10, unit: "pt")
                 }
                 SettingsRow(icon: "arrow.up.and.down", "Height") {
-                    dimensionValueRow(value: "\(window.height ?? 420) pt",
-                                      binding: heightBinding, range: 240...1536, step: 10)
+                    dimensionValueRow(binding: heightBinding, range: 240...1536, step: 10, unit: "pt")
                 }
             }
 
             SettingsSection("Icons & Labels") {
                 SettingsRow(icon: "square.dashed", "Icon size") {
-                    dimensionValueRow(value: "\(window.iconSize ?? 96) pt",
-                                      binding: iconSizeBinding, range: 32...256, step: 8)
+                    dimensionValueRow(binding: iconSizeBinding, range: 32...256, step: 8, unit: "pt")
                 }
                 SettingsRow(icon: "textformat.size", "Text size") {
-                    dimensionValueRow(value: "\(window.textSize ?? 12) pt",
-                                      binding: textSizeBinding, range: 8...32, step: 1)
+                    dimensionValueRow(binding: textSizeBinding, range: 8...32, step: 1, unit: "pt")
                 }
             }
 
@@ -41,21 +37,23 @@ public struct WindowTab: View {
         }
     }
 
-    /// Value-and-stepper trailing content for a `SettingsRow`. The value
-    /// text is pinned to a single line via `fixedSize(horizontal:)` —
-    /// without it, the narrow side-panel column will wrap a string like
-    /// `"152 pt"` at the space and stack "152" above "pt".
-    private func dimensionValueRow(value: String,
-                                   binding: Binding<Int>,
+    /// Stepper-left, typeable-value-right trailing content for a `SettingsRow`.
+    /// The stepper sits on the left; the numeric field sits to its right with
+    /// the unit suffix. The field is clamped to the same range the stepper uses.
+    private func dimensionValueRow(binding: Binding<Int>,
                                    range: ClosedRange<Int>,
-                                   step: Int) -> some View {
+                                   step: Int,
+                                   unit: String) -> some View {
         HStack(spacing: Tokens.spacing(.sm)) {
-            Text(value)
-                .font(.system(size: 12))
-                .foregroundStyle(Tokens.color(.textSecondary))
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
             LutinStepper(value: binding, in: range, step: step)
+            HStack(spacing: 2) {
+                LutinNumericField("", value: binding.clamped(to: range),
+                                  format: .number)
+                    .frame(width: 56)
+                Text(unit)
+                    .font(Typography.chromeSmall)
+                    .foregroundStyle(Tokens.color(.textTertiary))
+            }
         }
     }
 

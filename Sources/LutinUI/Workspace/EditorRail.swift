@@ -22,7 +22,7 @@ public struct EditorRail: View {
             // dividers in tab content. No inter-row spacing; the
             // hairline does the visual separation work.
             ForEach(EditorTab.allCases, id: \.self) { tab in
-                RailButton(systemImage: tab.iconName,
+                RailButton(asset: tab.iconName,
                            isSelected: tab == selectedTab,
                            tooltip: tab.title,
                            action: { selectedTab = tab })
@@ -88,7 +88,7 @@ private struct RailRowDivider: ViewModifier {
 /// Press darkens the active fill (selected → darker accent; hover → darker
 /// grey) so users get the same press feedback in both states.
 private struct RailButton: View {
-    let systemImage: String
+    let asset: String
     let isSelected: Bool
     let tooltip: String
     let action: () -> Void
@@ -105,8 +105,11 @@ private struct RailButton: View {
         // trailing divider. The visual indicator and the hit target are
         // the same surface — no inner padding to mistime hover/selection.
         SwiftUI.Button(action: action) {  // allow-menu-button: hidden behind RailButton
-            Image(systemName: systemImage)
-                .font(.system(size: 17, weight: .regular))
+            Image(asset, bundle: LutinAssets.bundle)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 20, height: 20)
                 .foregroundStyle(fg)
                 .frame(maxWidth: .infinity)
                 .frame(height: Tokens.Size.railWidth)
