@@ -6,24 +6,40 @@ public struct ResizeHandles: View {
     @Bindable var document: LutinProjectDocument
     let index: Int
     let deco: LutinConfig.Decoration
+    /// Bounding-box width and height in canvas points. Width comes from
+    /// `deco.width`; height is derived by the parent layer from the
+    /// source image's aspect ratio. Pass both so the corner / edge dots
+    /// land on the actual rectangle, not on a square inferred from
+    /// `width × width` (which used to make the dots float off the image
+    /// whenever the source wasn't 1:1).
+    let widthPoints: CGFloat
+    let heightPoints: CGFloat
     @State private var dragStartWidth: Int = 0
 
-    public init(document: LutinProjectDocument, index: Int, deco: LutinConfig.Decoration) {
-        self.document = document; self.index = index; self.deco = deco
+    public init(document: LutinProjectDocument,
+                index: Int,
+                deco: LutinConfig.Decoration,
+                widthPoints: CGFloat,
+                heightPoints: CGFloat) {
+        self.document = document
+        self.index = index
+        self.deco = deco
+        self.widthPoints = widthPoints
+        self.heightPoints = heightPoints
     }
 
     public var body: some View {
-        let w = CGFloat(deco.width ?? 100)
-        let halfW = w / 2
+        let halfW = widthPoints / 2
+        let halfH = heightPoints / 2
         ZStack {
-            handle(at: CGPoint(x: -halfW, y: -halfW), direction: .nw)
-            handle(at: CGPoint(x: 0, y: -halfW), direction: .n)
-            handle(at: CGPoint(x: halfW, y: -halfW), direction: .ne)
-            handle(at: CGPoint(x: halfW, y: 0), direction: .e)
-            handle(at: CGPoint(x: halfW, y: halfW), direction: .se)
-            handle(at: CGPoint(x: 0, y: halfW), direction: .s)
-            handle(at: CGPoint(x: -halfW, y: halfW), direction: .sw)
-            handle(at: CGPoint(x: -halfW, y: 0), direction: .w)
+            handle(at: CGPoint(x: -halfW, y: -halfH), direction: .nw)
+            handle(at: CGPoint(x: 0,      y: -halfH), direction: .n)
+            handle(at: CGPoint(x: halfW,  y: -halfH), direction: .ne)
+            handle(at: CGPoint(x: halfW,  y: 0),      direction: .e)
+            handle(at: CGPoint(x: halfW,  y: halfH),  direction: .se)
+            handle(at: CGPoint(x: 0,      y: halfH),  direction: .s)
+            handle(at: CGPoint(x: -halfW, y: halfH),  direction: .sw)
+            handle(at: CGPoint(x: -halfW, y: 0),      direction: .w)
         }
     }
 
