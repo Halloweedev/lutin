@@ -78,8 +78,11 @@ public struct ItemDragController: ViewModifier {
                         guideState.equalSpacingY = nil
                         guideState.canvasCenterX = false
                         guideState.canvasCenterY = false
-                        let dx = Self.snap(Int(v.translation.width), gridSize: snapGrid)
-                        let dy = Self.snap(Int(v.translation.height), gridSize: snapGrid)
+                        // Read `pendingDX`/`pendingDY` instead of `v.translation`:
+                        // `updateGuides` may have overridden them with the snapped
+                        // values when canvas-center snap fired on that axis.
+                        let dx = Self.snap(Int(pendingDX), gridSize: snapGrid)
+                        let dy = Self.snap(Int(pendingDY), gridSize: snapGrid)
                         guard dx != 0 || dy != 0 else { return }
                         let deltas = Self.deltas(forSelection: selectionModel.selection,
                                                  dx: dx, dy: dy)
@@ -104,7 +107,7 @@ public struct ItemDragController: ViewModifier {
         // its axis). When it fires we override pendingDX/DY so the
         // bbox center lands exactly on the canvas centerline and we
         // suppress the blue item-snap guide on that axis.
-        let size = currentSize() ?? .zero
+        guard let size = currentSize() else { return }
         let snapX = DragMath.canvasCenterSnap(elementOrigin: CGFloat(originX),
                                               elementSize: size.width,
                                               rawTranslation: translation.width,
