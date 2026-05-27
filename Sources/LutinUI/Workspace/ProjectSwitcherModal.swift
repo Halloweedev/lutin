@@ -97,44 +97,49 @@ public struct ProjectSwitcherModal: View {
                     }
                 }
             }
-            Divider().frame(height: Tokens.Size.hairline).background(Tokens.color(.divider))
-            LutinButton(role: .secondary, action: addNewProject) {
-                HStack(spacing: Tokens.spacing(.sm)) {
-                    Image(systemName: "plus.square")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundStyle(Tokens.color(.brandAccent))
-                        .frame(width: 24, height: 24)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("New project from .app…").font(Typography.chrome)
-                            .foregroundStyle(Tokens.color(.textPrimary))
-                        Text("Pick a .app bundle to bootstrap a fresh project")
-                            .font(Typography.chromeSmall)
-                            .foregroundStyle(Tokens.color(.textSecondary))
+            Divider().frame(height: Tokens.Size.hairline)
+                .background(Tokens.color(.divider))
+            VStack(spacing: Tokens.spacing(.sm)) {
+                LutinButton(role: .secondary, action: addNewProject) {
+                    HStack(spacing: Tokens.spacing(.sm)) {
+                        ZStack {
+                            Rectangle()
+                                .fill(Tokens.color(.brandAccentMuted))
+                                .frame(width: 24, height: 24)
+                            Image(systemName: "plus")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Tokens.color(.brandAccent))
+                        }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("New project from .app")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Tokens.color(.textPrimary))
+                            Text("Drop or pick a .app — we scaffold the rest.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Tokens.color(.textTertiary))
+                        }
+                        Spacer()
+                        Text("⌘N")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Tokens.color(.brandAccent))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Tokens.color(.brandAccentMuted))
                     }
-                    Spacer()
-                    Text("⌘N").font(Typography.chromeSmall)
-                        .foregroundStyle(Tokens.color(.textTertiary))
+                    .padding(Tokens.spacing(.sm))
+                    .overlay(SquareShape()
+                        .stroke(Tokens.color(.brandAccent),
+                                lineWidth: Tokens.Size.hairline))
                 }
-                .padding(Tokens.spacing(.md))
-                .contentShape(Rectangle())
+                Text("already have a lutin.yml? Link it →")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Tokens.color(.textTertiary))
+                    .textLink(action: linkExistingProject)
             }
-            Divider().frame(height: Tokens.Size.hairline).background(Tokens.color(.divider))
-            LutinButton(role: .secondary, action: linkExistingProject) {
-                HStack(spacing: Tokens.spacing(.sm)) {
-                    Image(systemName: "link")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundStyle(Tokens.color(.textSecondary))
-                        .frame(width: 24, height: 24)
-                    Text("Link existing lutin.yml…").font(Typography.chromeSmall)
-                        .foregroundStyle(Tokens.color(.textSecondary))
-                    Spacer()
-                }
-                .padding(.horizontal, Tokens.spacing(.md))
-                .padding(.vertical, Tokens.spacing(.sm))
-                .contentShape(Rectangle())
-            }
+            .padding(Tokens.spacing(.md))
+            .background(Tokens.color(.sheetBackground))
         }
-        .frame(width: 480, height: 360)
+        .frame(width: 520, height: 420)
         .background(Tokens.color(.sheetBackground))
         .onKeyPress(.return) { open(filteredStatuses[safe: highlightedIndex]?.entry.name); return .handled }
         .onKeyPress(.escape) { dismiss(); return .handled }
