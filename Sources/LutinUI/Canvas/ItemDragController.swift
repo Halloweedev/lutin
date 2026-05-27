@@ -23,23 +23,24 @@ public enum DragMath {
         return AlignmentResult(vertical: v, horizontal: h)
     }
 
-    /// Canvas-center snap (single axis). Given an element's current origin
-    /// on this axis, its bbox size on this axis, an unsnapped translation
-    /// delta, and the canvas centerline on this axis, returns the
-    /// *translation that lands the bbox center exactly on `canvasCenter`*
-    /// when the element center is within `threshold`; `nil` otherwise.
+    /// Canvas-center snap (single axis). Given the element's current visual
+    /// CENTER on this axis (already resolved by the caller — items use their
+    /// stored `(x, y)` directly because that IS the visual center; image
+    /// decorations use `(x + width/2, y + height/2)`), an unsnapped
+    /// translation delta, and the canvas centerline on this axis, returns
+    /// the *translation that lands the bbox center exactly on `canvasCenter`*
+    /// when the proposed center is within `threshold`; `nil` otherwise.
     ///
     /// Pure function — no SwiftUI / document state. Run independently per
     /// axis. The caller substitutes the returned value for the raw drag
     /// translation on that axis.
-    public static func canvasCenterSnap(elementOrigin: CGFloat,
-                                        elementSize: CGFloat,
+    public static func canvasCenterSnap(currentCenter: CGFloat,
                                         rawTranslation: CGFloat,
                                         canvasCenter: CGFloat,
                                         threshold: CGFloat) -> CGFloat? {
-        let proposedCenter = elementOrigin + rawTranslation + elementSize / 2
+        let proposedCenter = currentCenter + rawTranslation
         guard abs(proposedCenter - canvasCenter) <= threshold else { return nil }
-        return canvasCenter - elementOrigin - elementSize / 2
+        return canvasCenter - currentCenter
     }
 }
 
@@ -106,15 +107,16 @@ public struct ItemDragController: ViewModifier {
         // ── Canvas-center snap (axis-independent, wins over item-snap on
         // its axis). When it fires we override pendingDX/DY so the
         // bbox center lands exactly on the canvas centerline and we
-        // suppress the blue item-snap guide on that axis.
-        guard let size = currentSize() else { return }
-        let snapX = DragMath.canvasCenterSnap(elementOrigin: CGFloat(originX),
-                                              elementSize: size.width,
+        // suppress the blue item-snap guide on that axis. The center
+        // for items is `item.x/y` itself; for image decorations it's
+        // the top-left offset by half the rendered size — both resolved
+        // by `currentCenter()`.
+        guard let center = currentCenter() else { return }
+        let snapX = DragMath.canvasCenterSnap(currentCenter: center.x,
                                               rawTranslation: translation.width,
                                               canvasCenter: configW / 2,
                                               threshold: 4)
-        let snapY = DragMath.canvasCenterSnap(elementOrigin: CGFloat(originY),
-                                              elementSize: size.height,
+        let snapY = DragMath.canvasCenterSnap(currentCenter: center.y,
                                               rawTranslation: translation.height,
                                               canvasCenter: configH / 2,
                                               threshold: 4)
@@ -180,16 +182,20 @@ public struct ItemDragController: ViewModifier {
         }
     }
 
-    /// Bbox size on canvas for the element being dragged. Used by the
-    /// canvas-center snap to convert origin → center. Items are square
-    /// (iconSize). Image decorations are stored-width × intrinsic-aspect;
-    /// when the source asset cannot be loaded we fall back to a square
-    /// (height = width) — one stale frame, self-corrects.
-    private func currentSize() -> CGSize? {
+    /// Visual center on canvas for the dragged element. Items use their
+    /// stored `(x, y)` directly — that IS the visual center (see
+    /// `MarqueeSelection`, `OffCanvasWarning`, `CanvasView` for the same
+    /// contract). Image decorations are top-left-anchored, so we add half
+    /// the rendered width/height; the height comes from the source asset's
+    /// intrinsic aspect ratio (same as `ImageDecorationLayer.imageView`).
+    /// Returns nil only when the document state can't resolve the element
+    /// (out-of-bounds decoration index) — `currentOrigin()` short-circuits
+    /// the same way.
+    private func currentCenter() -> CGPoint? {
         switch myID {
-        case .item:
-            let side = CGFloat(document.config.window?.iconSize ?? 96)
-            return CGSize(width: side, height: side)
+        case .item(let id):
+            guard let item = (document.config.items ?? []).first(where: { $0.id == id }) else { return nil }
+            return CGPoint(x: CGFloat(item.x), y: CGFloat(item.y))
         case .image(let idx):
             guard let decos = document.config.decorations,
                   idx >= 0, idx < decos.count else { return nil }
@@ -201,7 +207,8 @@ public struct ItemDragController: ViewModifier {
                 guard let ns = NSImage(contentsOf: url), ns.size.width > 0 else { return 1.0 }
                 return ns.size.height / ns.size.width
             }()
-            return CGSize(width: w, height: w * aspect)
+            return CGPoint(x: CGFloat(decos[idx].x ?? 0) + w / 2,
+                           y: CGFloat(decos[idx].y ?? 0) + w * aspect / 2)
         }
     }
 

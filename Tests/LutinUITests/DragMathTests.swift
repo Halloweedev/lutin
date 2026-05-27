@@ -28,35 +28,31 @@ final class DragMathTests: XCTestCase {
     // MARK: - canvasCenterSnap
 
     func testCanvasCenterSnapFiresWhenProposedCenterIsExactlyOnCanvasCenter() {
-        // Item at x=292 with width 96 → center 340. Canvas centerX 340.
-        // rawTranslation 0 → proposed center 340 == canvas center.
+        // Element visual center 340, canvas center 340, no movement.
         let result = DragMath.canvasCenterSnap(
-            elementOrigin: 292,
-            elementSize: 96,
+            currentCenter: 340,
             rawTranslation: 0,
-            canvasCenter: 340,
-            threshold: 4)
-        XCTAssertEqual(result, 0)  // translation needed to keep center on canvas center
-    }
-
-    func testCanvasCenterSnapFiresWithinThresholdAndReturnsSnappedTranslation() {
-        // Item origin 292, size 96, raw translation 3 → proposed center 343.
-        // |343 - 340| = 3 ≤ 4 → snap. Required translation: 340 - 292 - 48 = 0.
-        let result = DragMath.canvasCenterSnap(
-            elementOrigin: 292,
-            elementSize: 96,
-            rawTranslation: 3,
             canvasCenter: 340,
             threshold: 4)
         XCTAssertEqual(result, 0)
     }
 
-    func testCanvasCenterSnapNegativeSideOfCenterStillFires() {
-        // Item origin 295, size 96, raw translation -2 → proposed center 295 - 2 + 48 = 341.
-        // |341 - 340| = 1 ≤ 4 → snap. Required translation: 340 - 295 - 48 = -3.
+    func testCanvasCenterSnapFiresWithinThresholdAndReturnsSnappedTranslation() {
+        // Current center 337, raw 3 → proposed 340. |0| ≤ 4 → snap.
+        // Required translation: 340 - 337 = 3.
         let result = DragMath.canvasCenterSnap(
-            elementOrigin: 295,
-            elementSize: 96,
+            currentCenter: 337,
+            rawTranslation: 3,
+            canvasCenter: 340,
+            threshold: 4)
+        XCTAssertEqual(result, 3)
+    }
+
+    func testCanvasCenterSnapNegativeSideOfCenterStillFires() {
+        // Current center 343, raw -2 → proposed 341. |1| ≤ 4 → snap.
+        // Required translation: 340 - 343 = -3.
+        let result = DragMath.canvasCenterSnap(
+            currentCenter: 343,
             rawTranslation: -2,
             canvasCenter: 340,
             threshold: 4)
@@ -64,10 +60,10 @@ final class DragMathTests: XCTestCase {
     }
 
     func testCanvasCenterSnapAtExactThresholdBoundaryFires() {
-        // proposed center 344, canvas center 340, |Δ| = 4 = threshold → fires (≤).
+        // Current center 340, raw 4 → proposed 344. |4| = threshold → fires.
+        // Required translation: 340 - 340 = 0.
         let result = DragMath.canvasCenterSnap(
-            elementOrigin: 292,
-            elementSize: 96,
+            currentCenter: 340,
             rawTranslation: 4,
             canvasCenter: 340,
             threshold: 4)
@@ -75,31 +71,26 @@ final class DragMathTests: XCTestCase {
     }
 
     func testCanvasCenterSnapOutsideThresholdReturnsNil() {
-        // proposed center 345, canvas center 340, |Δ| = 5 > threshold 4 → no snap.
+        // Current center 340, raw 5 → proposed 345. |5| > 4 → nil.
         let result = DragMath.canvasCenterSnap(
-            elementOrigin: 292,
-            elementSize: 96,
+            currentCenter: 340,
             rawTranslation: 5,
             canvasCenter: 340,
             threshold: 4)
         XCTAssertNil(result)
     }
 
-    func testCanvasCenterSnapHandlesNonSquareSize() {
-        // Image decoration: width 200, height 100 (aspect 0.5).
-        // For the Y axis: origin 165, size 100, raw 0 → proposed center 215.
-        // Canvas centerY 210. |215 - 210| = 5 > 4 → nil.
+    func testCanvasCenterSnapWorksOnArbitraryAxisValues() {
+        // Y axis example: current center 215, canvas center 210, raw 0 → nil.
         XCTAssertNil(DragMath.canvasCenterSnap(
-            elementOrigin: 165,
-            elementSize: 100,
+            currentCenter: 215,
             rawTranslation: 0,
             canvasCenter: 210,
             threshold: 4))
-        // Same shape but raw -2 → proposed center 213. |3| ≤ 4 → snap.
-        // Required translation: 210 - 165 - 50 = -5.
+        // Same center, raw -2 → proposed 213. |3| ≤ 4 → snap.
+        // Required translation: 210 - 215 = -5.
         XCTAssertEqual(DragMath.canvasCenterSnap(
-            elementOrigin: 165,
-            elementSize: 100,
+            currentCenter: 215,
             rawTranslation: -2,
             canvasCenter: 210,
             threshold: 4), -5)
