@@ -42,26 +42,37 @@ public struct TabBody<Content: View>: View {
 ///     section boundary in every tab.
 ///   • header padding-bottom: 4pt — fixed offset between section title
 ///     and first content row.
-public struct SettingsSection<Content: View, HeaderTrailing: View>: View {
+public struct SettingsSection<Content: View,
+                              HeaderTrailing: View,
+                              HeaderMeta: View>: View {
     let title: String
     let footer: String?
+    /// Read-only meta — pill, path, status — that sits next to the title and
+    /// demotes typographically (`chromeSmall` `textTertiary`). Interactive
+    /// controls go in `headerTrailing` instead.
+    let headerMeta: HeaderMeta
     let headerTrailing: HeaderTrailing
     let content: Content
+
     public init(_ title: String,
                 footer: String? = nil,
+                @ViewBuilder headerMeta: () -> HeaderMeta = { EmptyView() },
                 @ViewBuilder headerTrailing: () -> HeaderTrailing = { EmptyView() },
                 @ViewBuilder content: () -> Content) {
         self.title = title
         self.footer = footer
+        self.headerMeta = headerMeta()
         self.headerTrailing = headerTrailing()
         self.content = content()
     }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: Tokens.spacing(.sm)) {
             HStack(spacing: Tokens.spacing(.sm)) {
                 Text(title)
                     .font(Typography.chromeSmall.weight(.medium))
                     .foregroundStyle(Tokens.color(.textTertiary))
+                headerMeta
                 Spacer()
                 headerTrailing
             }
@@ -123,18 +134,27 @@ public struct SettingsField<Content: View>: View {
 /// (e.g. "Show toolbar" — *whose* toolbar, exactly?). The helper wraps
 /// to fit; the trailing control stays vertically centered against the
 /// label + helper as a unit.
+///
+/// Optional `info` is a quieter alternative to `helper`: a small `ⓘ`
+/// glyph next to the label surfaces the description as a system tooltip
+/// on hover. Use when the surface is dense and inline sub-lines would
+/// crowd it (e.g. the Release tab). `helper` and `info` are mutually
+/// exclusive — pass one, not both.
 public struct SettingsRow<Content: View>: View {
     let icon: String?
     let label: String
     let helper: String?
+    let info: String?
     let content: Content
     public init(icon: String? = nil,
                 _ label: String,
                 helper: String? = nil,
+                info: String? = nil,
                 @ViewBuilder content: () -> Content) {
         self.icon = icon
         self.label = label
         self.helper = helper
+        self.info = info
         self.content = content()
     }
     public var body: some View {
@@ -147,9 +167,14 @@ public struct SettingsRow<Content: View>: View {
                     .frame(width: 18, alignment: .leading)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Tokens.color(.textPrimary))
+                HStack(spacing: 2) {
+                    Text(label)
+                        .font(.system(size: 13))
+                        .foregroundStyle(Tokens.color(.textPrimary))
+                    if let info {
+                        InfoBadge(text: info)
+                    }
+                }
                 if let helper {
                     Text(helper)
                         .font(Typography.chromeSmall)
@@ -162,6 +187,54 @@ public struct SettingsRow<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
+    }
+}
+
+/// `ⓘ` glyph next to a row label that surfaces a short description as a
+/// hover-popover. Replaces the macOS `.help(_:)` tooltip (~1.5s system
+/// delay) with a SwiftUI popover that opens after 150ms — fast enough
+/// to feel responsive, slow enough that the user can scan past a row
+/// without the popover flashing under the cursor.
+///
+/// Hit-area is intentionally larger than the glyph (14pt glyph in a
+/// 22×22 transparent rectangle) so the cursor doesn't have to land on
+/// a 14pt target to trigger the popover.
+private struct InfoBadge: View {
+    let text: String
+
+    @State private var isHovering = false
+    @State private var isShowing = false
+    @State private var revealTask: Task<Void, Never>?
+
+    var body: some View {
+        Image("info", bundle: LutinAssets.bundle)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 14, height: 14)
+            .foregroundStyle(Tokens.color(.textTertiary))
+            .padding(4)
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                isHovering = hovering
+                revealTask?.cancel()
+                if hovering {
+                    revealTask = Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(150))
+                        if !Task.isCancelled, isHovering { isShowing = true }
+                    }
+                } else {
+                    isShowing = false
+                }
+            }
+            .popover(isPresented: $isShowing, arrowEdge: .top) {
+                Text(text)
+                    .font(Typography.chromeSmall)
+                    .foregroundStyle(Tokens.color(.textPrimary))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(10)
+                    .frame(maxWidth: 260)
+            }
     }
 }
 
@@ -277,8 +350,8 @@ public struct PathPickerRow: View {
         self.onPick = onPick
     }
     public var body: some View {
-        HStack(spacing: Tokens.spacing(.sm)) {
-            Text(value.isEmpty ? placeholder : value)
+        HStack(spacing: 0) {
+            Text(value.isEmpty ? placeholder : value.collapsedHome)
                 .font(Typography.chromeSmall)
                 .foregroundStyle(value.isEmpty
                                  ? Tokens.color(.textTertiary)
@@ -288,12 +361,16 @@ public struct PathPickerRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
-                .background(SquareShape().fill(Tokens.color(.canvasBackground)))
-                .overlay(SquareShape().stroke(Tokens.color(.divider),
-                                              lineWidth: Tokens.Size.hairline))
             if let onPick {
-                LutinButton("Choose…", action: onPick)
+                LutinIconButton(systemName: "folder",
+                                accessibilityLabel: "Choose path",
+                                action: onPick)
+                    .padding(.trailing, 4)
+                    .help("Choose…")
             }
         }
+        .background(Tokens.color(.canvasBackground))
+        .overlay(SquareShape().stroke(Tokens.color(.divider),
+                                      lineWidth: Tokens.Size.hairline))
     }
 }

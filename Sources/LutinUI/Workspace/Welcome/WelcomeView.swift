@@ -5,8 +5,7 @@ import LutinRegistry
 import LutinDocument
 
 /// Welcome page: brand mark, a clean drop area, quiet Create/Open
-/// text links, a compact doctor strip, and a grid of recent projects
-/// led by a `+ New project` card.
+/// text links, and a grid of recent projects led by a `+ New project` card.
 public struct WelcomeView: View {
     @Environment(RegistryStore.self) private var registryStore
 
@@ -39,7 +38,7 @@ public struct WelcomeView: View {
                 hero
                 WelcomeRecentsGrid(
                     entries: recentEntries,
-                    onOpenExisting: onOpenExisting,
+                    onSeeAll: onOpenExisting,
                     onSelect: onSelectRecent,
                     onReveal: revealInFinder,
                     onRemove: { name in try? registryStore.remove(name: name) })
@@ -85,7 +84,8 @@ public struct WelcomeView: View {
     private var hero: some View {
         VStack(spacing: Tokens.spacing(.lg)) {
             brandMark
-            WelcomeDropHero(onPickApp: onPickApp)
+            WelcomeDropHero(onPickApp: onPickApp,
+                            onOpenExisting: onOpenExisting)
         }
         .frame(maxWidth: 460)
     }
@@ -94,11 +94,12 @@ public struct WelcomeView: View {
         VStack(spacing: Tokens.spacing(.xs)) {
             appGlyph
             Text("Lutin")
-                .font(.system(size: 26, weight: .light))
+                .font(.system(size: 32, weight: .ultraLight))
+                .tracking(-0.5)
                 .foregroundStyle(Tokens.color(.textPrimary))
             Text("Visual editor for macOS DMG layouts")
                 .font(Typography.chromeSmall)
-                .foregroundStyle(Tokens.color(.textSecondary))
+                .foregroundStyle(Tokens.color(.textTertiary))
         }
     }
 

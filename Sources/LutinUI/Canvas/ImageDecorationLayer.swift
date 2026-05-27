@@ -7,13 +7,19 @@ public struct ImageDecorationLayer: View {
     @Bindable var document: LutinProjectDocument
     @Bindable var selectionModel: CanvasSelectionModel
     let guideState: CanvasGuideState
+    let configW: CGFloat
+    let configH: CGFloat
 
     public init(document: LutinProjectDocument,
                 selectionModel: CanvasSelectionModel,
-                guideState: CanvasGuideState) {
+                guideState: CanvasGuideState,
+                configW: CGFloat,
+                configH: CGFloat) {
         self.document = document
         self.selectionModel = selectionModel
         self.guideState = guideState
+        self.configW = configW
+        self.configH = configH
     }
 
     public var body: some View {
@@ -41,7 +47,15 @@ public struct ImageDecorationLayer: View {
             return ns.size.height / ns.size.width
         }()
         let h = w * aspect
-        return Group {
+        // All three layers (image, selection ring, resize handles) live
+        // inside a single `.frame(w, h)` + `.position(...)` container so
+        // they move together. The previous shape (image positioned,
+        // selection ring + handles inside an .overlay) had a subtle bug:
+        // `.position` makes its target view fill the parent for layout,
+        // so the .overlay's bounds matched the WHOLE CANVAS, and the
+        // un-positioned ResizeHandles ZStack centered itself in canvas
+        // coordinates instead of around the image.
+        return ZStack {
             if let img = nsImage {
                 Image(nsImage: img)
                     .resizable()
@@ -52,7 +66,18 @@ public struct ImageDecorationLayer: View {
                     .frame(width: w, height: h)
                     .overlay(Text("?").foregroundStyle(Tokens.color(.logError)))
             }
+            if isSelected {
+                SquareShape()
+                    .stroke(Tokens.color(.itemSelected), lineWidth: 1)
+                    .frame(width: w, height: h)
+                ResizeHandles(document: document,
+                              index: index,
+                              deco: deco,
+                              widthPoints: w,
+                              heightPoints: h)
+            }
         }
+        .frame(width: w, height: h)
         // Position the view's CENTER such that its TOP-LEFT lands at
         // (deco.x, deco.y) — matches the renderer's coordinate contract.
         .position(x: CGFloat(deco.x ?? 0) + w / 2,
@@ -68,21 +93,12 @@ public struct ImageDecorationLayer: View {
         // canvas-level via `.onContinuousHover` in `CanvasView`,
         // hit-testing against the same bounding boxes used for
         // measurements (see ItemLayer for the longer history).
-        .overlay {
-            if isSelected {
-                // Selection ring positioned at the same top-left convention.
-                SquareShape()
-                    .stroke(Tokens.color(.itemSelected), lineWidth: 1)
-                    .frame(width: w, height: h)
-                    .position(x: CGFloat(deco.x ?? 0) + w / 2,
-                              y: CGFloat(deco.y ?? 0) + h / 2)
-                ResizeHandles(document: document, index: index, deco: deco)
-            }
-        }
         .draggableItem(document: document,
                        selectionModel: selectionModel,
                        id: .image(index: index),
                        snapGrid: 0,
-                       guideState: guideState)
+                       guideState: guideState,
+                       configW: configW,
+                       configH: configH)
     }
 }

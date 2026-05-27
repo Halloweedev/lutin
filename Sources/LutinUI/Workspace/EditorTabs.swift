@@ -8,15 +8,10 @@ public enum EditorTab: String, CaseIterable, Sendable, Hashable {
 
     public var iconName: String {
         switch self {
-        case .design:  "rectangle.3.offgrid"
-        case .window:  "macwindow"
-        case .project: "folder"
-        // Was `shippingbox.and.arrow.backward` — the backward-arrow
-        // variant reads as "return shipment", the wrong direction
-        // for shipping a release out the door. Plain `shippingbox.fill`
-        // is unambiguous and matches the canvas action-bar Release
-        // button's glyph.
-        case .release: "shippingbox.fill"
+        case .design:  "palette"
+        case .window:  "app-window"
+        case .project: "package"
+        case .release: "rocket-launch"
         }
     }
 

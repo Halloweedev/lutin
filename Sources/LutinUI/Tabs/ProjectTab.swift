@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import LutinConfig
 import LutinDocument
 
 public struct ProjectTab: View {
@@ -27,7 +28,7 @@ public struct ProjectTab: View {
                 // was built around" but it doesn't drive anything; the
                 // real identifier lives inside the .app. See helper.
                 SettingsField("Bundle identifier",
-                              helper: "Read from \(document.config.app.path.isEmpty ? "the linked .app" : "the .app")'s Info.plist. Edit it in Xcode → target → Signing & Capabilities, or in the .app's Info.plist directly.") {
+                              helper: "Edit in Xcode → target → Signing & Capabilities, or in the .app's Info.plist.") {
                     BundleIdentifierReadout(
                         appPath: document.config.app.path,
                         projectDirectory: document.projectDirectory,
@@ -35,21 +36,30 @@ public struct ProjectTab: View {
                 }
             }
 
-            SettingsSection("Output",
-                            footer: "DMG name supports ${version} and ${build} tokens, filled at build time.") {
+            SettingsSection("Output", headerMeta: {
+                Text(document.config.output.directory.isEmpty
+                     ? "—"
+                     : document.config.output.directory.collapsedHome)
+                    .font(Typography.chromeSmall)
+                    .foregroundStyle(Tokens.color(.textTertiary))
+                    .lineLimit(1).truncationMode(.middle)
+            }) {
                 SettingsField("Directory") {
                     PathPickerRow(value: document.config.output.directory,
                                   placeholder: "Pick a folder",
                                   onPick: pickOutputDir)
                 }
-                SettingsField("DMG name") {
+                VStack(alignment: .leading, spacing: 6) {
+                    dmgNameLabel
                     SettingsTextField("MyApp-${version}.dmg", text: Binding(
                         get: { document.config.output.dmgName },
                         set: { try? document.apply(.setOutput(
                             directory: document.config.output.directory,
                             dmgName: $0,
                             volumeName: document.config.output.volumeName)) }))
+                    dmgResolvesToStrip
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 SettingsField("Volume name",
                               helper: "Shown in Finder when the DMG mounts.") {
                     SettingsTextField("MyApp", text: Binding(
@@ -79,6 +89,82 @@ public struct ProjectTab: View {
                                        dmgName: document.config.output.dmgName,
                                        volumeName: document.config.output.volumeName))
     }
+
+    private var dmgNameLabel: some View {
+        HStack(spacing: 6) {
+            Text("DMG name")
+                .font(Typography.chromeSmall.weight(.medium))
+                .foregroundStyle(Tokens.color(.textSecondary))
+            tokenChip("${version}")
+            tokenChip("${build}")
+        }
+    }
+
+    private func tokenChip(_ s: String) -> some View {
+        Text(s)
+            .font(.system(size: 10, design: .monospaced))
+            .padding(.horizontal, 5).padding(.vertical, 1)
+            .background(Tokens.color(.canvasBackground))
+            .overlay(SquareShape().stroke(Tokens.color(.divider),
+                                          lineWidth: Tokens.Size.hairline))
+    }
+
+    private var dmgResolvesToStrip: some View {
+        let template = document.config.output.dmgName
+        let info = liveAppInfo()
+        let resolved: String
+        let trailing: String
+        if let info {
+            resolved = TokenResolver.resolve(template,
+                TokenResolver.Context(
+                    version: info.shortVersion ?? "",
+                    name: document.config.project.name,
+                    build: info.build ?? ""))
+            trailing = ""
+        } else {
+            resolved = template
+            trailing = "Resolves when an app is linked."
+        }
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(resolved)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(Tokens.color(.textPrimary))
+                .textSelection(.enabled)
+            if !trailing.isEmpty {
+                Text(trailing)
+                    .font(Typography.chromeSmall)
+                    .foregroundStyle(Tokens.color(.textTertiary))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Tokens.color(.canvasBackground))
+    }
+
+    /// Reads the linked `.app`'s `Info.plist` for the live DMG-name preview.
+    /// Returns `nil` only when no app is linked or the file is unreadable —
+    /// in those cases the preview shows the template plus a "Resolves when
+    /// an app is linked." helper line instead of a substitution.
+    ///
+    /// Empty-string fallbacks for `shortVersion` / `build` (in the caller)
+    /// match `LutinRelease.InfoPlistReader.read(...)`'s contract — that
+    /// reader is the one `ReleasePipeline.swift:34` uses to build the
+    /// token context for actual builds. Keeping the same fallback shape
+    /// here means the preview filename matches what the build will produce
+    /// byte-for-byte when version fields are missing from the plist.
+    private func liveAppInfo() -> AppBundleInfo.Metadata? {
+        let trimmed = document.config.app.path
+            .trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return nil }
+        let url = URL(fileURLWithPath: trimmed,
+                      relativeTo: document.projectDirectory)
+            .standardizedFileURL
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return nil
+        }
+        return try? AppBundleInfo.read(url)
+    }
 }
 
 /// Read-only field that displays the linked `.app`'s `CFBundleIdentifier`.
@@ -99,20 +185,32 @@ private struct BundleIdentifierReadout: View {
     let fallback: String
 
     var body: some View {
-        Text(displayedIdentifier.isEmpty ? "—" : displayedIdentifier)
-            .font(Typography.chromeSmall)
-            .foregroundStyle(displayedIdentifier.isEmpty
-                             ? Tokens.color(.textTertiary)
-                             : Tokens.color(.textPrimary))
-            .lineLimit(1)
-            .truncationMode(.middle)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(SquareShape().fill(Tokens.color(.canvasBackground)))
-            .overlay(SquareShape().stroke(Tokens.color(.divider),
-                                          lineWidth: Tokens.Size.hairline))
-            .textSelection(.enabled)
+        HStack(spacing: Tokens.spacing(.sm)) {
+            Text(displayedIdentifier.isEmpty ? "—" : displayedIdentifier)
+                .font(.system(size: 11.5, design: .monospaced))
+                .foregroundStyle(displayedIdentifier.isEmpty
+                                 ? Tokens.color(.textTertiary)
+                                 : Tokens.color(.textPrimary))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Tokens.color(.canvasBackground))
+                .overlay(SquareShape().stroke(Tokens.color(.divider),
+                                              lineWidth: Tokens.Size.hairline))
+                .textSelection(.enabled)
+            if !displayedIdentifier.isEmpty {
+                Text("from Info.plist")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Tokens.color(.textTertiary))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Tokens.color(.canvasBackground))
+                    .overlay(SquareShape().stroke(Tokens.color(.divider),
+                                                  lineWidth: Tokens.Size.hairline))
+            }
+        }
     }
 
     /// Resolves the `.app` URL and asks `AppBundleInfo` to read its

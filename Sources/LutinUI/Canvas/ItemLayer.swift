@@ -8,15 +8,21 @@ public struct ItemLayer: View {
     @Bindable var document: LutinProjectDocument
     @Bindable var selectionModel: CanvasSelectionModel
     let guideState: CanvasGuideState
+    let configW: CGFloat
+    let configH: CGFloat
     @Environment(PreferencesStore.self) private var preferences
     @State private var editingID: String?
 
     public init(document: LutinProjectDocument,
                 selectionModel: CanvasSelectionModel,
-                guideState: CanvasGuideState) {
+                guideState: CanvasGuideState,
+                configW: CGFloat,
+                configH: CGFloat) {
         self.document = document
         self.selectionModel = selectionModel
         self.guideState = guideState
+        self.configW = configW
+        self.configH = configH
     }
 
     public var body: some View {
@@ -37,7 +43,9 @@ public struct ItemLayer: View {
                                    selectionModel: selectionModel,
                                    id: .item(id: item.id),
                                    snapGrid: preferences.preferences.snapGridSize,
-                                   guideState: guideState)
+                                   guideState: guideState,
+                                   configW: configW,
+                                   configH: configH)
             }
         }
     }

@@ -75,81 +75,50 @@ public struct ReleaseTab: View {
     private var signingEnabled: Bool { document.config.signing?.enabled ?? false }
 
     private var signingSection: some View {
-        SettingsSection("Signing", headerTrailing: {
-            // Enabled toggle pulled into the header — "Signing" already
-            // names the section, so an "Enabled" row underneath was
-            // redundant labelling. On first enable we auto-fill the
-            // identity if exactly one Developer ID is in the keychain —
-            // the overwhelmingly common case for solo developers, and
-            // it shaves a deliberate picker tap.
-            LutinToggle("", isOn: Binding(
-                get: { signingEnabled },
-                set: { v in
-                    var s = currentSigning()
-                    s.enabled = v
-                    if v, (s.identity ?? "").isEmpty {
-                        let devIDs = identities.filter {
-                            $0.name.contains("Developer ID Application:")
-                        }
-                        if devIDs.count == 1 { s.identity = devIDs[0].name }
-                    }
-                    try? document.apply(.setSigning(s))
-                }))
+        let verdict = ReleaseStatusKind.signing(document.config.signing)
+        return SettingsSection("Signing", headerMeta: {
+            statusPill(verdict)
         }) {
-            // Order within the Group is value-fields first, then a
-            // toggle cluster, then status. Toggles read together as
-            // a single "what flags apply to this signing run" block
-            // rather than interleaved between configuration fields —
-            // shorter eye travel when scanning the section.
-            // The whole group is gated on `signingEnabled` (disabled
-            // + dimmed); the status row stays at full opacity so the
-            // red/green dot remains readable on an inactive section.
+            SettingsRow("Enabled",
+                        info: "Codesign the .app and the DMG before notarization.") {
+                LutinToggle("", isOn: Binding(
+                    get: { signingEnabled },
+                    set: { v in
+                        var s = currentSigning()
+                        s.enabled = v
+                        if v, (s.identity ?? "").isEmpty {
+                            let devIDs = identities.filter {
+                                $0.name.contains("Developer ID Application:")
+                            }
+                            if devIDs.count == 1 { s.identity = devIDs[0].name }
+                        }
+                        try? document.apply(.setSigning(s))
+                    }))
+            }
             Group {
                 SettingsField("Identity",
                               helper: identities.isEmpty
-                              ? "No Developer ID identities found in the Keychain."
-                              : nil) {
+                                ? "No Developer ID identities found in the Keychain."
+                                : nil) {
                     HStack(spacing: Tokens.spacing(.sm)) {
                         LutinPicker(
                             selection: Binding(
                                 get: { document.config.signing?.identity ?? "" },
                                 set: { v in
-                                    var s = currentSigning(); s.identity = v.isEmpty ? nil : v
+                                    var s = currentSigning()
+                                    s.identity = v.isEmpty ? nil : v
                                     try? document.apply(.setSigning(s))
                                 }),
                             options: [.init(id: "", label: "Not set")]
                                 + identities.map { .init(id: $0.name, label: $0.name) }
                         )
-                        // Keychain escape hatch only when there's
-                        // nothing to pick — once identities exist,
-                        // the picker is the affordance and a separate
-                        // button is visual noise.
                         if identities.isEmpty {
                             LutinButton("Open Keychain") { openKeychainAccess() }
                         }
                     }
                 }
-                SettingsField("Entitlements") {
-                    HStack(spacing: Tokens.spacing(.sm)) {
-                        PathPickerRow(value: entitlementsDisplayPath,
-                                      placeholder: "No .entitlements file",
-                                      onPick: pickEntitlements)
-                        // Clear is a one-click escape from a chosen
-                        // path back to the "no .entitlements file"
-                        // empty state — only useful when something is
-                        // set, so hidden otherwise.
-                        if !(document.config.signing?.entitlements ?? "").isEmpty {
-                            LutinIconButton(systemName: "xmark.circle",
-                                            accessibilityLabel: "Clear entitlements") {
-                                var s = currentSigning(); s.entitlements = nil
-                                try? document.apply(.setSigning(s))
-                            }
-                        }
-                    }
-                }
-                // Toggle cluster — flush-stacked at the bottom of the
-                // section's value-fields.
-                SettingsRow(icon: "lock.shield", "Hardened runtime") {
+                SettingsRow("Hardened runtime",
+                            info: "Required for notarization.") {
                     LutinToggle("", isOn: Binding(
                         get: { document.config.signing?.hardenedRuntime ?? false },
                         set: { v in
@@ -157,17 +126,29 @@ public struct ReleaseTab: View {
                             try? document.apply(.setSigning(s))
                         }))
                 }
-                // `externaldrive.fill` reads as "the DMG once it mounts"
-                // — DMGs surface in Finder as external volumes. The
-                // previous `doc.zipper` glyph read as "compressed
-                // document", a different artifact entirely.
-                SettingsRow(icon: "externaldrive.fill", "Sign DMG") {
+                SettingsRow("Sign DMG",
+                            info: "Also codesign the .dmg artifact.") {
                     LutinToggle("", isOn: Binding(
                         get: { document.config.signing?.signDmg ?? false },
                         set: { v in
                             var s = currentSigning(); s.signDmg = v
                             try? document.apply(.setSigning(s))
                         }))
+                }
+                SettingsField("Entitlements") {
+                    HStack(spacing: Tokens.spacing(.sm)) {
+                        PathPickerRow(value: entitlementsDisplayPath,
+                                      placeholder: "No .entitlements file",
+                                      onPick: pickEntitlements)
+                        if !(document.config.signing?.entitlements ?? "").isEmpty {
+                            LutinIconButton(systemName: "xmark.circle",
+                                            accessibilityLabel:
+                                                "Clear entitlements") {
+                                var s = currentSigning(); s.entitlements = nil
+                                try? document.apply(.setSigning(s))
+                            }
+                        }
+                    }
                 }
             }
             .disabled(!signingEnabled)
@@ -182,35 +163,42 @@ public struct ReleaseTab: View {
     private var notarizationEnabled: Bool { document.config.notarization?.enabled ?? false }
 
     private var notarizationSection: some View {
-        SettingsSection("Notarization", headerTrailing: {
-            LutinToggle("", isOn: Binding(
-                get: { notarizationEnabled },
-                set: { v in
-                    var n = currentNotarization()
-                    n.enabled = v
-                    // First-enable default: switch Staple on if the
-                    // user hasn't expressed an opinion yet. Stapling
-                    // is what every shipping artifact needs (chrome
-                    // status reflects this); defaulting to off forced
-                    // a second deliberate toggle to reach a green
-                    // state, which read as a footgun.
-                    if v, n.staple == nil { n.staple = true }
-                    try? document.apply(.setNotarization(n))
-                }))
+        let verdict = ReleaseStatusKind.notarization(
+            document.config.notarization,
+            signingHardenedRuntime:
+                document.config.signing?.hardenedRuntime ?? false)
+        return SettingsSection("Notarization", headerMeta: {
+            statusPill(verdict)
         }) {
+            SettingsRow("Enabled",
+                        info: "Submit to Apple after signing and wait for the ticket.") {
+                LutinToggle("", isOn: Binding(
+                    get: { notarizationEnabled },
+                    set: { v in
+                        var n = currentNotarization()
+                        n.enabled = v
+                        // First-enable default: Staple on so the user
+                        // doesn't need a second deliberate toggle to reach
+                        // a green state.
+                        if v, n.staple == nil { n.staple = true }
+                        try? document.apply(.setNotarization(n))
+                    }))
+            }
             Group {
                 SettingsField("Profile") {
                     NotaryProfileField(
                         name: Binding(
                             get: { document.config.notarization?.profile ?? "" },
                             set: { v in
-                                var n = currentNotarization(); n.profile = v.isEmpty ? nil : v
+                                var n = currentNotarization()
+                                n.profile = v.isEmpty ? nil : v
                                 try? document.apply(.setNotarization(n))
                             }),
                         onCreateNew: { showingCreateProfile = true }
                     )
                 }
-                SettingsRow(icon: "paperclip", "Staple") {
+                SettingsRow("Staple",
+                            info: "Attach the notarization ticket so Gatekeeper can verify offline.") {
                     LutinToggle("", isOn: Binding(
                         get: { document.config.notarization?.staple ?? false },
                         set: { v in
@@ -255,41 +243,65 @@ public struct ReleaseTab: View {
     ///     instead of verifying offline. First-time notarization
     ///     enable defaults Staple to on, so this branch mostly fires
     ///     when the user has deliberately flipped it off.
-    private var signingStatusRow: StatusRow {
-        let s = document.config.signing
-        let enabled = s?.enabled ?? false
-        let identity = (s?.identity ?? "").trimmingCharacters(in: .whitespaces)
-        if !enabled { return StatusRow(.inactive, "Signing disabled") }
-        if identity.isEmpty { return StatusRow(.blocked, "Signing needs an identity") }
-        return StatusRow(.ok, "Signing ready")
+    private var signingStatusRow: some View {
+        let v = ReleaseStatusKind.signing(document.config.signing)
+        return StatusRow(v.kind, v.longMessage)
+            .padding(.top, 4)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Tokens.color(.divider))
+                    .frame(height: Tokens.Size.hairline)
+            }
     }
 
-    private var notarizationStatusRow: StatusRow {
-        let n = document.config.notarization
-        let enabled = n?.enabled ?? false
-        let profile = (n?.profile ?? "").trimmingCharacters(in: .whitespaces)
-        let staple = n?.staple ?? false
-        let hardened = document.config.signing?.hardenedRuntime ?? false
-        if !enabled { return StatusRow(.inactive, "Notarization disabled") }
-        if profile.isEmpty { return StatusRow(.blocked, "Notary profile required") }
-        if !hardened {
-            return StatusRow(.blocked, "Hardened runtime required for notarization",
-                             fix: .init(label: "Enable") {
-                var s = currentSigning()
-                s.hardenedRuntime = true
-                if !s.enabled { s.enabled = true }
-                try? document.apply(.setSigning(s))
-            })
+    private func statusPill(_ v: ReleaseStatusKind.Verdict) -> some View {
+        HStack(spacing: 5) {
+            Circle().fill(v.kind.color).frame(width: 7, height: 7)
+            Text(v.shortLabel)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Tokens.color(.textSecondary))
         }
-        if !staple {
-            return StatusRow(.blocked, "Stapling recommended — disable only if intentional",
-                             fix: .init(label: "Enable") {
-                var n = currentNotarization()
-                n.staple = true
-                try? document.apply(.setNotarization(n))
-            })
-        }
-        return StatusRow(.ok, "Notarization ready")
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(Tokens.color(.canvasBackground))
+        .overlay(SquareShape().stroke(Tokens.color(.divider),
+                                      lineWidth: Tokens.Size.hairline))
+    }
+
+    private var notarizationStatusRow: some View {
+        let v = ReleaseStatusKind.notarization(
+            document.config.notarization,
+            signingHardenedRuntime:
+                document.config.signing?.hardenedRuntime ?? false)
+        let fix: StatusRow.Fix? = {
+            // Re-attach the cross-section one-click fixes that used to live
+            // inline in this property. The verdict tells us which fix is
+            // relevant via `shortLabel`.
+            switch v.shortLabel {
+            case "needs hardened runtime":
+                return .init(label: "Enable") {
+                    var s = currentSigning()
+                    s.hardenedRuntime = true
+                    if !s.enabled { s.enabled = true }
+                    try? document.apply(.setSigning(s))
+                }
+            case "staple off":
+                return .init(label: "Enable") {
+                    var n = currentNotarization()
+                    n.staple = true
+                    try? document.apply(.setNotarization(n))
+                }
+            default:
+                return nil
+            }
+        }()
+        return StatusRow(v.kind, v.longMessage, fix: fix)
+            .padding(.top, 4)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Tokens.color(.divider))
+                    .frame(height: Tokens.Size.hairline)
+            }
     }
 
     /// Entitlements path shown in the picker: relative to the project

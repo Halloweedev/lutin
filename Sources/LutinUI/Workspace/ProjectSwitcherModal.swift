@@ -4,13 +4,26 @@ import LutinRegistry
 import LutinDocument
 
 public enum ProjectSwitcherFilter {
-    public static func filter(_ entries: [RegistryEntry], query: String) -> [RegistryEntry] {
+    /// Predicate used by both the `[RegistryEntry]` and
+    /// `[RegistryEntryStatus]` overloads — keeps the lowered-case
+    /// `contains` semantics in one place.
+    private static func matches(name: String, configPath: String, query: String) -> Bool {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !q.isEmpty else { return entries }
-        return entries.filter {
-            $0.name.lowercased().contains(q)
-                || $0.configPath.lowercased().contains(q)
-        }
+        if q.isEmpty { return true }
+        return name.lowercased().contains(q)
+            || configPath.lowercased().contains(q)
+    }
+
+    public static func filter(_ entries: [RegistryEntry], query: String) -> [RegistryEntry] {
+        entries.filter { matches(name: $0.name,
+                                 configPath: $0.configPath,
+                                 query: query) }
+    }
+
+    public static func filter(_ statuses: [RegistryEntryStatus], query: String) -> [RegistryEntryStatus] {
+        statuses.filter { matches(name: $0.entry.name,
+                                  configPath: $0.entry.configPath,
+                                  query: query) }
     }
 }
 
@@ -42,72 +55,102 @@ public struct ProjectSwitcherModal: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            LutinTextField("Search projects…", text: $query)
-                .padding(Tokens.spacing(.md))
-                .background(Tokens.color(.sheetBackground))
-            Divider().frame(height: Tokens.Size.hairline).background(Tokens.color(.divider))
+            ZStack(alignment: .leading) {
+                // 12pt glyph + ~6pt gap = ~18pt clearance for the text field's content.
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(Tokens.color(.textTertiary))
+                    .allowsHitTesting(false)
+                    .padding(.leading, Tokens.spacing(.md) + 4)
+                LutinTextField("Search projects by name or path…",
+                               text: $query,
+                               font: .system(size: 14))
+                    .padding(.leading, Tokens.spacing(.md) + 22)
+            }
+            .padding(Tokens.spacing(.md))
+            .background(Tokens.color(.sheetBackground))
+            Divider().frame(height: Tokens.Size.hairline)
+                .background(Tokens.color(.divider))
+            if !filteredStatuses.isEmpty {
+                scopeStrip
+            }
             ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(filtered.enumerated()), id: \.element.name) { idx, entry in
-                            entryRow(entry, isHighlighted: idx == highlightedIndex)
-                                .id(entry.name)
-                                .onTapGesture { open(entry.name) }
+                if filteredStatuses.isEmpty {
+                    emptyStateView
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(filteredStatuses.enumerated()),
+                                    id: \.element.entry.name) { idx, status in
+                                entryRow(status,
+                                         isHighlighted: idx == highlightedIndex)
+                                    .id(status.entry.name)
+                                    .onTapGesture { open(status.entry.name) }
+                            }
+                        }
+                    }
+                    .onChange(of: highlightedIndex) { _, new in
+                        if let target = filteredStatuses[safe: new] {
+                            proxy.scrollTo(target.entry.name, anchor: .center)
                         }
                     }
                 }
-                .onChange(of: highlightedIndex) { _, new in
-                    if let target = filtered[safe: new] {
-                        proxy.scrollTo(target.name, anchor: .center)
+            }
+            Divider().frame(height: Tokens.Size.hairline)
+                .background(Tokens.color(.divider))
+            VStack(spacing: Tokens.spacing(.sm)) {
+                LutinButton(role: .secondary, action: addNewProject) {
+                    HStack(spacing: Tokens.spacing(.sm)) {
+                        ZStack {
+                            Rectangle()
+                                .fill(Tokens.color(.brandAccentMuted))
+                                .frame(width: 24, height: 24)
+                            Image(systemName: "plus")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Tokens.color(.brandAccent))
+                        }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("New project from .app")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Tokens.color(.textPrimary))
+                            Text("Drop or pick a .app — we scaffold the rest.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Tokens.color(.textTertiary))
+                        }
+                        Spacer()
+                        Text("⌘N")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Tokens.color(.brandAccent))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Tokens.color(.brandAccentMuted))
                     }
+                    .padding(Tokens.spacing(.sm))
+                    .overlay(SquareShape()
+                        .stroke(Tokens.color(.brandAccent),
+                                lineWidth: Tokens.Size.hairline))
                 }
+                Text("already have a lutin.yml? Link it →")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Tokens.color(.textTertiary))
+                    .textLink(action: linkExistingProject)
             }
-            Divider().frame(height: Tokens.Size.hairline).background(Tokens.color(.divider))
-            LutinButton(role: .secondary, action: addNewProject) {
-                HStack(spacing: Tokens.spacing(.sm)) {
-                    Image(systemName: "plus.square")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundStyle(Tokens.color(.brandAccent))
-                        .frame(width: 24, height: 24)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("New project from .app…").font(Typography.chrome)
-                            .foregroundStyle(Tokens.color(.textPrimary))
-                        Text("Pick a .app bundle to bootstrap a fresh project")
-                            .font(Typography.chromeSmall)
-                            .foregroundStyle(Tokens.color(.textSecondary))
-                    }
-                    Spacer()
-                    Text("⌘N").font(Typography.chromeSmall)
-                        .foregroundStyle(Tokens.color(.textTertiary))
-                }
-                .padding(Tokens.spacing(.md))
-                .contentShape(Rectangle())
-            }
-            Divider().frame(height: Tokens.Size.hairline).background(Tokens.color(.divider))
-            LutinButton(role: .secondary, action: linkExistingProject) {
-                HStack(spacing: Tokens.spacing(.sm)) {
-                    Image(systemName: "link")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundStyle(Tokens.color(.textSecondary))
-                        .frame(width: 24, height: 24)
-                    Text("Link existing lutin.yml…").font(Typography.chromeSmall)
-                        .foregroundStyle(Tokens.color(.textSecondary))
-                    Spacer()
-                }
-                .padding(.horizontal, Tokens.spacing(.md))
-                .padding(.vertical, Tokens.spacing(.sm))
-                .contentShape(Rectangle())
-            }
+            .padding(Tokens.spacing(.md))
+            .background(Tokens.color(.sheetBackground))
         }
-        .frame(width: 480, height: 360)
+        .frame(width: 520, height: 420)
         .background(Tokens.color(.sheetBackground))
-        .onKeyPress(.return) { open(filtered[safe: highlightedIndex]?.name); return .handled }
+        .onKeyPress(.return) { open(filteredStatuses[safe: highlightedIndex]?.entry.name); return .handled }
         .onKeyPress(.escape) { dismiss(); return .handled }
         .onKeyPress(.upArrow) {
             highlightedIndex = max(0, highlightedIndex - 1); return .handled
         }
         .onKeyPress(.downArrow) {
-            highlightedIndex = min(filtered.count - 1, highlightedIndex + 1); return .handled
+            highlightedIndex = max(0, min(filteredStatuses.count - 1, highlightedIndex + 1)); return .handled
+        }
+        .onChange(of: filteredStatuses.count) { _, _ in
+            highlightedIndex = 0
         }
         .sheet(item: $deleteCandidate) { request in
             DeleteProjectSheet(entry: request.entry, onConfirm: { alsoTrash in
@@ -116,40 +159,64 @@ public struct ProjectSwitcherModal: View {
         }
     }
 
-    private var filtered: [RegistryEntry] {
-        ProjectSwitcherFilter.filter(registryStore.entries.map(\.entry), query: query)
+    private var scopeStrip: some View {
+        HStack {
+            Text("RECENT · \(filteredStatuses.count)")
+                .font(.system(size: 10, weight: .medium))
+                .tracking(0.8)
+                .foregroundStyle(Tokens.color(.textTertiary))
+            Spacer()
+            Text("↑↓ navigate · ↩ open · ⌫ delete")
+                .font(.system(size: 10.5))
+                .foregroundStyle(Tokens.color(.textTertiary))
+        }
+        .padding(.horizontal, Tokens.spacing(.md))
+        .padding(.top, Tokens.spacing(.sm))
+        .padding(.bottom, 4)
     }
 
-    private func entryRow(_ entry: RegistryEntry, isHighlighted: Bool) -> some View {
+    @ViewBuilder
+    private var emptyStateView: some View {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        VStack(spacing: Tokens.spacing(.sm)) {
+            Image(systemName: q.isEmpty ? "tray" : "questionmark.circle")
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(Tokens.color(.brandAccent))
+            Text(q.isEmpty ? "No projects yet" : "No projects match \"\(q)\"")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Tokens.color(.textPrimary))
+            if q.isEmpty {
+                Text("Drop or pick a .app to start one.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Tokens.color(.textTertiary))
+            }
+        }
+        .padding(.vertical, Tokens.spacing(.xl))
+    }
+
+    private var filteredStatuses: [RegistryEntryStatus] {
+        ProjectSwitcherFilter.filter(registryStore.entries, query: query)
+    }
+
+    private func entryRow(_ status: RegistryEntryStatus,
+                          isHighlighted: Bool) -> some View {
+        let entry = status.entry
         let isHovered = hoveredEntryName == entry.name
         return HStack(spacing: Tokens.spacing(.sm)) {
-            ZStack {
-                SquareShape()
-                    .stroke(Tokens.color(.divider),
-                            lineWidth: Tokens.Size.hairline)
-                    .frame(width: 24, height: 24)
-                Text(String(entry.name.prefix(1)).uppercased())
-                    .font(Typography.chromeSmall)
-                    .foregroundStyle(Tokens.color(.textSecondary))
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.name).font(Typography.chrome)
+            ProjectIconTile(name: entry.name,
+                            appPath: entry.appPath,
+                            sizePoints: 28)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(entry.name)
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Tokens.color(.textPrimary))
-                Text(entry.configPath).font(Typography.chromeSmall)
-                    .foregroundStyle(Tokens.color(.textSecondary))
+                Text(entry.configPath.collapsedHome)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(Tokens.color(.textTertiary))
                     .lineLimit(1).truncationMode(.middle)
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(entry.lastOpenedDate, format: .relative(presentation: .named))
-                    .font(Typography.chromeSmall)
-                    .foregroundStyle(Tokens.color(.textTertiary))
-                if let version = entry.lastDetectedVersion {
-                    Text(version)
-                        .font(Typography.chromeSmall)
-                        .foregroundStyle(Tokens.color(.textTertiary))
-                }
-            }
+            metaColumn(entry: entry, isMissing: status.status == .missing)
             // Trash button revealed on hover so the row stays calm by
             // default but the delete affordance is one mouse-move away.
             // Reserve the slot at all times so hovering doesn't reflow
@@ -157,8 +224,10 @@ public struct ProjectSwitcherModal: View {
             ZStack {
                 if isHovered {
                     LutinIconButton(systemName: "trash",
-                                    accessibilityLabel: "Delete \(entry.name) from project list",
-                                    action: { deleteCandidate = DeleteRequest(entry: entry) })
+                                    accessibilityLabel:
+                                        "Delete \(entry.name) from project list",
+                                    action: { deleteCandidate =
+                                        DeleteRequest(entry: entry) })
                         .help("Delete \(entry.name)…")
                 }
             }
@@ -172,6 +241,33 @@ public struct ProjectSwitcherModal: View {
             if hovering { hoveredEntryName = entry.name }
             else if hoveredEntryName == entry.name { hoveredEntryName = nil }
         }
+    }
+
+    private func metaColumn(entry: RegistryEntry, isMissing: Bool) -> some View {
+        let relativeDate = entry.lastOpenedDate
+            .formatted(.relative(presentation: .numeric))
+        let kind = RegistryEntryStatusKind.resolve(
+            entry: entry, isMissingOnDisk: isMissing)
+        return HStack(spacing: 6) {
+            Circle()
+                .fill(kind.dotColor)
+                .frame(width: 6, height: 6)
+            // Compact one-liner: "● 2d · v1.4.2"
+            // We intentionally omit the build-outcome verb ("built",
+            // "failed") here — the dot color carries the signal, and
+            // the switcher row needs to scan tightly. The Welcome card
+            // includes the verb because it has more horizontal room.
+            Text(metaText(relativeDate: relativeDate,
+                          version: entry.lastDetectedVersion))
+                .font(.system(size: 10.5))
+                .foregroundStyle(Tokens.color(.textTertiary))
+                .lineLimit(1)
+        }
+    }
+
+    private func metaText(relativeDate: String, version: String?) -> String {
+        if let v = version, !v.isEmpty { return "\(relativeDate) · \(v)" }
+        return relativeDate
     }
 
     private func open(_ name: String?) {

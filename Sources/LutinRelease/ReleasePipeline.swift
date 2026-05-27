@@ -170,20 +170,18 @@ public enum ReleasePipeline {
         return Result(summary: summary, dmgPath: dmgPath, plannedSteps: build.plannedSteps)
     }
 
-    /// Produces the background image to embed. Renders via `LutinRender` when
-    /// the background is a solid/gradient (or legacy "generated"), or when the
-    /// config carries decorations. Falls back to plain user-image resolution
-    /// only for a bare `type: "image"` background with no decorations.
+    /// Produces the background image to embed. ALWAYS routes through
+    /// `LutinRenderer.renderBackground` — even for a plain `type: "image"`
+    /// background with no decorations — because the renderer is what
+    /// applies cover-fit scaling AND the `dpi: 72 × scale` PNG tag that
+    /// tells Finder to map the pixel grid back onto the configured
+    /// window dimensions. Embedding the raw user image instead made
+    /// Finder render it at its native pixel size, pinned top-left, which
+    /// matched neither the canvas preview nor the user's expectations.
     static func renderedBackground(config: LutinConfig, projectDirectory: URL,
                                    onOutput: ((String) -> Void)?) throws -> URL? {
-        let hasDecorations = !(config.decorations ?? []).isEmpty
-        let bgType = config.background?.type ?? ""
-        let needsRenderer = bgType != "image" || hasDecorations
-        if needsRenderer {
-            return try LutinRenderer.renderBackground(
-                config: config, projectDirectory: projectDirectory, onOutput: onOutput)
-        }
-        return resolveBackground(config: config, projectDirectory: projectDirectory)
+        return try LutinRenderer.renderBackground(
+            config: config, projectDirectory: projectDirectory, onOutput: onOutput)
     }
 
     /// Resolves the background image: explicit `background.path`, else the

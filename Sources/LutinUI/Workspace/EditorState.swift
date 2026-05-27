@@ -6,7 +6,6 @@ import SwiftUI
 public final class EditorState {
     public let configPath: String
     public var selectedTab: EditorTab = .design
-    public var sidePanelWidth: CGFloat = Tokens.Size.sidePanelDefault
     public var zoomPercent: Int = 100
     public var scrollOffset: CGPoint = .zero
     public init(configPath: String) { self.configPath = configPath }

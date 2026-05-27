@@ -7,6 +7,14 @@ public final class CanvasGuideState {
     public var guideX: Int?  // a vertical line at this x
     public var guideY: Int?  // a horizontal line at this y
 
+    /// True while a drag is in progress AND the moving element's bbox
+    /// center on the X axis is within `threshold` of the canvas vertical
+    /// centerline (configW / 2). Drives a solid magenta full-height guide
+    /// in `CanvasView`. Cleared on `onEnded`. Independent of `canvasCenterY`.
+    public var canvasCenterX: Bool = false
+    /// Y-axis counterpart of `canvasCenterX` — horizontal guide at configH / 2.
+    public var canvasCenterY: Bool = false
+
     /// Element under the mouse pointer. Set/cleared by `.onHover`
     /// handlers in `ItemLayer` / `ImageDecorationLayer`. Drives the
     /// Figma-style Option-hover measurement overlay — when the user

@@ -90,8 +90,14 @@ public struct CanvasView: View {
                     background(configW: configW, configH: configH)
                     ImageDecorationLayer(document: document,
                                          selectionModel: selectionModel,
-                                         guideState: guideState)
-                    ItemLayer(document: document, selectionModel: selectionModel, guideState: guideState)
+                                         guideState: guideState,
+                                         configW: configW,
+                                         configH: configH)
+                    ItemLayer(document: document,
+                              selectionModel: selectionModel,
+                              guideState: guideState,
+                              configW: configW,
+                              configH: configH)
                     if let gx = guideState.guideX {
                         Rectangle()
                             .fill(Tokens.color(.alignmentGuide))
@@ -104,6 +110,24 @@ public struct CanvasView: View {
                             .fill(Tokens.color(.alignmentGuide))
                             .frame(width: configW, height: Tokens.Size.hairline)
                             .position(x: configW / 2, y: CGFloat(gy))
+                            .allowsHitTesting(false)
+                    }
+                    // Canvas-center snap — solid magenta lines at the
+                    // canvas centerlines. Distinct from the Option-hover
+                    // measurement overlay (also magenta) by line style:
+                    // these are solid; the measurement overlay is dashed.
+                    if guideState.canvasCenterX {
+                        Rectangle()
+                            .fill(Tokens.color(.measurementGuide))
+                            .frame(width: Tokens.Size.hairline, height: configH)
+                            .position(x: configW / 2, y: configH / 2)
+                            .allowsHitTesting(false)
+                    }
+                    if guideState.canvasCenterY {
+                        Rectangle()
+                            .fill(Tokens.color(.measurementGuide))
+                            .frame(width: configW, height: Tokens.Size.hairline)
+                            .position(x: configW / 2, y: configH / 2)
                             .allowsHitTesting(false)
                     }
                     // Equal-spacing pills — render two distance badges
@@ -240,11 +264,10 @@ public struct CanvasView: View {
                 .padding(Tokens.spacing(.xl))
             }
             .scrollIndicators(.hidden)
-            // Bottom-leading: Preview/Build/Release/Doctor actions.
+            // Bottom-leading: Preview/Build/Release actions.
             .overlay(alignment: .bottomLeading) {
                 CanvasActionsBar(document: document,
                                  runner: runner,
-                                 showingDoctor: $showingDoctor,
                                  projectName: projectName,
                                  registryStore: registryStore)
                     .padding(Tokens.spacing(.md))

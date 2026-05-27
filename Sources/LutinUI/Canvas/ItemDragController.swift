@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import LutinConfig
 import LutinDocument
 
@@ -21,6 +22,26 @@ public enum DragMath {
         let h = others.contains { abs($0.y - c.y) <= tolerance }
         return AlignmentResult(vertical: v, horizontal: h)
     }
+
+    /// Canvas-center snap (single axis). Given the element's current visual
+    /// CENTER on this axis (already resolved by the caller — items use their
+    /// stored `(x, y)` directly because that IS the visual center; image
+    /// decorations use `(x + width/2, y + height/2)`), an unsnapped
+    /// translation delta, and the canvas centerline on this axis, returns
+    /// the *translation that lands the bbox center exactly on `canvasCenter`*
+    /// when the proposed center is within `threshold`; `nil` otherwise.
+    ///
+    /// Pure function — no SwiftUI / document state. Run independently per
+    /// axis. The caller substitutes the returned value for the raw drag
+    /// translation on that axis.
+    public static func canvasCenterSnap(currentCenter: CGFloat,
+                                        rawTranslation: CGFloat,
+                                        canvasCenter: CGFloat,
+                                        threshold: CGFloat) -> CGFloat? {
+        let proposedCenter = currentCenter + rawTranslation
+        guard abs(proposedCenter - canvasCenter) <= threshold else { return nil }
+        return canvasCenter - currentCenter
+    }
 }
 
 /// View modifier that handles dragging of a canvas element, committing a
@@ -31,6 +52,8 @@ public struct ItemDragController: ViewModifier {
     let myID: CanvasSelectionID
     let snapGrid: Int
     let guideState: CanvasGuideState
+    let configW: CGFloat
+    let configH: CGFloat
 
     @State private var pendingDX: CGFloat = 0
     @State private var pendingDY: CGFloat = 0
@@ -54,8 +77,13 @@ public struct ItemDragController: ViewModifier {
                         guideState.guideY = nil
                         guideState.equalSpacingX = nil
                         guideState.equalSpacingY = nil
-                        let dx = Self.snap(Int(v.translation.width), gridSize: snapGrid)
-                        let dy = Self.snap(Int(v.translation.height), gridSize: snapGrid)
+                        guideState.canvasCenterX = false
+                        guideState.canvasCenterY = false
+                        // Read `pendingDX`/`pendingDY` instead of `v.translation`:
+                        // `updateGuides` may have overridden them with the snapped
+                        // values when canvas-center snap fired on that axis.
+                        let dx = Self.snap(Int(pendingDX), gridSize: snapGrid)
+                        let dy = Self.snap(Int(pendingDY), gridSize: snapGrid)
                         guard dx != 0 || dy != 0 else { return }
                         let deltas = Self.deltas(forSelection: selectionModel.selection,
                                                  dx: dx, dy: dy)
@@ -74,29 +102,64 @@ public struct ItemDragController: ViewModifier {
         let candidatesY = (document.config.items ?? [])
             .filter { item in !selectionModel.selection.contains(.item(id: item.id)) }
             .map(\.y)
-        // Snap relative to the dragged element's current position, not the
-        // first moveable in the document. For multi-drag this means the
-        // element under the cursor drives the guides — what the user
-        // expects. For image overlays, look up by index in decorations.
         guard let (originX, originY) = currentOrigin() else { return }
-        let newX = originX + Int(translation.width)
-        let newY = originY + Int(translation.height)
-        let snapX = AlignmentGuides.snap(value: newX, candidates: candidatesX, threshold: 4)
-        let snapY = AlignmentGuides.snap(value: newY, candidates: candidatesY, threshold: 4)
-        guideState.guideX = snapX.target
-        guideState.guideY = snapY.target
+
+        // ── Canvas-center snap (axis-independent, wins over item-snap on
+        // its axis). When it fires we override pendingDX/DY so the
+        // bbox center lands exactly on the canvas centerline and we
+        // suppress the blue item-snap guide on that axis. The center
+        // for items is `item.x/y` itself; for image decorations it's
+        // the top-left offset by half the rendered size — both resolved
+        // by `currentCenter()`.
+        guard let center = currentCenter() else { return }
+        let snapX = DragMath.canvasCenterSnap(currentCenter: center.x,
+                                              rawTranslation: translation.width,
+                                              canvasCenter: configW / 2,
+                                              threshold: 4)
+        let snapY = DragMath.canvasCenterSnap(currentCenter: center.y,
+                                              rawTranslation: translation.height,
+                                              canvasCenter: configH / 2,
+                                              threshold: 4)
+        if let dx = snapX {
+            pendingDX = dx
+            guideState.canvasCenterX = true
+        } else {
+            guideState.canvasCenterX = false
+        }
+        if let dy = snapY {
+            pendingDY = dy
+            guideState.canvasCenterY = true
+        } else {
+            guideState.canvasCenterY = false
+        }
+
+        // ── Item-to-item snap (existing behavior). Use the post-snap
+        // translation so the guide tracks the visual position of the
+        // dragged element. On axes where canvas-center fired, suppress
+        // the item-snap line so we don't draw blue and magenta together.
+        let effectiveDX = snapX ?? translation.width
+        let effectiveDY = snapY ?? translation.height
+        let newX = originX + Int(effectiveDX)
+        let newY = originY + Int(effectiveDY)
+        let itemSnapX = AlignmentGuides.snap(value: newX, candidates: candidatesX, threshold: 4)
+        let itemSnapY = AlignmentGuides.snap(value: newY, candidates: candidatesY, threshold: 4)
+        guideState.guideX = (snapX == nil) ? itemSnapX.target : nil
+        guideState.guideY = (snapY == nil) ? itemSnapY.target : nil
 
         // Equal-spacing pills: only when the snap is the midpoint of two
         // candidates. Use the unselected-items' x/y as siblings; pick the
-        // closest two flanking the snapped value.
-        if let mid = AlignmentGuides.equalSpacing(value: newX, others: candidatesX, threshold: 4) {
+        // closest two flanking the snapped value. Skip on an axis where
+        // canvas-center has taken over.
+        if snapX == nil,
+           let mid = AlignmentGuides.equalSpacing(value: newX, others: candidatesX, threshold: 4) {
             let (a, b) = closestFlanking(value: mid.snapped, in: candidatesX)
             guideState.equalSpacingX = .init(leftOrTop: a, rightOrBottom: b,
                                              midpoint: mid.snapped, distance: mid.distance)
         } else {
             guideState.equalSpacingX = nil
         }
-        if let mid = AlignmentGuides.equalSpacing(value: newY, others: candidatesY, threshold: 4) {
+        if snapY == nil,
+           let mid = AlignmentGuides.equalSpacing(value: newY, others: candidatesY, threshold: 4) {
             let (a, b) = closestFlanking(value: mid.snapped, in: candidatesY)
             guideState.equalSpacingY = .init(leftOrTop: a, rightOrBottom: b,
                                              midpoint: mid.snapped, distance: mid.distance)
@@ -116,6 +179,36 @@ public struct ItemDragController: ViewModifier {
             guard let decos = document.config.decorations,
                   idx >= 0, idx < decos.count else { return nil }
             return (decos[idx].x ?? 0, decos[idx].y ?? 0)
+        }
+    }
+
+    /// Visual center on canvas for the dragged element. Items use their
+    /// stored `(x, y)` directly — that IS the visual center (see
+    /// `MarqueeSelection`, `OffCanvasWarning`, `CanvasView` for the same
+    /// contract). Image decorations are top-left-anchored, so we add half
+    /// the rendered width/height; the height comes from the source asset's
+    /// intrinsic aspect ratio (same as `ImageDecorationLayer.imageView`).
+    /// Returns nil only when the document state can't resolve the element
+    /// (out-of-bounds decoration index) — `currentOrigin()` short-circuits
+    /// the same way.
+    private func currentCenter() -> CGPoint? {
+        switch myID {
+        case .item(let id):
+            guard let item = (document.config.items ?? []).first(where: { $0.id == id }) else { return nil }
+            return CGPoint(x: CGFloat(item.x), y: CGFloat(item.y))
+        case .image(let idx):
+            guard let decos = document.config.decorations,
+                  idx >= 0, idx < decos.count else { return nil }
+            let w = CGFloat(decos[idx].width ?? 100)
+            let aspect: CGFloat = {
+                guard let path = decos[idx].path else { return 1.0 }
+                let url = URL(fileURLWithPath: path,
+                              relativeTo: document.projectDirectory).standardizedFileURL
+                guard let ns = NSImage(contentsOf: url), ns.size.width > 0 else { return 1.0 }
+                return ns.size.height / ns.size.width
+            }()
+            return CGPoint(x: CGFloat(decos[idx].x ?? 0) + w / 2,
+                           y: CGFloat(decos[idx].y ?? 0) + w * aspect / 2)
         }
     }
 
@@ -153,16 +246,22 @@ public struct ItemDragController: ViewModifier {
 
 public extension View {
     /// Multi-select aware drag: commits a `moveMany` intent for the full
-    /// moveable selection when the drag ends.
+    /// moveable selection when the drag ends. `configW`/`configH` are the
+    /// rendered canvas dimensions (window-points) — used by the
+    /// canvas-center snap to know where the centerlines are.
     func draggableItem(document: LutinProjectDocument,
                        selectionModel: CanvasSelectionModel,
                        id: CanvasSelectionID,
                        snapGrid: Int,
-                       guideState: CanvasGuideState) -> some View {
+                       guideState: CanvasGuideState,
+                       configW: CGFloat,
+                       configH: CGFloat) -> some View {
         modifier(ItemDragController(document: document,
                                     selectionModel: selectionModel,
                                     myID: id,
                                     snapGrid: snapGrid,
-                                    guideState: guideState))
+                                    guideState: guideState,
+                                    configW: configW,
+                                    configH: configH))
     }
 }

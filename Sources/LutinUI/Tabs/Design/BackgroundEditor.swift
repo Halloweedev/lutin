@@ -86,12 +86,19 @@ public struct BackgroundEditor: View {
                 })
             }
             SettingsField("Angle") {
+                let angleBinding = Binding<Int>(
+                    get: { bg.angle ?? 0 },
+                    set: { var b = bg; b.angle = $0; try? document.apply(.setBackground(b)) })
                 HStack(spacing: Tokens.spacing(.sm)) {
-                    Text("\(bg.angle ?? 0)°").font(Typography.chromeSmall)
-                    LutinStepper(value: Binding(
-                        get: { bg.angle ?? 0 },
-                        set: { var b = bg; b.angle = $0; try? document.apply(.setBackground(b)) }),
-                        in: 0...359, step: 15)
+                    LutinStepper(value: angleBinding, in: 0...359, step: 15)
+                    HStack(spacing: 2) {
+                        LutinNumericField("", value: angleBinding.clamped(to: 0...359),
+                                          format: .number)
+                            .frame(width: 56)
+                        Text("°")
+                            .font(Typography.chromeSmall)
+                            .foregroundStyle(Tokens.color(.textTertiary))
+                    }
                 }
             }
         }
@@ -116,25 +123,27 @@ public struct BackgroundEditor: View {
         VStack(alignment: .leading, spacing: Tokens.spacing(.md)) {
             SettingsField("Scale") {
                 HStack(spacing: Tokens.spacing(.sm)) {
-                    Text("\(bg.scale ?? 2)×").font(Typography.chromeSmall)
                     LutinStepper(value: Binding(
                         get: { bg.scale ?? 2 },
                         set: { var b = bg; b.scale = $0; try? document.apply(.setBackground(b)) }),
                         in: 1...2, step: 1)
+                    Text("\(bg.scale ?? 2)×").font(Typography.chromeSmall)
                 }
             }
             SettingsField("Corner radius") {
+                let cornerBinding = Binding<Int>(
+                    get: { bg.cornerRadius ?? 0 },
+                    set: { var b = bg; b.cornerRadius = $0; try? document.apply(.setBackground(b)) })
                 HStack(spacing: Tokens.spacing(.sm)) {
-                    // `fixedSize` keeps "32 pt" on one line — without it
-                    // SwiftUI breaks at the space when the column narrows.
-                    Text("\(bg.cornerRadius ?? 0) pt")
-                        .font(Typography.chromeSmall)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-                    LutinStepper(value: Binding(
-                        get: { bg.cornerRadius ?? 0 },
-                        set: { var b = bg; b.cornerRadius = $0; try? document.apply(.setBackground(b)) }),
-                        in: 0...64, step: 1)
+                    LutinStepper(value: cornerBinding, in: 0...64, step: 1)
+                    HStack(spacing: 2) {
+                        LutinNumericField("", value: cornerBinding.clamped(to: 0...64),
+                                          format: .number)
+                            .frame(width: 56)
+                        Text("pt")
+                            .font(Typography.chromeSmall)
+                            .foregroundStyle(Tokens.color(.textTertiary))
+                    }
                 }
             }
             if currentVariant != .image {

@@ -47,6 +47,14 @@ public struct FinderWindowChrome<Content: View>: View {
             titleBar
             content
                 .frame(width: contentSize.width, height: contentSize.height)
+                // Decorations that drift above or below the content area
+                // would otherwise overlap the title bar (drawn first in
+                // the VStack, so z-below the content) and slip under the
+                // volume strip (drawn after, so z-above). Clipping makes
+                // both edges behave the same way: nothing extends past
+                // the content rectangle, which matches what Finder will
+                // actually show when the DMG mounts.
+                .clipped()
             Rectangle()
                 .fill(Tokens.color(.divider))
                 .frame(height: 1)

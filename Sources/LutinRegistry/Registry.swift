@@ -40,6 +40,10 @@ public struct RegistryEntryStatus: Equatable {
     public enum Status: String { case ok, missing }
     public let entry: RegistryEntry
     public let status: Status
+    public init(entry: RegistryEntry, status: Status) {
+        self.entry = entry
+        self.status = status
+    }
 }
 
 private struct RegistryFile: Codable {
