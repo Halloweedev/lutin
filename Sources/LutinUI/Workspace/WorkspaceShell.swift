@@ -118,6 +118,7 @@ public struct WorkspaceShell: View {
             EmptyState(title: "Could not load project", message: loadError, icon: "EmptySelection")
         } else {
             WelcomeView(
+                showingDoctor: $showingDoctor,
                 onOpenExisting: { showSwitcher = true },
                 onSelectRecent: { name in selectedEntryName = name },
                 onDropApp: { url in requestNewProject(preselectedURL: url) },
