@@ -1,10 +1,10 @@
 import SwiftUI
 import AppKit
 
-/// Narrow left rail holding the four editor-tab buttons and a Preferences
-/// cog. The project switcher lives in the SidePanel's top row as a name +
-/// chevron dropdown — having a second opener here (a brand emblem at the
-/// top) duplicated the affordance, so it was removed.
+/// Narrow left rail holding the four editor-tab buttons. The project
+/// switcher lives in the SidePanel's top row as a name + chevron
+/// dropdown — having a second opener here (a brand emblem at the top)
+/// duplicated the affordance, so it was removed.
 public struct EditorRail: View {
     @Binding var selectedTab: EditorTab
 
@@ -29,15 +29,6 @@ public struct EditorRail: View {
                     .modifier(RailRowDivider())
             }
             Spacer(minLength: 0)
-            // Settings cog pinned to the bottom of the rail — also
-            // carries the top hairline so the gap-then-cog reads as
-            // "cog is its own group", visually anchored to the rail
-            // bottom.
-            RailButton(systemImage: "gearshape",
-                       isSelected: false,
-                       tooltip: "Preferences (⌘,)",
-                       action: openPreferences)
-                .modifier(RailRowDivider())
         }
         .frame(width: Tokens.Size.railWidth)
         // Rail shares the panel's surface color so the two read as one
@@ -49,20 +40,6 @@ public struct EditorRail: View {
                 .fill(Tokens.color(.divider))
                 .frame(width: Tokens.Size.hairline)
         }
-    }
-
-    /// Hands off to the standard "open settings" action. macOS 14+ uses
-    /// `showSettingsWindow:`; older macOS used `showPreferencesWindow:`.
-    /// Sending both — only one will be answered — keeps this working
-    /// across the deprecation boundary. The `Settings { ... }` scene in
-    /// `LutinApp/main.swift` is the receiver.
-    private func openPreferences() {
-        if NSApp.sendAction(Selector(("showSettingsWindow:")),
-                            to: nil, from: nil) {
-            return
-        }
-        NSApp.sendAction(Selector(("showPreferencesWindow:")),
-                         to: nil, from: nil)
     }
 }
 
