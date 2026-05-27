@@ -8,7 +8,7 @@ public enum EditorTab: String, CaseIterable, Sendable, Hashable {
 
     public var iconName: String {
         switch self {
-        case .design:  "rectangle.3.offgrid"
+        case .design:  "paintbrush.fill"
         case .window:  "macwindow"
         case .project: "folder"
         // Was `shippingbox.and.arrow.backward` — the backward-arrow

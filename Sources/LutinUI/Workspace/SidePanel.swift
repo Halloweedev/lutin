@@ -1,42 +1,26 @@
 import SwiftUI
 
+/// Fixed-width side panel. Users can hide the whole panel via the
+/// workspace's hide-sidebar button, but the width itself isn't draggable
+/// any more — the panel opens at `Tokens.Size.sidePanelDefault` and stays
+/// there, which keeps long settings labels and inline token chips from
+/// crowding when the user happens to have shrunk the panel in a prior
+/// session.
 public struct SidePanel<Content: View>: View {
-    @Binding var width: CGFloat
     let content: Content
 
-    public init(width: Binding<CGFloat>, @ViewBuilder content: () -> Content) {
-        self._width = width
+    public init(@ViewBuilder content: () -> Content) {
         self.content = content()
-    }
-
-    public static func clampWidth(_ w: CGFloat) -> CGFloat {
-        max(Tokens.Size.sidePanelMin, min(Tokens.Size.sidePanelMax, w))
     }
 
     public var body: some View {
         HStack(spacing: 0) {
             content
-                .frame(width: width)
+                .frame(width: Tokens.Size.sidePanelDefault)
                 .background(Tokens.color(.panelBackground))
             Rectangle()
                 .fill(Tokens.color(.divider))
                 .frame(width: Tokens.Size.hairline)
-                .overlay(
-                    Rectangle()
-                        .fill(Color.clear)
-                        .frame(width: 4)
-                        .contentShape(Rectangle())
-                        .onHover { inside in
-                            if inside { NSCursor.resizeLeftRight.push() }
-                            else { NSCursor.pop() }
-                        }
-                        .gesture(
-                            DragGesture(coordinateSpace: .global)
-                                .onChanged { v in
-                                    width = SidePanel.clampWidth(width + v.translation.width)
-                                }
-                        )
-                )
         }
     }
 }

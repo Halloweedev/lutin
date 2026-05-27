@@ -255,7 +255,7 @@ private struct ProjectWorkspace: View {
         HStack(spacing: 0) {
             EditorRail(selectedTab: $editorState.selectedTab)
             if !sidePanelHidden {
-                SidePanel(width: $editorState.sidePanelWidth) {
+                SidePanel {
                     VStack(spacing: 0) {
                         // Project switcher + collapse control. Sits
                         // immediately below the AppHeaderBar (14pt
