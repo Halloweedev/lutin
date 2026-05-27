@@ -5,7 +5,15 @@ import AppKit
 /// a filled square appears behind the glyph using the `controlHoverFill` token
 /// (a clearly-grey tile against the pure-white chrome).
 public struct LutinIconButton: View {
-    let symbol: Image
+    private enum Glyph {
+        /// SF Symbol; sized by the SwiftUI font context (matches `.body`).
+        case symbol(Image)
+        /// Asset-catalog image; explicit point size so the glyph fits the
+        /// 28×28 hit frame the same way an SF Symbol naturally does.
+        case asset(Image)
+    }
+
+    private let glyph: Glyph
     let accessibilityLabel: String
     let action: () -> Void
 
@@ -13,13 +21,14 @@ public struct LutinIconButton: View {
         isHovered: false, isPressed: false, isFocused: false)
 
     public init(asset: String, accessibilityLabel: String, action: @escaping () -> Void) {
-        self.symbol = Image(asset, bundle: LutinAssets.bundle).renderingMode(.template)
+        self.glyph = .asset(Image(asset, bundle: LutinAssets.bundle)
+            .renderingMode(.template))
         self.accessibilityLabel = accessibilityLabel
         self.action = action
     }
 
     public init(systemName: String, accessibilityLabel: String, action: @escaping () -> Void) {
-        self.symbol = Image(systemName: systemName)
+        self.glyph = .symbol(Image(systemName: systemName).renderingMode(.template))
         self.accessibilityLabel = accessibilityLabel
         self.action = action
     }
@@ -28,8 +37,7 @@ public struct LutinIconButton: View {
         let appearance = NSApp?.effectiveAppearance ?? .currentDrawing()
         let fill = resolvedFill(appearance: appearance)
         SwiftUI.Button(action: action) {  // allow-menu-button: hidden behind LutinIconButton
-            symbol
-                .renderingMode(.template)
+            renderedGlyph
                 .foregroundStyle(Tokens.color(.textPrimary))
                 .frame(width: 28, height: 28)
                 .background(SquareShape().fill(Color(nsColor: fill)))
@@ -41,6 +49,19 @@ public struct LutinIconButton: View {
         // mainly here for the rectangular `contentShape` — clicks at the
         // exact corner of the square otherwise miss the SF Symbol path.
         .lutinHitTarget()
+    }
+
+    @ViewBuilder
+    private var renderedGlyph: some View {
+        switch glyph {
+        case .symbol(let img):
+            img
+        case .asset(let img):
+            // Phosphor-style SVGs ship with a 32×32 viewBox and render at
+            // that natural size unless we constrain them. Match an SF
+            // Symbol's optical weight inside a 28×28 hit area.
+            img.resizable().scaledToFit().frame(width: 16, height: 16)
+        }
     }
 
     /// Resolves the current icon fill from interaction state and system appearance.
