@@ -21,6 +21,25 @@ public enum DragMath {
         let h = others.contains { abs($0.y - c.y) <= tolerance }
         return AlignmentResult(vertical: v, horizontal: h)
     }
+
+    /// Canvas-center snap (single axis). Given an element's current origin
+    /// on this axis, its bbox size on this axis, an unsnapped translation
+    /// delta, and the canvas centerline on this axis, returns the
+    /// *translation that lands the bbox center exactly on `canvasCenter`*
+    /// when the element center is within `threshold`; `nil` otherwise.
+    ///
+    /// Pure function — no SwiftUI / document state. Run independently per
+    /// axis. The caller substitutes the returned value for the raw drag
+    /// translation on that axis.
+    public static func canvasCenterSnap(elementOrigin: CGFloat,
+                                        elementSize: CGFloat,
+                                        rawTranslation: CGFloat,
+                                        canvasCenter: CGFloat,
+                                        threshold: CGFloat) -> CGFloat? {
+        let proposedCenter = elementOrigin + rawTranslation + elementSize / 2
+        guard abs(proposedCenter - canvasCenter) <= threshold else { return nil }
+        return canvasCenter - elementOrigin - elementSize / 2
+    }
 }
 
 /// View modifier that handles dragging of a canvas element, committing a
