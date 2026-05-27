@@ -8,7 +8,19 @@ public struct ProjectTab: View {
 
     public var body: some View {
         TabBody {
-            SettingsSection("Identity") {
+            SettingsSection("Identity", headerMeta: {
+                Text(document.config.app.path.isEmpty ? "unlinked" : "linked")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(document.config.app.path.isEmpty
+                                     ? Tokens.color(.textTertiary)
+                                     : Tokens.color(.logSuccess))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(document.config.app.path.isEmpty
+                                ? Color.clear
+                                : Tokens.color(.brandAccentMuted)
+                                    .opacity(0.5))
+            }) {
                 SettingsField("Project name") {
                     SettingsTextField("MyApp", text: Binding(
                         get: { document.config.project.name },
@@ -35,8 +47,14 @@ public struct ProjectTab: View {
                 }
             }
 
-            SettingsSection("Output",
-                            footer: "DMG name supports ${version} and ${build} tokens, filled at build time.") {
+            SettingsSection("Output", headerMeta: {
+                Text(document.config.output.directory.isEmpty
+                     ? "—"
+                     : document.config.output.directory.collapsedHome)
+                    .font(Typography.chromeSmall)
+                    .foregroundStyle(Tokens.color(.textTertiary))
+                    .lineLimit(1).truncationMode(.middle)
+            }) {
                 SettingsField("Directory") {
                     PathPickerRow(value: document.config.output.directory,
                                   placeholder: "Pick a folder",
