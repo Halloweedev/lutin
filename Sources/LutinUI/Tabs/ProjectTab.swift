@@ -9,7 +9,7 @@ public struct ProjectTab: View {
 
     public var body: some View {
         TabBody {
-            SettingsSection("Identity", headerMeta: { identityPill }) {
+            SettingsSection("Identity") {
                 SettingsField("Project name") {
                     SettingsTextField("MyApp", text: Binding(
                         get: { document.config.project.name },
@@ -91,15 +91,10 @@ public struct ProjectTab: View {
     }
 
     private var dmgNameLabel: some View {
-        // "DMG name · supports ${version} ${build}" — token suffix renders
-        // in a small mono code style so the user sees exactly what to type.
         HStack(spacing: 6) {
             Text("DMG name")
                 .font(Typography.chromeSmall.weight(.medium))
                 .foregroundStyle(Tokens.color(.textSecondary))
-            Text("· supports")
-                .font(Typography.chromeSmall)
-                .foregroundStyle(Tokens.color(.textTertiary))
             tokenChip("${version}")
             tokenChip("${build}")
         }
@@ -115,79 +110,36 @@ public struct ProjectTab: View {
     }
 
     private var dmgResolvesToStrip: some View {
-        // Live substitution using the same TokenResolver the release
-        // pipeline uses (`LutinRelease/ReleasePipeline.swift:45`). When
-        // no .app is linked we surface the template + a hint instead of a
-        // misleading preview.
         let template = document.config.output.dmgName
         let info = liveAppInfo()
         let resolved: String
         let trailing: String
         if let info {
             resolved = TokenResolver.resolve(template,
-                TokenResolver.Context(version: info.shortVersion ?? "",
-                      name: document.config.project.name,
-                      build: info.build ?? ""))
+                TokenResolver.Context(
+                    version: info.shortVersion ?? "",
+                    name: document.config.project.name,
+                    build: info.build ?? ""))
             trailing = ""
         } else {
             resolved = template
             trailing = "Resolves when an app is linked."
         }
-        return HStack(alignment: .top, spacing: Tokens.spacing(.sm)) {
-            Rectangle()
-                .fill(Tokens.color(.brandAccent))
-                .frame(width: 2)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("RESOLVES TO")
-                    .font(.system(size: 10, weight: .medium))
-                    .tracking(0.8)
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(resolved)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(Tokens.color(.textPrimary))
+                .textSelection(.enabled)
+            if !trailing.isEmpty {
+                Text(trailing)
+                    .font(Typography.chromeSmall)
                     .foregroundStyle(Tokens.color(.textTertiary))
-                Text(resolved)
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundStyle(Tokens.color(.textPrimary))
-                    .textSelection(.enabled)
-                if !trailing.isEmpty {
-                    Text(trailing)
-                        .font(Typography.chromeSmall)
-                        .foregroundStyle(Tokens.color(.textTertiary))
-                }
             }
-            .padding(.vertical, 4)
-            Spacer()
         }
-        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
         .background(Tokens.color(.canvasBackground))
-    }
-
-    private var identityPill: some View {
-        // Three states (more honest than the binary "linked / unlinked"
-        // we shipped before): app reachable on disk → green linked;
-        // path is set but the bundle isn't there anymore → amber missing;
-        // never linked → grey unlinked.
-        let path = document.config.app.path
-            .trimmingCharacters(in: .whitespaces)
-        let label: String
-        let fg: Color
-        let bg: Color
-        if path.isEmpty {
-            label = "unlinked"
-            fg = Tokens.color(.textTertiary)
-            bg = .clear
-        } else if liveAppInfo() != nil {
-            label = "linked"
-            fg = Tokens.color(.logSuccess)
-            bg = Tokens.color(.brandAccentMuted).opacity(0.5)
-        } else {
-            label = "missing"
-            fg = Tokens.color(.logProgress)
-            bg = Tokens.color(.brandAccentMuted).opacity(0.5)
-        }
-        return Text(label)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(fg)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(bg)
     }
 
     /// Reads the linked `.app`'s `Info.plist` for the live DMG-name preview.

@@ -136,7 +136,7 @@ public struct ReleaseTab: View {
                             try? document.apply(.setSigning(s))
                         }))
                 }
-                SettingsRow("Entitlements") {
+                SettingsField("Entitlements") {
                     HStack(spacing: Tokens.spacing(.sm)) {
                         PathPickerRow(value: entitlementsDisplayPath,
                                       placeholder: "No .entitlements file",
@@ -150,7 +150,6 @@ public struct ReleaseTab: View {
                             }
                         }
                     }
-                    .frame(maxWidth: 260)
                 }
             }
             .disabled(!signingEnabled)

@@ -288,7 +288,7 @@ public struct PathPickerRow: View {
         self.onPick = onPick
     }
     public var body: some View {
-        HStack(spacing: Tokens.spacing(.sm)) {
+        HStack(spacing: 0) {
             Text(value.isEmpty ? placeholder : value.collapsedHome)
                 .font(Typography.chromeSmall)
                 .foregroundStyle(value.isEmpty
@@ -299,12 +299,16 @@ public struct PathPickerRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
-                .background(SquareShape().fill(Tokens.color(.canvasBackground)))
-                .overlay(SquareShape().stroke(Tokens.color(.divider),
-                                              lineWidth: Tokens.Size.hairline))
             if let onPick {
-                LutinButton("Choose…", action: onPick)
+                LutinIconButton(systemName: "folder",
+                                accessibilityLabel: "Choose path",
+                                action: onPick)
+                    .padding(.trailing, 4)
+                    .help("Choose…")
             }
         }
+        .background(Tokens.color(.canvasBackground))
+        .overlay(SquareShape().stroke(Tokens.color(.divider),
+                                      lineWidth: Tokens.Size.hairline))
     }
 }

@@ -5,13 +5,10 @@ import LutinRegistry
 import LutinDocument
 
 /// Welcome page: brand mark, a clean drop area, quiet Create/Open
-/// text links, a compact doctor strip, and a grid of recent projects
-/// led by a `+ New project` card.
+/// text links, and a grid of recent projects led by a `+ New project` card.
 public struct WelcomeView: View {
     @Environment(RegistryStore.self) private var registryStore
-    @Environment(CredentialsStore.self) private var credentialsStore
 
-    @Binding var showingDoctor: Bool
     let onOpenExisting: () -> Void
     let onSelectRecent: (String) -> Void
     let onDropApp: (URL) -> Void
@@ -19,12 +16,10 @@ public struct WelcomeView: View {
 
     @State private var isDropTargeted = false
 
-    public init(showingDoctor: Binding<Bool>,
-                onOpenExisting: @escaping () -> Void,
+    public init(onOpenExisting: @escaping () -> Void,
                 onSelectRecent: @escaping (String) -> Void,
                 onDropApp: @escaping (URL) -> Void,
                 onPickApp: @escaping (URL) -> Void) {
-        self._showingDoctor = showingDoctor
         self.onOpenExisting = onOpenExisting
         self.onSelectRecent = onSelectRecent
         self.onDropApp = onDropApp
@@ -47,11 +42,6 @@ public struct WelcomeView: View {
                     onSelect: onSelectRecent,
                     onReveal: revealInFinder,
                     onRemove: { name in try? registryStore.remove(name: name) })
-                    .frame(maxWidth: 720)
-                WelcomeDoctorStrip(
-                    hasCodesign: credentialsStore.hasCodesign,
-                    hasDeveloperIDIdentity: !credentialsStore.hasNoDeveloperIDIdentity,
-                    onOpenDoctor: { showingDoctor = true })
                     .frame(maxWidth: 720)
             }
             .padding(.top, Tokens.spacing(.xl) * 2)
@@ -103,10 +93,6 @@ public struct WelcomeView: View {
     private var brandMark: some View {
         VStack(spacing: Tokens.spacing(.xs)) {
             appGlyph
-            Text("WELCOME BACK")
-                .font(.system(size: 10, weight: .medium))
-                .tracking(0.8)
-                .foregroundStyle(Tokens.color(.textTertiary))
             Text("Lutin")
                 .font(.system(size: 32, weight: .ultraLight))
                 .tracking(-0.5)

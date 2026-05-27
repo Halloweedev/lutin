@@ -44,17 +44,12 @@ struct WelcomeDropHero: View {
             }
             .onHover { isHovering = $0 }
 
-            HStack(spacing: 4) {
-                Text("or")
-                    .font(Typography.chromeSmall)
-                    .foregroundStyle(Tokens.color(.textTertiary))
+            HStack {
                 Text("browse for an app")
                     .font(Typography.chromeSmall.weight(.medium))
                     .foregroundStyle(Tokens.color(.brandAccent))
                     .textLink(action: openPanel)
-                Text("·")
-                    .font(Typography.chromeSmall)
-                    .foregroundStyle(Tokens.color(.textTertiary))
+                Spacer()
                 Text("open existing project")
                     .font(Typography.chromeSmall.weight(.medium))
                     .foregroundStyle(Tokens.color(.brandAccent))

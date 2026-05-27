@@ -51,11 +51,18 @@ public struct EditorRail: View {
         }
     }
 
-    /// Opens the macOS Preferences scene via the standard menu action.
-    /// macOS handles routing this to the `Settings { }` declared in
-    /// LutinApp.main.
+    /// Hands off to the standard "open settings" action. macOS 14+ uses
+    /// `showSettingsWindow:`; older macOS used `showPreferencesWindow:`.
+    /// Sending both — only one will be answered — keeps this working
+    /// across the deprecation boundary. The `Settings { ... }` scene in
+    /// `LutinApp/main.swift` is the receiver.
     private func openPreferences() {
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        if NSApp.sendAction(Selector(("showSettingsWindow:")),
+                            to: nil, from: nil) {
+            return
+        }
+        NSApp.sendAction(Selector(("showPreferencesWindow:")),
+                         to: nil, from: nil)
     }
 }
 
