@@ -80,7 +80,7 @@ public struct ReleaseTab: View {
             statusPill(verdict)
         }) {
             SettingsRow("Enabled",
-                        helper: "Codesign the .app and the DMG before notarization.") {
+                        info: "Codesign the .app and the DMG before notarization.") {
                 LutinToggle("", isOn: Binding(
                     get: { signingEnabled },
                     set: { v in
@@ -96,8 +96,8 @@ public struct ReleaseTab: View {
                     }))
             }
             Group {
-                SettingsRow("Identity",
-                            helper: identities.isEmpty
+                SettingsField("Identity",
+                              helper: identities.isEmpty
                                 ? "No Developer ID identities found in the Keychain."
                                 : nil) {
                     HStack(spacing: Tokens.spacing(.sm)) {
@@ -116,10 +116,9 @@ public struct ReleaseTab: View {
                             LutinButton("Open Keychain") { openKeychainAccess() }
                         }
                     }
-                    .frame(maxWidth: 260)
                 }
                 SettingsRow("Hardened runtime",
-                            helper: "Required for notarization.") {
+                            info: "Required for notarization.") {
                     LutinToggle("", isOn: Binding(
                         get: { document.config.signing?.hardenedRuntime ?? false },
                         set: { v in
@@ -128,7 +127,7 @@ public struct ReleaseTab: View {
                         }))
                 }
                 SettingsRow("Sign DMG",
-                            helper: "Also codesign the .dmg artifact.") {
+                            info: "Also codesign the .dmg artifact.") {
                     LutinToggle("", isOn: Binding(
                         get: { document.config.signing?.signDmg ?? false },
                         set: { v in
@@ -172,7 +171,7 @@ public struct ReleaseTab: View {
             statusPill(verdict)
         }) {
             SettingsRow("Enabled",
-                        helper: "Submit to Apple after signing and wait for the ticket.") {
+                        info: "Submit to Apple after signing and wait for the ticket.") {
                 LutinToggle("", isOn: Binding(
                     get: { notarizationEnabled },
                     set: { v in
@@ -186,7 +185,7 @@ public struct ReleaseTab: View {
                     }))
             }
             Group {
-                SettingsRow("Profile") {
+                SettingsField("Profile") {
                     NotaryProfileField(
                         name: Binding(
                             get: { document.config.notarization?.profile ?? "" },
@@ -197,10 +196,9 @@ public struct ReleaseTab: View {
                             }),
                         onCreateNew: { showingCreateProfile = true }
                     )
-                    .frame(maxWidth: 260)
                 }
                 SettingsRow("Staple",
-                            helper: "Attach the notarization ticket so Gatekeeper can verify offline.") {
+                            info: "Attach the notarization ticket so Gatekeeper can verify offline.") {
                     LutinToggle("", isOn: Binding(
                         get: { document.config.notarization?.staple ?? false },
                         set: { v in

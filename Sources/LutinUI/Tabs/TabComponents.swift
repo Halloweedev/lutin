@@ -134,18 +134,27 @@ public struct SettingsField<Content: View>: View {
 /// (e.g. "Show toolbar" — *whose* toolbar, exactly?). The helper wraps
 /// to fit; the trailing control stays vertically centered against the
 /// label + helper as a unit.
+///
+/// Optional `info` is a quieter alternative to `helper`: a small `ⓘ`
+/// glyph next to the label surfaces the description as a system tooltip
+/// on hover. Use when the surface is dense and inline sub-lines would
+/// crowd it (e.g. the Release tab). `helper` and `info` are mutually
+/// exclusive — pass one, not both.
 public struct SettingsRow<Content: View>: View {
     let icon: String?
     let label: String
     let helper: String?
+    let info: String?
     let content: Content
     public init(icon: String? = nil,
                 _ label: String,
                 helper: String? = nil,
+                info: String? = nil,
                 @ViewBuilder content: () -> Content) {
         self.icon = icon
         self.label = label
         self.helper = helper
+        self.info = info
         self.content = content()
     }
     public var body: some View {
@@ -158,9 +167,20 @@ public struct SettingsRow<Content: View>: View {
                     .frame(width: 18, alignment: .leading)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Tokens.color(.textPrimary))
+                HStack(spacing: 4) {
+                    Text(label)
+                        .font(.system(size: 13))
+                        .foregroundStyle(Tokens.color(.textPrimary))
+                    if let info {
+                        Image("info", bundle: LutinAssets.bundle)
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 12, height: 12)
+                            .foregroundStyle(Tokens.color(.textTertiary))
+                            .help(info)
+                    }
+                }
                 if let helper {
                     Text(helper)
                         .font(Typography.chromeSmall)
