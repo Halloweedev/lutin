@@ -167,18 +167,12 @@ public struct SettingsRow<Content: View>: View {
                     .frame(width: 18, alignment: .leading)
             }
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
+                HStack(spacing: 2) {
                     Text(label)
                         .font(.system(size: 13))
                         .foregroundStyle(Tokens.color(.textPrimary))
                     if let info {
-                        Image("info", bundle: LutinAssets.bundle)
-                            .renderingMode(.template)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 12, height: 12)
-                            .foregroundStyle(Tokens.color(.textTertiary))
-                            .help(info)
+                        InfoBadge(text: info)
                     }
                 }
                 if let helper {
@@ -193,6 +187,54 @@ public struct SettingsRow<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
+    }
+}
+
+/// `ⓘ` glyph next to a row label that surfaces a short description as a
+/// hover-popover. Replaces the macOS `.help(_:)` tooltip (~1.5s system
+/// delay) with a SwiftUI popover that opens after 150ms — fast enough
+/// to feel responsive, slow enough that the user can scan past a row
+/// without the popover flashing under the cursor.
+///
+/// Hit-area is intentionally larger than the glyph (14pt glyph in a
+/// 22×22 transparent rectangle) so the cursor doesn't have to land on
+/// a 14pt target to trigger the popover.
+private struct InfoBadge: View {
+    let text: String
+
+    @State private var isHovering = false
+    @State private var isShowing = false
+    @State private var revealTask: Task<Void, Never>?
+
+    var body: some View {
+        Image("info", bundle: LutinAssets.bundle)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 14, height: 14)
+            .foregroundStyle(Tokens.color(.textTertiary))
+            .padding(4)
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                isHovering = hovering
+                revealTask?.cancel()
+                if hovering {
+                    revealTask = Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(150))
+                        if !Task.isCancelled, isHovering { isShowing = true }
+                    }
+                } else {
+                    isShowing = false
+                }
+            }
+            .popover(isPresented: $isShowing, arrowEdge: .top) {
+                Text(text)
+                    .font(Typography.chromeSmall)
+                    .foregroundStyle(Tokens.color(.textPrimary))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(10)
+                    .frame(maxWidth: 260)
+            }
     }
 }
 
