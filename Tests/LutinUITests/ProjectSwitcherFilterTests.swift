@@ -39,4 +39,10 @@ final class ProjectSwitcherFilterTests: XCTestCase {
         let entries = [entry(name: "Barry", path: "/p1/lutin.yml")]
         XCTAssertEqual(ProjectSwitcherFilter.filter(entries, query: "BARRY").count, 1)
     }
+
+    func testFilterUnknownQueryReturnsEmpty() {
+        let entries = [entry(name: "Luce", path: "/p/lutin.yml")]
+        XCTAssertEqual(
+            ProjectSwitcherFilter.filter(entries, query: "zzzz").count, 0)
+    }
 }
