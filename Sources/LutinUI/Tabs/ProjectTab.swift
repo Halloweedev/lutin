@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import LutinConfig
 import LutinDocument
 
 public struct ProjectTab: View {
@@ -60,14 +61,17 @@ public struct ProjectTab: View {
                                   placeholder: "Pick a folder",
                                   onPick: pickOutputDir)
                 }
-                SettingsField("DMG name") {
+                VStack(alignment: .leading, spacing: 6) {
+                    dmgNameLabel
                     SettingsTextField("MyApp-${version}.dmg", text: Binding(
                         get: { document.config.output.dmgName },
                         set: { try? document.apply(.setOutput(
                             directory: document.config.output.directory,
                             dmgName: $0,
                             volumeName: document.config.output.volumeName)) }))
+                    dmgResolvesToStrip
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 SettingsField("Volume name",
                               helper: "Shown in Finder when the DMG mounts.") {
                     SettingsTextField("MyApp", text: Binding(
@@ -96,6 +100,99 @@ public struct ProjectTab: View {
         try? document.apply(.setOutput(directory: url.path,
                                        dmgName: document.config.output.dmgName,
                                        volumeName: document.config.output.volumeName))
+    }
+
+    private var dmgNameLabel: some View {
+        // "DMG name · supports ${version} ${build}" — token suffix renders
+        // in a small mono code style so the user sees exactly what to type.
+        HStack(spacing: 6) {
+            Text("DMG name")
+                .font(Typography.chromeSmall.weight(.medium))
+                .foregroundStyle(Tokens.color(.textSecondary))
+            Text("· supports")
+                .font(Typography.chromeSmall)
+                .foregroundStyle(Tokens.color(.textTertiary))
+            tokenChip("${version}")
+            tokenChip("${build}")
+        }
+    }
+
+    private func tokenChip(_ s: String) -> some View {
+        Text(s)
+            .font(.system(size: 10, design: .monospaced))
+            .padding(.horizontal, 5).padding(.vertical, 1)
+            .background(Tokens.color(.canvasBackground))
+            .overlay(SquareShape().stroke(Tokens.color(.divider),
+                                          lineWidth: Tokens.Size.hairline))
+    }
+
+    private var dmgResolvesToStrip: some View {
+        // Live substitution using the same TokenResolver the release
+        // pipeline uses (`LutinRelease/ReleasePipeline.swift:45`). When
+        // no .app is linked we surface the template + a hint instead of a
+        // misleading preview.
+        let template = document.config.output.dmgName
+        let info = liveAppInfo()
+        let resolved: String
+        let trailing: String
+        if let info {
+            resolved = TokenResolver.resolve(template,
+                TokenResolver.Context(version: info.shortVersion ?? "",
+                      name: document.config.project.name,
+                      build: info.build ?? ""))
+            trailing = ""
+        } else {
+            resolved = template
+            trailing = "Resolves when an app is linked."
+        }
+        return HStack(alignment: .top, spacing: Tokens.spacing(.sm)) {
+            Rectangle()
+                .fill(Tokens.color(.brandAccent))
+                .frame(width: 2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("RESOLVES TO")
+                    .font(.system(size: 10, weight: .medium))
+                    .tracking(0.8)
+                    .foregroundStyle(Tokens.color(.textTertiary))
+                Text(resolved)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundStyle(Tokens.color(.textPrimary))
+                    .textSelection(.enabled)
+                if !trailing.isEmpty {
+                    Text(trailing)
+                        .font(Typography.chromeSmall)
+                        .foregroundStyle(Tokens.color(.textTertiary))
+                }
+            }
+            .padding(.vertical, 4)
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+        .background(Tokens.color(.canvasBackground))
+    }
+
+    /// Reads the linked `.app`'s `Info.plist` for the live DMG-name preview.
+    /// Returns `nil` only when no app is linked or the file is unreadable —
+    /// in those cases the preview shows the template plus a "Resolves when
+    /// an app is linked." helper line instead of a substitution.
+    ///
+    /// Empty-string fallbacks for `shortVersion` / `build` (in the caller)
+    /// match `LutinRelease.InfoPlistReader.read(...)`'s contract — that
+    /// reader is the one `ReleasePipeline.swift:34` uses to build the
+    /// token context for actual builds. Keeping the same fallback shape
+    /// here means the preview filename matches what the build will produce
+    /// byte-for-byte when version fields are missing from the plist.
+    private func liveAppInfo() -> AppBundleInfo.Metadata? {
+        let trimmed = document.config.app.path
+            .trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return nil }
+        let url = URL(fileURLWithPath: trimmed,
+                      relativeTo: document.projectDirectory)
+            .standardizedFileURL
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return nil
+        }
+        return try? AppBundleInfo.read(url)
     }
 }
 
