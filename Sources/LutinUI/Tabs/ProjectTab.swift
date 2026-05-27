@@ -9,19 +9,7 @@ public struct ProjectTab: View {
 
     public var body: some View {
         TabBody {
-            SettingsSection("Identity", headerMeta: {
-                Text(document.config.app.path.isEmpty ? "unlinked" : "linked")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(document.config.app.path.isEmpty
-                                     ? Tokens.color(.textTertiary)
-                                     : Tokens.color(.logSuccess))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(document.config.app.path.isEmpty
-                                ? Color.clear
-                                : Tokens.color(.brandAccentMuted)
-                                    .opacity(0.5))
-            }) {
+            SettingsSection("Identity", headerMeta: { identityPill }) {
                 SettingsField("Project name") {
                     SettingsTextField("MyApp", text: Binding(
                         get: { document.config.project.name },
@@ -171,6 +159,37 @@ public struct ProjectTab: View {
         .background(Tokens.color(.canvasBackground))
     }
 
+    private var identityPill: some View {
+        // Three states (more honest than the binary "linked / unlinked"
+        // we shipped before): app reachable on disk → green linked;
+        // path is set but the bundle isn't there anymore → amber missing;
+        // never linked → grey unlinked.
+        let path = document.config.app.path
+            .trimmingCharacters(in: .whitespaces)
+        let label: String
+        let fg: Color
+        let bg: Color
+        if path.isEmpty {
+            label = "unlinked"
+            fg = Tokens.color(.textTertiary)
+            bg = .clear
+        } else if liveAppInfo() != nil {
+            label = "linked"
+            fg = Tokens.color(.logSuccess)
+            bg = Tokens.color(.brandAccentMuted).opacity(0.5)
+        } else {
+            label = "missing"
+            fg = Tokens.color(.logProgress)
+            bg = Tokens.color(.brandAccentMuted).opacity(0.5)
+        }
+        return Text(label)
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(fg)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(bg)
+    }
+
     /// Reads the linked `.app`'s `Info.plist` for the live DMG-name preview.
     /// Returns `nil` only when no app is linked or the file is unreadable —
     /// in those cases the preview shows the template plus a "Resolves when
@@ -235,7 +254,7 @@ private struct BundleIdentifierReadout: View {
                     .foregroundStyle(Tokens.color(.textTertiary))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .background(Color.white.opacity(0.6))
+                    .background(Tokens.color(.canvasBackground))
                     .overlay(SquareShape().stroke(Tokens.color(.divider),
                                                   lineWidth: Tokens.Size.hairline))
             }
