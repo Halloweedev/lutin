@@ -7,13 +7,19 @@ public struct ImageDecorationLayer: View {
     @Bindable var document: LutinProjectDocument
     @Bindable var selectionModel: CanvasSelectionModel
     let guideState: CanvasGuideState
+    let configW: CGFloat
+    let configH: CGFloat
 
     public init(document: LutinProjectDocument,
                 selectionModel: CanvasSelectionModel,
-                guideState: CanvasGuideState) {
+                guideState: CanvasGuideState,
+                configW: CGFloat,
+                configH: CGFloat) {
         self.document = document
         self.selectionModel = selectionModel
         self.guideState = guideState
+        self.configW = configW
+        self.configH = configH
     }
 
     public var body: some View {
@@ -91,6 +97,8 @@ public struct ImageDecorationLayer: View {
                        selectionModel: selectionModel,
                        id: .image(index: index),
                        snapGrid: 0,
-                       guideState: guideState)
+                       guideState: guideState,
+                       configW: configW,
+                       configH: configH)
     }
 }

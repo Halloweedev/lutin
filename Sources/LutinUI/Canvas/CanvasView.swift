@@ -90,8 +90,14 @@ public struct CanvasView: View {
                     background(configW: configW, configH: configH)
                     ImageDecorationLayer(document: document,
                                          selectionModel: selectionModel,
-                                         guideState: guideState)
-                    ItemLayer(document: document, selectionModel: selectionModel, guideState: guideState)
+                                         guideState: guideState,
+                                         configW: configW,
+                                         configH: configH)
+                    ItemLayer(document: document,
+                              selectionModel: selectionModel,
+                              guideState: guideState,
+                              configW: configW,
+                              configH: configH)
                     if let gx = guideState.guideX {
                         Rectangle()
                             .fill(Tokens.color(.alignmentGuide))
