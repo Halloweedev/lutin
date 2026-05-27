@@ -165,35 +165,43 @@ public struct ReleaseTab: View {
     private var notarizationEnabled: Bool { document.config.notarization?.enabled ?? false }
 
     private var notarizationSection: some View {
-        SettingsSection("Notarization", headerTrailing: {
-            LutinToggle("", isOn: Binding(
-                get: { notarizationEnabled },
-                set: { v in
-                    var n = currentNotarization()
-                    n.enabled = v
-                    // First-enable default: switch Staple on if the
-                    // user hasn't expressed an opinion yet. Stapling
-                    // is what every shipping artifact needs (chrome
-                    // status reflects this); defaulting to off forced
-                    // a second deliberate toggle to reach a green
-                    // state, which read as a footgun.
-                    if v, n.staple == nil { n.staple = true }
-                    try? document.apply(.setNotarization(n))
-                }))
+        let verdict = ReleaseStatusKind.notarization(
+            document.config.notarization,
+            signingHardenedRuntime:
+                document.config.signing?.hardenedRuntime ?? false)
+        return SettingsSection("Notarization", headerMeta: {
+            statusPill(verdict)
         }) {
+            SettingsRow("Enabled",
+                        helper: "Submit to Apple after signing and wait for the ticket.") {
+                LutinToggle("", isOn: Binding(
+                    get: { notarizationEnabled },
+                    set: { v in
+                        var n = currentNotarization()
+                        n.enabled = v
+                        // First-enable default: Staple on so the user
+                        // doesn't need a second deliberate toggle to reach
+                        // a green state.
+                        if v, n.staple == nil { n.staple = true }
+                        try? document.apply(.setNotarization(n))
+                    }))
+            }
             Group {
-                SettingsField("Profile") {
+                SettingsRow("Profile") {
                     NotaryProfileField(
                         name: Binding(
                             get: { document.config.notarization?.profile ?? "" },
                             set: { v in
-                                var n = currentNotarization(); n.profile = v.isEmpty ? nil : v
+                                var n = currentNotarization()
+                                n.profile = v.isEmpty ? nil : v
                                 try? document.apply(.setNotarization(n))
                             }),
                         onCreateNew: { showingCreateProfile = true }
                     )
+                    .frame(maxWidth: 260)
                 }
-                SettingsRow(icon: "paperclip", "Staple") {
+                SettingsRow("Staple",
+                            helper: "Attach the notarization ticket so Gatekeeper can verify offline.") {
                     LutinToggle("", isOn: Binding(
                         get: { document.config.notarization?.staple ?? false },
                         set: { v in
@@ -263,32 +271,40 @@ public struct ReleaseTab: View {
                                       lineWidth: Tokens.Size.hairline))
     }
 
-    private var notarizationStatusRow: StatusRow {
-        let n = document.config.notarization
-        let enabled = n?.enabled ?? false
-        let profile = (n?.profile ?? "").trimmingCharacters(in: .whitespaces)
-        let staple = n?.staple ?? false
-        let hardened = document.config.signing?.hardenedRuntime ?? false
-        if !enabled { return StatusRow(.inactive, "Notarization disabled") }
-        if profile.isEmpty { return StatusRow(.blocked, "Notary profile required") }
-        if !hardened {
-            return StatusRow(.blocked, "Hardened runtime required for notarization",
-                             fix: .init(label: "Enable") {
-                var s = currentSigning()
-                s.hardenedRuntime = true
-                if !s.enabled { s.enabled = true }
-                try? document.apply(.setSigning(s))
-            })
-        }
-        if !staple {
-            return StatusRow(.blocked, "Stapling recommended — disable only if intentional",
-                             fix: .init(label: "Enable") {
-                var n = currentNotarization()
-                n.staple = true
-                try? document.apply(.setNotarization(n))
-            })
-        }
-        return StatusRow(.ok, "Notarization ready")
+    private var notarizationStatusRow: some View {
+        let v = ReleaseStatusKind.notarization(
+            document.config.notarization,
+            signingHardenedRuntime:
+                document.config.signing?.hardenedRuntime ?? false)
+        let fix: StatusRow.Fix? = {
+            // Re-attach the cross-section one-click fixes that used to live
+            // inline in this property. The verdict tells us which fix is
+            // relevant via `shortLabel`.
+            switch v.shortLabel {
+            case "needs hardened runtime":
+                return .init(label: "Enable") {
+                    var s = currentSigning()
+                    s.hardenedRuntime = true
+                    if !s.enabled { s.enabled = true }
+                    try? document.apply(.setSigning(s))
+                }
+            case "staple off":
+                return .init(label: "Enable") {
+                    var n = currentNotarization()
+                    n.staple = true
+                    try? document.apply(.setNotarization(n))
+                }
+            default:
+                return nil
+            }
+        }()
+        return StatusRow(v.kind, v.longMessage, fix: fix)
+            .padding(.top, 4)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Tokens.color(.divider))
+                    .frame(height: Tokens.Size.hairline)
+            }
     }
 
     /// Entitlements path shown in the picker: relative to the project
