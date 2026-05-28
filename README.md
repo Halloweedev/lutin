@@ -42,7 +42,7 @@ Every action the GUI takes flows through the same intent layer the CLI's `apply-
 Free, no limits, no licensing flow.
 
 ```sh
-# Homebrew (coming soon)
+# Homebrew
 brew install halloweedev/lutin/lutin
 
 # Or download the latest release
