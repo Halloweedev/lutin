@@ -39,10 +39,14 @@ fi
 OUT_DIR="$REPO_ROOT/Apps/LutinApp/build"
 rm -rf "$OUT_DIR/Lutin.app"
 mkdir -p "$OUT_DIR"
+# Version comes from LutinVersion.current (the single source of truth that
+# also drives `lutin --version` and release-app.sh), read straight from
+# source so dev builds match the CLI without an extra `lutin` build.
+VERSION="$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/LutinCore/LutinVersion.swift)"
 "$PRODUCT_DIR/lutin-app-packager" \
     "$PRODUCT_DIR/lutin-app" "$RES_DIR" "$OUT_DIR" \
-    --name=Lutin --bundle-id=com.lutin.app --version=0.1.0 --build=1 > /dev/null
-echo "   $OUT_DIR/Lutin.app"
+    --name=Lutin --bundle-id=com.lutin.app --version="${VERSION:-0.0.0}" --build=1 > /dev/null
+echo "   $OUT_DIR/Lutin.app (v$VERSION)"
 
 # Framework embedding (KeylightSDK), the Frameworks rpath, and the
 # Contents/Resources/Lutin_LutinUI.bundle asset staging are all done by
