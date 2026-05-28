@@ -473,6 +473,7 @@ public struct Lutin: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "lutin",
         abstract: "Design, build, and release beautiful DMGs for macOS apps.",
+        version: LutinVersion.current,
         subcommands: [Init.self, Projects.self, Add.self, Remove.self, Open.self,
                       Validate.self, Doctor.self, Build.self, Release.self, Preview.self,
                       Notary.self, ApplyIntents.self])
