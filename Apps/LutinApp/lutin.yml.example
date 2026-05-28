@@ -8,6 +8,11 @@
 # your own signing identity and notary profile without leaking them into
 # source control.
 #
+# The DMG *design* (window, item positions, decorations, background) is
+# committed here so the release artifact is reproducible. The decoration
+# and background images live in `assets/` — swap them per release for
+# fresh art; keep the filenames stable so this config keeps resolving.
+#
 # IMPORTANT (macOS 14+/26): Finder silently refuses to apply a .DS_Store
 # layout (background image, icon positions, iconSize) to any DMG that
 # Gatekeeper rejects. The signing + notarization + staple steps below are
@@ -23,39 +28,49 @@ output:
   directory: ../../release
   dmgName: Lutin-${version}.dmg
   volumeName: Lutin
-# window.width × window.height is the *content area* (the canvas a background
-# fills, not the outer window frame). For a custom background image, export
-# it at width*scale × height*scale pixels (default scale = 2 for Retina).
-# Lutin grows the outer WindowBounds internally to leave the chrome alone.
-# window:
-#   width: 680
-#   height: 420
+window:
+  width: 680
+  height: 420
+  iconSize: 128
+  textSize: 12
 background:
-  type: solid
-  colorA: '#FFFFFF'
+  type: image
+  path: assets/background.jpg
   scale: 2
 items:
 - type: app
   id: app
-  x: 180
-  y: 220
+  x: 190
+  y: 210
   label: Lutin
 - type: applications
   id: applications
-  x: 500
-  y: 220
+  x: 482
+  y: 210
   label: Applications
 decorations:
-- type: arrow
-  from: app
-  to: applications
-  label: Drag to install
+- type: image
+  path: assets/header.png
+  x: 65
+  y: 98
+  width: 550
+- type: image
+  path: assets/credit-photo.png
+  x: 32
+  y: 388
+  width: 120
+- type: image
+  path: assets/made-with-lutin.png
+  x: 548
+  y: 388
+  width: 100
 # Replace the identity below with your own "Developer ID Application: …"
 # string from `security find-identity -p codesigning`, and the profile with
 # the name you used in `lutin notary setup --profile NAME`.
 signing:
   enabled: true
   identity: "Developer ID Application: Your Name (TEAMID00)"
+  hardenedRuntime: true
   signDmg: true
 notarization:
   enabled: true
