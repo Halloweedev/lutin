@@ -51,6 +51,8 @@ brew install halloweedev/lutin/lutin
 # https://github.com/Halloweedev/lutin/releases
 ```
 
+Installs a prebuilt universal binary (Apple Silicon + Intel) — no Xcode needed.
+
 ### App
 
 Download the latest **Lutin.app** `.dmg` from [Releases](https://github.com/Halloweedev/lutin/releases). Free for up to **10 DMG projects** — see [Free vs Pro](#free-vs-pro).
@@ -85,7 +87,7 @@ lutin preview         # mount and open the result in Finder
 | `lutin notary setup [--profile NAME] ...` | Store a `notarytool` keychain profile. |
 | `lutin apply-intents --config PATH [--file intents.json] [--json]` | Apply editor intents to a project file (stdin if `--file` omitted). |
 
-Every command accepts `--help`. Output-producing commands accept `--json` for machine consumption.
+Every command accepts `--help`, and `lutin --version` prints the version. Output-producing commands accept `--json` for machine consumption.
 
 ## Free vs Pro
 
@@ -156,9 +158,10 @@ Sources/         Swift modules (Core, Config, Builder, Render, Signing, …)
 Apps/            Executable targets (CLI, App, Packager, Headless)
 Tests/           Swift Testing + XCTest suites
 Examples/        Sample lutin.yml projects
-release/         Build artifacts
 scripts/         dev-app.sh, release-app.sh, verify-editor-parity.sh, …
-docs/            Internal notes and specs
+homebrew/        Homebrew formula (mirrored to the halloweedev/lutin tap)
+docs/            Notes, specs, and brand assets
+.github/         CI workflows (release-cli.yml builds the universal binary)
 ```
 
 ## Contributing

@@ -88,6 +88,7 @@ Arrows: drawn arrows were removed — add an arrow PNG via `addImageDecoration` 
 
 | Goal | Command |
 |---|---|
+| Check the installed CLI version | `lutin --version` |
 | List registered projects | `lutin projects --json` |
 | Read the current `lutin.yml` | Read the file directly — it's plain YAML. |
 | Check the config is structurally valid | `lutin validate --config X --json` |
