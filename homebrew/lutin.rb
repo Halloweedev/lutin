@@ -11,8 +11,8 @@
 class Lutin < Formula
   desc "Design, build, sign, and notarize macOS DMGs"
   homepage "https://github.com/Halloweedev/lutin"
-  url "https://github.com/Halloweedev/lutin/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "b9879d92e1738c9fa99430c7f098d0e933b9ee7ab8e3b4e4fa14225fdf13e6ef"
+  url "https://github.com/Halloweedev/lutin/archive/refs/tags/v0.1.1.tar.gz"
+  sha256 "d62305e2f5deb4e2be97d5224e0298a45d55c25e23d8df7a6b4f7c0c5daca5c6"
   license "GPL-3.0-only"
   head "https://github.com/Halloweedev/lutin.git", branch: "main"
 
@@ -30,8 +30,9 @@ class Lutin < Formula
   end
 
   test do
-    # --help is the cheapest smoke test that exercises argument parsing
-    # and confirms every registered subcommand resolves cleanly.
+    # Confirm the installed binary reports the version this formula declares.
+    assert_match version.to_s, shell_output("#{bin}/lutin --version")
+    # And that argument parsing resolves every registered subcommand.
     assert_match "USAGE: lutin <subcommand>", shell_output("#{bin}/lutin --help")
   end
 end
