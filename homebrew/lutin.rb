@@ -1,20 +1,18 @@
 # typed: strict
 # frozen_string_literal: true
 
-# Draft of the Homebrew formula for the Lutin CLI.
+# Homebrew formula for the Lutin CLI. Canonical copy lives in the main repo
+# at homebrew/lutin.rb; it is mirrored to github.com/Halloweedev/homebrew-lutin
+# under Formula/lutin.rb so users can `brew install halloweedev/lutin/lutin`.
 #
-# This file lives in the main repo while we iterate; the published copy
-# belongs in github.com/Halloweedev/homebrew-lutin under `Formula/lutin.rb`
-# so users can run `brew install halloweedev/lutin/lutin`.
-#
-# Build-from-source formula: no prebuilt bottle yet. `brew install` runs
-# `swift build -c release` against the tagged source tarball, which takes
-# ~30s on first install with Xcode 16+ already present.
+# Source-build formula (no prebuilt bottle yet): `brew install` runs
+# `swift build -c release` against the tagged source tarball, ~30s on first
+# install with Xcode 16+ present.
 class Lutin < Formula
   desc "Design, build, sign, and notarize macOS DMGs"
   homepage "https://github.com/Halloweedev/lutin"
   url "https://github.com/Halloweedev/lutin/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "REPLACE_AFTER_TAGGING"
+  sha256 "b9879d92e1738c9fa99430c7f098d0e933b9ee7ab8e3b4e4fa14225fdf13e6ef"
   license "GPL-3.0-only"
   head "https://github.com/Halloweedev/lutin.git", branch: "main"
 
