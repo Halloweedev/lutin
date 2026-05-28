@@ -11,8 +11,8 @@
 class Lutin < Formula
   desc "Design, build, sign, and notarize macOS DMGs"
   homepage "https://github.com/Halloweedev/lutin"
-  url "https://github.com/Halloweedev/lutin/archive/refs/tags/v0.1.1.tar.gz"
-  sha256 "d62305e2f5deb4e2be97d5224e0298a45d55c25e23d8df7a6b4f7c0c5daca5c6"
+  url "https://github.com/Halloweedev/lutin/archive/refs/tags/v0.1.2.tar.gz"
+  sha256 "20ee13385a9ec49712f7371253f1cc50b50ff7b02a3adaf56cb3e887214ab690"
   license "GPL-3.0-only"
   head "https://github.com/Halloweedev/lutin.git", branch: "main"
 
