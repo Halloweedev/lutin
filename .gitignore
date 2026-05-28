@@ -24,3 +24,13 @@
 # and the build-needed sizes are in AppIcon.appiconset/; intermediate
 # rasterizations don't belong in git.
 /Icon-*.png
+
+# Keylight SDK key and other build-time secrets. Template lives at
+# Sources/LutinUI/Secrets.swift.example. dev-app.sh bootstraps a copy
+# from the template if missing.
+/Sources/LutinUI/Secrets.swift
+
+# Dogfood DMG config — contains your personal signing identity and
+# notary profile name. Template at Apps/LutinApp/lutin.yml.example;
+# release-app.sh bootstraps a copy from the template if missing.
+/Apps/LutinApp/lutin.yml

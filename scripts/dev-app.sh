@@ -9,6 +9,15 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# Bootstrap Secrets.swift from template on a fresh clone. The file is
+# gitignored so the real Keylight SDK key never lands in source control;
+# the template ships placeholder values that compile but fail at runtime
+# with a clear Keylight error, prompting the user to fill in real values.
+if [[ ! -f Sources/LutinUI/Secrets.swift ]]; then
+    cp Sources/LutinUI/Secrets.swift.example Sources/LutinUI/Secrets.swift
+    echo "! created Sources/LutinUI/Secrets.swift from template — edit it with your Keylight SDK key before launching" >&2
+fi
+
 echo "→ build (debug)"
 # SwiftPM quietly takes only the LAST --product when several are passed
 # on a single `swift build` invocation, so we issue two builds to make

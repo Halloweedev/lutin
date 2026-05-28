@@ -16,7 +16,7 @@ enum Licensing {
     static let manager: LicenseManager = {
         do {
             return try Keylight.manager(
-                sdkKey: "sdk_live_49d148828ffc2667f2e17987db9d94d1b36a770969ad3bb721351c0389d4388e",
+                sdkKey: LutinSecrets.keylightSDKKey,
                 tenantId: "anotheragence",
                 productId: "lutn",
                 keyPrefix: "LUTN",

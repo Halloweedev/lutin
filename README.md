@@ -1,5 +1,10 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/lutin.icon/Assets/lutin-logo-icon-dark.svg">
+  <img src="docs/lutin.icon/Assets/lutin-logo-icon.svg" alt="Lutin logo" width="120" height="120">
+</picture>
+
 # Lutin
 
 **Design, build, sign, and notarize macOS DMGs — with a native app and an agent-operable CLI.**
@@ -100,6 +105,13 @@ Pro licenses are issued and validated via [**Keylight.dev**](https://keylight.de
 ```sh
 git clone https://github.com/Halloweedev/lutin.git
 cd lutin
+
+# Provision the Keylight SDK key (one-time, only needed for the GUI app —
+# the CLI doesn't link the licensing module). Get a key from
+# https://keylight.dev, then:
+cp Sources/LutinUI/Secrets.swift.example Sources/LutinUI/Secrets.swift
+$EDITOR Sources/LutinUI/Secrets.swift   # paste your sdk_test_* or sdk_live_* key
+
 swift build
 swift run lutin --help
 
@@ -107,7 +119,7 @@ swift run lutin --help
 ./scripts/dev-app.sh
 ```
 
-`scripts/dev-app.sh` builds the debug executable, assembles a real `Lutin.app` bundle, and opens it with normal Dock and focus behavior. `swift run lutin-app` runs the bare SwiftPM executable and is mainly useful when debugging process startup from a terminal.
+`scripts/dev-app.sh` builds the debug executable, assembles a real `Lutin.app` bundle, and opens it with normal Dock and focus behavior. It also bootstraps `Sources/LutinUI/Secrets.swift` from the template if missing. `swift run lutin-app` runs the bare SwiftPM executable and is mainly useful when debugging process startup from a terminal.
 
 ## Tests
 
@@ -142,7 +154,7 @@ docs/            Internal notes and specs
 
 ## Contributing
 
-Issues, bug reports, and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). For security disclosures, see [SECURITY.md](SECURITY.md).
+Issues, bug reports, and pull requests are welcome — open one on GitHub. For security disclosures, please email the address in [TRADEMARKS.md](TRADEMARKS.md) rather than filing a public issue.
 
 ## License & trademarks
 

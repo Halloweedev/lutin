@@ -61,12 +61,12 @@ let package = Package(
             "LutinCore", "LutinConfig", "LutinDocument", "LutinAppKit", "LutinRender", "LutinRelease",
             "LutinSigning", "LutinNotarization", "LutinLicense",
             .product(name: "KeylightSDK", package: "keylight-swift"),
-        ], resources: [.process("Resources")]),
+        ], exclude: ["Secrets.swift.example"], resources: [.process("Resources")]),
         .target(name: "LutinAppPackagerCore", dependencies: ["LutinCore", "LutinConfig", "LutinSigning"]),
 
         .executableTarget(name: "LutinCLIExe", dependencies: ["LutinCLI"], path: "Apps/LutinCLI"),
         .executableTarget(name: "LutinAppExe", dependencies: ["LutinUI"], path: "Apps/LutinApp",
-                          exclude: ["lutin.yml", "build"]),
+                          exclude: ["lutin.yml", "lutin.yml.example", "build"]),
         .executableTarget(name: "LutinAppPackagerExe", dependencies: [
             "LutinAppPackagerCore",
         ], path: "Apps/LutinAppPackager"),

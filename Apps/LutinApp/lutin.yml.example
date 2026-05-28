@@ -3,6 +3,11 @@
 # `lutin release` for the full signed + notarized + stapled pipeline) after
 # LutinAppPackager produces ./build/Lutin.app.
 #
+# This file is the **template**. On a fresh clone, `scripts/release-app.sh`
+# copies it to `Apps/LutinApp/lutin.yml` (gitignored) so you can fill in
+# your own signing identity and notary profile without leaking them into
+# source control.
+#
 # IMPORTANT (macOS 14+/26): Finder silently refuses to apply a .DS_Store
 # layout (background image, icon positions, iconSize) to any DMG that
 # Gatekeeper rejects. The signing + notarization + staple steps below are
@@ -50,9 +55,9 @@ decorations:
 # the name you used in `lutin notary setup --profile NAME`.
 signing:
   enabled: true
-  identity: "Developer ID Application: Your Name (TEAMID)"
+  identity: "Developer ID Application: Your Name (TEAMID00)"
   signDmg: true
 notarization:
   enabled: true
-  profile: your-notary-profile
+  profile: lutin-notarize
   staple: true

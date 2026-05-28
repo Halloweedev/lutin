@@ -9,6 +9,15 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# Bootstrap Apps/LutinApp/lutin.yml from template on a fresh clone. The
+# real file is gitignored because it embeds a personal signing identity
+# and notary profile name; the template ships placeholder values that
+# `lutin doctor` will flag, prompting the user to fill in their own.
+if [[ ! -f Apps/LutinApp/lutin.yml ]]; then
+    cp Apps/LutinApp/lutin.yml.example Apps/LutinApp/lutin.yml
+    echo "! created Apps/LutinApp/lutin.yml from template — edit it with your Developer ID signing identity and notarytool profile before releasing" >&2
+fi
+
 VERSION="${LUTIN_VERSION:-1.0.0}"
 BUILD="${LUTIN_BUILD:-1}"
 
