@@ -7,6 +7,8 @@
 
 # Lutin
 
+<img src="docs/header_image.png" alt="Lutin" width="640">
+
 **Design, build, sign, and notarize macOS DMGs — with a native app and an agent-operable CLI.**
 
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
