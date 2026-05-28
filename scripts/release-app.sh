@@ -18,7 +18,6 @@ if [[ ! -f Apps/LutinApp/lutin.yml ]]; then
     echo "! created Apps/LutinApp/lutin.yml from template — edit it with your Developer ID signing identity and notarytool profile before releasing" >&2
 fi
 
-VERSION="${LUTIN_VERSION:-1.0.0}"
 BUILD="${LUTIN_BUILD:-1}"
 
 echo "→ swift build -c release"
@@ -29,6 +28,13 @@ echo "→ Resolve resource bundle"
 BIN="$PRODUCT_DIR/lutin-app"
 PACKAGER="$PRODUCT_DIR/lutin-app-packager"
 LUTIN="$PRODUCT_DIR/lutin"
+
+# Single source of truth for the version: LutinVersion.current, read back
+# from the freshly-built CLI (`lutin --version`). Keeps the GUI app bundle
+# version locked to the CLI version so the two can't drift. Override with
+# LUTIN_VERSION only for one-off local builds.
+VERSION="${LUTIN_VERSION:-$("$LUTIN" --version)}"
+echo "  version: $VERSION (build $BUILD)"
 RES_DIR="$(find "$PRODUCT_DIR" -maxdepth 1 -type d -name '*LutinUI*.bundle' -print -quit)"
 if [[ -z "$RES_DIR" ]]; then
   echo "ERROR: could not locate the LutinUI resource bundle under $PRODUCT_DIR" >&2
