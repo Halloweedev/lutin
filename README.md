@@ -92,7 +92,7 @@ The **app is free for up to 10 DMG projects**. Past that, a Pro license unlocks 
 
 Pro licenses are issued and validated via [**Keylight.dev**](https://keylight.dev). Lutin is also a real-world reference implementation for Keylight integration.
 
-> **Why a paid tier?** Lutin is open source under GPL-3.0 — you can read every line, build it yourself, and audit the gate. The paid tier funds development of the signed, notarized, supported binaries most users want to download and run.
+> **Why a paid tier?** Lutin is open source under GPL-3.0 — you can read every line, build it yourself, and audit the gate. The paid tier exists to support development and lift the 10-project cap.
 
 ## Requirements
 
