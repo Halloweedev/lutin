@@ -1,0 +1,58 @@
+name: Release CLI binary
+
+# On every version tag, build a universal (arm64 + x86_64) `lutin` binary and
+# attach it to the GitHub Release. The Homebrew formula then downloads this
+# instead of building from source, so `brew install` needs no Xcode and is
+# near-instant. Public repo → GitHub-hosted macOS runners are free.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # upload release assets
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: swift --version
+
+      - name: Build universal binary
+        run: swift build -c release --arch arm64 --arch x86_64 --product lutin
+
+      - name: Package tarball
+        id: package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/lutin"
+          TARBALL="lutin-${VERSION}-macos-universal.tar.gz"
+          tar -czf "$TARBALL" -C "$(dirname "$BIN")" lutin
+          SHA="$(shasum -a 256 "$TARBALL" | awk '{print $1}')"
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Create a draft release for the tag if one doesn't exist yet, then
+          # attach the binary. A human adds notes / the GUI .dmg and publishes.
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+                 --draft --title "$GITHUB_REF_NAME" --notes "Draft — add notes and assets."
+          gh release upload "$GITHUB_REF_NAME" "${{ steps.package.outputs.tarball }}" \
+            --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Formula update hint
+        run: |
+          {
+            echo "### CLI binary attached"
+            echo "- asset: \`${{ steps.package.outputs.tarball }}\`"
+            echo "- sha256: \`${{ steps.package.outputs.sha256 }}\`"
+            echo ""
+            echo "Next: point \`homebrew/lutin.rb\` at this asset URL + sha256, switch \`install\` to \`bin.install \"lutin\"\`, and mirror to the tap."
+          } >> "$GITHUB_STEP_SUMMARY"
