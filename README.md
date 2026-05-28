@@ -31,14 +31,15 @@ Every action the GUI takes flows through the same intent layer the CLI's `apply-
 - **Visual DMG editor** — drag your `.app`, position icons on a 1:1 device-pixel canvas, set window size, sidebar/toolbar chrome, background image, and the `Applications` shortcut.
 - **Real build pipeline** — `hdiutil`-based DMG assembly with Finder-compatible layout metadata. No AppleScript hacks.
 - **Signing & notarization built in** — pickers populated from `security find-identity` and `xcrun notarytool list-keychain-profiles`. Sign, notarize, staple, verify.
-- **Sparkle-ready** — appcast and signed updates configurable from the Release tab.
-- **Agent-operable** — every CLI subcommand supports `--json`; `apply-intents` accepts programmatic edits over stdin or file.
+- **Agent-operable** — every CLI subcommand supports `--json`; `apply-intents` accepts programmatic edits over stdin or file. See [AGENTS.md](AGENTS.md).
 - **Preview before you ship** — `lutin preview` builds, mounts, and opens the DMG in Finder.
 - **Doctor** — `lutin doctor` checks signing identities, notary profiles, required tools, and release readiness before you hit publish.
 
 ## Install
 
-### CLI — free forever, no limits
+### CLI
+
+Free, no limits, no licensing flow.
 
 ```sh
 # Homebrew (coming soon)
@@ -105,13 +106,6 @@ Pro licenses are issued and validated via [**Keylight.dev**](https://keylight.de
 ```sh
 git clone https://github.com/Halloweedev/lutin.git
 cd lutin
-
-# Provision the Keylight SDK key (one-time, only needed for the GUI app —
-# the CLI doesn't link the licensing module). Get a key from
-# https://keylight.dev, then:
-cp Sources/LutinUI/Secrets.swift.example Sources/LutinUI/Secrets.swift
-$EDITOR Sources/LutinUI/Secrets.swift   # paste your sdk_test_* or sdk_live_* key
-
 swift build
 swift run lutin --help
 
@@ -119,7 +113,20 @@ swift run lutin --help
 ./scripts/dev-app.sh
 ```
 
-`scripts/dev-app.sh` builds the debug executable, assembles a real `Lutin.app` bundle, and opens it with normal Dock and focus behavior. It also bootstraps `Sources/LutinUI/Secrets.swift` from the template if missing. `swift run lutin-app` runs the bare SwiftPM executable and is mainly useful when debugging process startup from a terminal.
+The **CLI builds with no extra setup** — it doesn't link the licensing module.
+
+The **GUI app** (`lutin-app`) does, and you have two options:
+
+1. **Use Keylight (default).** Sign up at [keylight.dev](https://keylight.dev), grab an SDK key, then:
+   ```sh
+   cp Sources/LutinUI/Secrets.swift.example Sources/LutinUI/Secrets.swift
+   $EDITOR Sources/LutinUI/Secrets.swift   # paste your sdk_test_* or sdk_live_* key
+   ```
+   `scripts/dev-app.sh` auto-creates `Secrets.swift` from the template if it's missing, so you can also just edit it after the first run.
+
+2. **Strip the licensing layer.** GPL-3.0 lets you build a fork without any licensing flow. Replace `Sources/LutinUI/Licensing.swift` with a stub that no-ops `LicensingHooks.checkOnLaunch()`/`refreshIfNeeded()` and exposes a `manager` with `isEntitled = true`, then edit `Sources/LutinLicense/LicenseGate.swift` so `canCreateProject` always returns `true` and `shouldShowSupportNag` always returns `false`. You can then drop the `KeylightSDK` dependency from `Package.swift`. Per [TRADEMARKS.md](TRADEMARKS.md), a rebranded fork is fine; just don't ship it as "Lutin".
+
+`swift run lutin-app` runs the bare SwiftPM executable and is mainly useful for debugging process startup from a terminal — `scripts/dev-app.sh` is what you want for normal dev.
 
 ## Tests
 
@@ -154,7 +161,7 @@ docs/            Internal notes and specs
 
 ## Contributing
 
-Issues, bug reports, and pull requests are welcome — open one on GitHub. For security disclosures, please email the address in [TRADEMARKS.md](TRADEMARKS.md) rather than filing a public issue.
+Issues, bug reports, and pull requests are welcome — open one on GitHub. For security issues, please use GitHub's **private vulnerability reporting** on this repo rather than filing a public issue.
 
 ## License & trademarks
 
