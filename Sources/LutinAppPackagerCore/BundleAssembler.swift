@@ -60,6 +60,23 @@ public enum BundleAssembler {
             }
         }
 
+        // SwiftPM's `Bundle.module` accessor (and LutinUI's LutinAssets) look
+        // for the resource bundle at `Contents/Resources/<Package>_<Target>.bundle`.
+        // We compiled its Assets.xcassets to a top-level `Assets.car` above (for
+        // the app icon); also stage a copy inside a nested bundle of the same
+        // name so module-scoped `Image(_:bundle:)` lookups resolve at runtime.
+        if spec.resourcesURL.pathExtension == "bundle" {
+            let compiledCar = resources.appendingPathComponent("Assets.car")
+            if fm.fileExists(atPath: compiledCar.path) {
+                let moduleBundle = resources
+                    .appendingPathComponent(spec.resourcesURL.lastPathComponent, isDirectory: true)
+                try fm.createDirectory(at: moduleBundle, withIntermediateDirectories: true)
+                let dest = moduleBundle.appendingPathComponent("Assets.car")
+                if fm.fileExists(atPath: dest.path) { try fm.removeItem(at: dest) }
+                try fm.copyItem(at: compiledCar, to: dest)
+            }
+        }
+
         // PkgInfo — classic macOS bundle marker. Apps without this look
         // suspect to LaunchServices / Finder; Xcode always writes it.
         try Data("APPL????".utf8).write(
@@ -67,6 +84,16 @@ public enum BundleAssembler {
 
         try InfoPlistWriter.write(spec, to: contents.appendingPathComponent("Info.plist"),
                                   extraKeys: partialPlistKeys)
+
+        // Make the bundle self-contained: embed any @rpath framework the
+        // binary links against (e.g. KeylightSDK) and add the Frameworks
+        // rpath. Frameworks are sought next to the source binary in the build
+        // dir. No-op for binaries with no @rpath framework deps.
+        try FrameworkEmbedder.embed(
+            appBundle: appURL,
+            binaryName: spec.bundleName,
+            searchDirectory: spec.binaryURL.deletingLastPathComponent())
+
         return appURL
     }
 
