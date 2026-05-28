@@ -18,7 +18,11 @@ if [[ ! -f Apps/LutinApp/lutin.yml ]]; then
     echo "! created Apps/LutinApp/lutin.yml from template — edit it with your Developer ID signing identity and notarytool profile before releasing" >&2
 fi
 
-BUILD="${LUTIN_BUILD:-1}"
+# Build number = git commit count: monotonic, deterministic, no manual
+# bumping. CFBundleVersion must increase across releases for Sparkle and
+# notarization hygiene; commit count does that for free. Override with
+# LUTIN_BUILD; falls back to 1 outside a git checkout (e.g. tarball build).
+BUILD="${LUTIN_BUILD:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}"
 
 echo "→ swift build -c release"
 swift build -c release --product lutin-app --product lutin --product lutin-app-packager
