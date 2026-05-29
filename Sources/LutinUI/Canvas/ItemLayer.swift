@@ -26,7 +26,8 @@ public struct ItemLayer: View {
     }
 
     public var body: some View {
-        let outsiders = OffCanvasDetection.outsiders(in: document.config)
+        let outsiders = OffCanvasDetection.outsiders(in: document.config,
+                                                     projectDirectory: document.projectDirectory)
         ZStack(alignment: .topLeading) {
             ForEach((document.config.items ?? []).filter { !($0.hidden ?? false) }, id: \.id) { item in
                 let isOffCanvas = outsiders.contains(.item(id: item.id))
