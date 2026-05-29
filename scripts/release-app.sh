@@ -25,7 +25,14 @@ fi
 BUILD="${LUTIN_BUILD:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}"
 
 echo "→ swift build -c release"
-swift build -c release --product lutin-app --product lutin --product lutin-app-packager
+# Build each product in its own invocation. A single
+# `swift build --product A --product B --product C` only actually builds the
+# LAST `--product` (SwiftPM quirk), which silently leaves the others stale —
+# e.g. an old `lutin` whose `--version` predates a release, breaking the
+# VERSION read below. Separate invocations force all three current.
+swift build -c release --product lutin
+swift build -c release --product lutin-app
+swift build -c release --product lutin-app-packager
 PRODUCT_DIR="$(swift build --show-bin-path -c release)"
 
 echo "→ Resolve resource bundle"
