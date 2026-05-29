@@ -4,5 +4,5 @@
 /// Homebrew formula's `url`/`sha256`. The Homebrew test asserts the
 /// installed binary reports the same version the formula declares.
 public enum LutinVersion {
-    public static let current = "0.1.2"
+    public static let current = "0.2.0"
 }
