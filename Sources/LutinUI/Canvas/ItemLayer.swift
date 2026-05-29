@@ -39,6 +39,7 @@ public struct ItemLayer: View {
                             selectionModel.select(.item(id: item.id))
                         }
                     }
+                    .contextMenu { LayerOrderMenu(document: document, id: .item(id: item.id)) }
                     .draggableItem(document: document,
                                    selectionModel: selectionModel,
                                    id: .item(id: item.id),
