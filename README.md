@@ -1,13 +1,13 @@
+# Lutin
+
+<img src="docs/header_image.png" alt="Lutin" width="640">
+
 <div align="center">
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/lutin.icon/Assets/lutin-logo-icon-dark.svg">
   <img src="docs/lutin.icon/Assets/lutin-logo-icon.svg" alt="Lutin logo" width="120" height="120">
 </picture>
-
-# Lutin
-
-<img src="docs/header_image.png" alt="Lutin" width="640">
 
 **Design, build, sign, and notarize macOS DMGs — with a native app and an agent-operable CLI.**
 
