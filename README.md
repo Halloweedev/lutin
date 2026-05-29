@@ -1,6 +1,8 @@
 # Lutin
 
-<img src="docs/header_image.png" alt="Lutin" width="640">
+<p align="center">
+  <img src="docs/header_image.png" alt="Lutin" width="640">
+</p>
 
 <div align="center">
 
