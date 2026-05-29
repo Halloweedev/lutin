@@ -46,7 +46,8 @@ public struct ImageDecorationLayer: View {
             guard let ns = nsImage, ns.size.width > 0 else { return 1.0 }
             return ns.size.height / ns.size.width
         }()
-        let h = w * aspect
+        // Explicit height → free stretch. Absent → aspect-locked to source.
+        let h = deco.height.map(CGFloat.init) ?? w * aspect
         // All three layers (image, selection ring, resize handles) live
         // inside a single `.frame(w, h)` + `.position(...)` container so
         // they move together. The previous shape (image positioned,

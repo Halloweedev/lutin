@@ -66,7 +66,8 @@ public final class CanvasSelectionModel {
                 try document.apply(.addImageDecoration(path: d.path ?? "",
                                                        x: (d.x ?? 0) + 16,
                                                        y: (d.y ?? 0) + 16,
-                                                       width: d.width ?? 100))
+                                                       width: d.width ?? 100,
+                                                       height: d.height))
             }
         }
     }

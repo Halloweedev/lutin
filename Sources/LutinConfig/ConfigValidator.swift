@@ -59,6 +59,14 @@ public enum ConfigValidator {
                     error("decorations[\(idx)].y",
                           "An image decoration requires a 'y' position.")
                 }
+                if let w = decoration.width, w <= 0 {
+                    error("decorations[\(idx)].width",
+                          "An image decoration's 'width' must be greater than 0.")
+                }
+                if let h = decoration.height, h <= 0 {
+                    error("decorations[\(idx)].height",
+                          "An image decoration's 'height' must be greater than 0.")
+                }
             default:
                 error("decorations[\(idx)].type",
                       "Unknown decoration type '\(decoration.type)'. Only 'image' is supported.")

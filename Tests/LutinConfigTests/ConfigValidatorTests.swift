@@ -39,4 +39,15 @@ final class ConfigValidatorTests: XCTestCase {
             $0.severity == .error && $0.path == "decorations[0].type"
         })
     }
+
+    /// A non-positive width/height collapses the draw rect so the overlay
+    /// vanishes from the baked image — reject it with a clear error.
+    func testNonPositiveImageDimensionsAreError() throws {
+        var config = try baseConfig()
+        config.decorations = [.init(type: "image", path: "./i.png", x: 0, y: 0,
+                                    width: 0, height: -5)]
+        let issues = ConfigValidator.validate(config)
+        XCTAssertTrue(issues.contains { $0.severity == .error && $0.path == "decorations[0].width" })
+        XCTAssertTrue(issues.contains { $0.severity == .error && $0.path == "decorations[0].height" })
+    }
 }

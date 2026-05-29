@@ -54,11 +54,11 @@ public struct IntentEnvelope: Decodable, Sendable {
         case "setItemID":
             try document.apply(.setItemID(old: id ?? "", new: new ?? ""))
         case "addImageDecoration":
-            try document.apply(.addImageDecoration(path: path ?? "", x: x ?? 0, y: y ?? 0, width: width ?? 100))
+            try document.apply(.addImageDecoration(path: path ?? "", x: x ?? 0, y: y ?? 0, width: width ?? 100, height: height))
         case "deleteImageDecoration":
             try document.apply(.deleteImageDecoration(index: index ?? 0))
         case "moveImageDecoration":
-            try document.apply(.moveImageDecoration(index: index ?? 0, x: x ?? 0, y: y ?? 0, width: width ?? 100))
+            try document.apply(.moveImageDecoration(index: index ?? 0, x: x ?? 0, y: y ?? 0, width: width ?? 100, height: height))
         case "reorderItem":
             try document.apply(.reorderItem(id: id ?? "", toIndex: index ?? 0))
         case "reorderImageDecoration":

@@ -28,8 +28,8 @@ final class ReorderAndSwapIntentTests: XCTestCase {
 
     func testReorderImageDecoration() throws {
         let doc = try makeDoc()
-        try doc.apply(.addImageDecoration(path: "./x.png", x: 0, y: 0, width: 10))
-        try doc.apply(.addImageDecoration(path: "./y.png", x: 0, y: 0, width: 10))
+        try doc.apply(.addImageDecoration(path: "./x.png", x: 0, y: 0, width: 10, height: nil))
+        try doc.apply(.addImageDecoration(path: "./y.png", x: 0, y: 0, width: 10, height: nil))
         try doc.apply(.reorderImageDecoration(fromIndex: 1, toIndex: 0))
         XCTAssertEqual(doc.config.decorations?[0].path, "./y.png")
         XCTAssertEqual(doc.config.decorations?[1].path, "./x.png")

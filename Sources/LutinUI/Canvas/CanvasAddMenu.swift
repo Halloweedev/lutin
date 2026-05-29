@@ -55,7 +55,8 @@ public struct CanvasAddMenu: View {
             path: url.path,
             x: placement.x,
             y: placement.y,
-            width: placement.width))
+            width: placement.width,
+            height: nil))
     }
 
     private struct Placement { let x: Int; let y: Int; let width: Int }

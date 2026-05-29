@@ -19,7 +19,7 @@ public enum SchemaCoverage {
         "items.type", "items.id", "items.x", "items.y", "items.label", "items.hidden",
         "decorations.type",
         "decorations.path", "decorations.x", "decorations.y", "decorations.width",
-        "decorations.label", "decorations.hidden",
+        "decorations.height", "decorations.label", "decorations.hidden",
         "signing.enabled", "signing.identity", "signing.hardenedRuntime",
         "signing.entitlements", "signing.signDmg",
         "notarization.enabled", "notarization.profile", "notarization.staple",

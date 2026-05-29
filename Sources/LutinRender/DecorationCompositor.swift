@@ -7,7 +7,7 @@ import LutinCore
 /// so the compositor never depends on `LutinConfig`. Drawn arrows were
 /// dropped — the only decoration is a user-supplied overlay image.
 enum RenderDecoration {
-    case image(url: URL, x: Int, y: Int, widthPoints: Int?)
+    case image(url: URL, x: Int, y: Int, widthPoints: Int?, heightPoints: Int?)
 }
 
 /// Bakes decorations onto a base image.
@@ -41,9 +41,9 @@ struct DecorationCompositor {
 
         for decoration in decorations {
             switch decoration {
-            case let .image(url, x, y, widthPoints):
+            case let .image(url, x, y, widthPoints, heightPoints):
                 try drawImage(in: cg, imageHeight: h, url: url, x: x, y: y,
-                              widthPoints: widthPoints, scale: s)
+                              widthPoints: widthPoints, heightPoints: heightPoints, scale: s)
             }
         }
         guard let result = cg.makeImage() else {
@@ -53,7 +53,7 @@ struct DecorationCompositor {
     }
 
     private func drawImage(in cg: CGContext, imageHeight: Int, url: URL, x: Int, y: Int,
-                           widthPoints: Int?, scale: CGFloat) throws {
+                           widthPoints: Int?, heightPoints: Int?, scale: CGFloat) throws {
         guard FileManager.default.fileExists(atPath: url.path) else {
             throw LutinError(code: "decoration_image_not_found",
                              message: "Decoration image not found at path: \(url.path)",
@@ -64,15 +64,22 @@ struct DecorationCompositor {
             throw LutinError(code: "render_failed",
                              message: "Could not decode decoration image at \(url.path).")
         }
-        let drawW: CGFloat
-        let drawH: CGFloat
+        var drawW: CGFloat
+        var drawH: CGFloat
         if let wp = widthPoints {
             drawW = CGFloat(wp) * scale
-            drawH = drawW * CGFloat(image.height) / CGFloat(max(1, image.width))
+            // Explicit height → free stretch. Absent → aspect-locked to source.
+            drawH = heightPoints.map { CGFloat($0) * scale }
+                ?? drawW * CGFloat(image.height) / CGFloat(max(1, image.width))
         } else {
             drawW = CGFloat(image.width)
             drawH = CGFloat(image.height)
         }
+        // Guard against a non-positive width/height (e.g. a hand-edited .yml)
+        // collapsing the draw rect so the overlay silently vanishes from the
+        // baked image. ConfigValidator rejects these, but clamp defensively.
+        drawW = max(1, drawW)
+        drawH = max(1, drawH)
         // x/y are window points with top-left origin.
         // In a bottom-up CGContext, the draw rect's origin y is measured from the bottom.
         let rectX = CGFloat(x) * scale

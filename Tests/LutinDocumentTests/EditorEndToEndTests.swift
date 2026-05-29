@@ -65,9 +65,9 @@ final class EditorEndToEndTests: XCTestCase {
         // user adds an image decoration of an arrow asset.
 
         // ── Design tab: image decorations ────────────────────────────
-        try doc.apply(.addImageDecoration(path: "./logo.png", x: 100, y: 100, width: 80))
-        try doc.apply(.addImageDecoration(path: "./badge.png", x: 200, y: 100, width: 80))
-        try doc.apply(.moveImageDecoration(index: 1, x: 220, y: 120, width: 100))
+        try doc.apply(.addImageDecoration(path: "./logo.png", x: 100, y: 100, width: 80, height: nil))
+        try doc.apply(.addImageDecoration(path: "./badge.png", x: 200, y: 100, width: 80, height: nil))
+        try doc.apply(.moveImageDecoration(index: 1, x: 220, y: 120, width: 100, height: nil))
         try doc.apply(.setImageHidden(index: 1, hidden: true))
         try doc.apply(.reorderImageDecoration(fromIndex: 1, toIndex: 2))
 
@@ -120,7 +120,7 @@ final class EditorEndToEndTests: XCTestCase {
             .moveItem(id: "app", x: 100, y: 100),
             .renameItemLabel(id: "app", label: "Renamed"),
             .setItemHidden(id: "app", hidden: true),
-            .addImageDecoration(path: "./x.png", x: 0, y: 0, width: 50),
+            .addImageDecoration(path: "./x.png", x: 0, y: 0, width: 50, height: nil),
             .setWindow(width: 1000, height: nil, iconSize: nil,
                        textSize: nil, showToolbar: nil, showSidebar: nil),
             .setProjectMetadata(name: "Other", bundleId: "com.other"),
@@ -149,7 +149,7 @@ final class EditorEndToEndTests: XCTestCase {
         let (_, doc) = try bootstrap()
         XCTAssertEqual(doc.config.items?.count, 2)
         try doc.apply(.addImageDecoration(path: "./arrow.png",
-                                          x: 250, y: 250, width: 120))
+                                          x: 250, y: 250, width: 120, height: nil))
         XCTAssertEqual(doc.config.decorations?.count, 1)
 
         try doc.apply(.deleteSelection(targets: [.item(id: "app")]))

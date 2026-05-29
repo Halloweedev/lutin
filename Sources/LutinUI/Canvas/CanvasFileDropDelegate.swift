@@ -73,7 +73,7 @@ public struct CanvasFileDropDelegate: DropDelegate {
             panel.allowedContentTypes = [.png, .jpeg]
             panel.allowsMultipleSelection = false
             guard panel.runModal() == .OK, let url = panel.url else { return }
-            try? document.apply(.addImageDecoration(path: url.path, x: x, y: y, width: 120))
+            try? document.apply(.addImageDecoration(path: url.path, x: x, y: y, width: 120, height: nil))
         }
     }
 
@@ -85,7 +85,7 @@ public struct CanvasFileDropDelegate: DropDelegate {
             let label = labelForAppItem(document: document)
             addItem(type: "app", x: x, y: y, label: label, document: document)
         } else if ["png", "jpg", "jpeg"].contains(ext) {
-            try? document.apply(.addImageDecoration(path: url.path, x: x, y: y, width: 120))
+            try? document.apply(.addImageDecoration(path: url.path, x: x, y: y, width: 120, height: nil))
         }
     }
 

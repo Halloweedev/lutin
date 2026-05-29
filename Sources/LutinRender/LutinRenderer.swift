@@ -113,7 +113,9 @@ public enum LutinRenderer {
                 }
                 let url = URL(fileURLWithPath: path, relativeTo: projectDirectory)
                     .standardizedFileURL
-                result.append(.image(url: url, x: x, y: y, widthPoints: decoration.width))
+                result.append(.image(url: url, x: x, y: y,
+                                     widthPoints: decoration.width,
+                                     heightPoints: decoration.height))
             default:
                 throw LutinError(
                     code: "render_failed",

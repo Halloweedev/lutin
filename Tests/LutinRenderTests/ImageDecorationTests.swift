@@ -39,7 +39,7 @@ final class ImageDecorationTests: XCTestCase {
         let asset = try redSquarePNG(side: 40)
         defer { try? FileManager.default.removeItem(at: asset) }
         // Place a 40-point-wide square at (100,60); scale 2 → pixel rect (200,120) 80x80.
-        let deco = RenderDecoration.image(url: asset, x: 100, y: 60, widthPoints: 40)
+        let deco = RenderDecoration.image(url: asset, x: 100, y: 60, widthPoints: 40, heightPoints: nil)
         let result = try DecorationCompositor().composite(
             base: base, decorations: [deco], iconSizePoints: 96, scale: 2)
         let inside = pixel(result, x: 220, y: 140)   // within the placed square
@@ -49,11 +49,31 @@ final class ImageDecorationTests: XCTestCase {
         XCTAssertGreaterThan(outside.g, 200)
     }
 
+    func testExplicitHeightStretchesIndependentOfAspect() throws {
+        let base = try solidBase(width: 100, height: 100)
+        let asset = try redSquarePNG(side: 40)
+        defer { try? FileManager.default.removeItem(at: asset) }
+        // 40-wide, 20-tall draw rect at (10,10), scale 1 → pixels x[10,50) y[10,30).
+        let deco = RenderDecoration.image(url: asset, x: 10, y: 10, widthPoints: 40, heightPoints: 20)
+        let result = try DecorationCompositor().composite(
+            base: base, decorations: [deco], iconSizePoints: 96, scale: 1)
+        // With explicit height 20 the red fill is exactly 20 rows tall; if it
+        // were aspect-locked to the 40x40 source it would be 40 rows tall.
+        // (`pixel` measures y from the bottom edge here.)
+        let inside = pixel(result, x: 30, y: 80)
+        XCTAssertGreaterThan(inside.r, 200)
+        XCTAssertLessThan(inside.g, 80)
+        // Row 60 is inside a 40-tall aspect-locked square but outside the
+        // 20-tall stretched rect — must be untouched white base.
+        let beyondStretch = pixel(result, x: 30, y: 60)
+        XCTAssertGreaterThan(beyondStretch.g, 200)
+    }
+
     func testMissingDecorationImageThrowsTypedError() throws {
         let base = try solidBase(width: 100, height: 100)
         let deco = RenderDecoration.image(
             url: URL(fileURLWithPath: "/tmp/lutin-no-such-overlay.png"),
-            x: 10, y: 10, widthPoints: 20)
+            x: 10, y: 10, widthPoints: 20, heightPoints: nil)
         XCTAssertThrowsError(try DecorationCompositor().composite(
             base: base, decorations: [deco], iconSizePoints: 96, scale: 1)) { error in
             XCTAssertEqual((error as? LutinError)?.code, "decoration_image_not_found")

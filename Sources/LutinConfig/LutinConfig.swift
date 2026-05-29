@@ -156,17 +156,21 @@ public struct LutinConfig: Codable, Equatable {
         public var x: Int?                     // image: position, window points
         public var y: Int?                     // image: position, window points
         public var width: Int?                 // image: drawn width, window points
+        public var height: Int?                // image: drawn height, window points.
+                                               // Absent → derived from the source
+                                               // image's aspect ratio (aspect-locked).
         public var label: String?              // optional text near the midpoint
         public var hidden: Bool?
         public init(type: String,
                     path: String? = nil,
-                    x: Int? = nil, y: Int? = nil, width: Int? = nil,
+                    x: Int? = nil, y: Int? = nil, width: Int? = nil, height: Int? = nil,
                     label: String? = nil, hidden: Bool? = nil) {
             self.type = type
             self.path = path
             self.x = x
             self.y = y
             self.width = width
+            self.height = height
             self.label = label
             self.hidden = hidden
         }
@@ -178,12 +182,13 @@ public struct LutinConfig: Codable, Equatable {
             if x != nil { try container.encode(x, forKey: .x) }
             if y != nil { try container.encode(y, forKey: .y) }
             if width != nil { try container.encode(width, forKey: .width) }
+            if height != nil { try container.encode(height, forKey: .height) }
             if label != nil { try container.encode(label, forKey: .label) }
             if hidden == true { try container.encode(true, forKey: .hidden) }
         }
 
         enum CodingKeys: String, CodingKey {
-            case type, path, x, y, width, label, hidden
+            case type, path, x, y, width, height, label, hidden
         }
     }
 

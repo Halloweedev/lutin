@@ -200,15 +200,18 @@ public struct ItemDragController: ViewModifier {
             guard let decos = document.config.decorations,
                   idx >= 0, idx < decos.count else { return nil }
             let w = CGFloat(decos[idx].width ?? 100)
-            let aspect: CGFloat = {
-                guard let path = decos[idx].path else { return 1.0 }
-                let url = URL(fileURLWithPath: path,
-                              relativeTo: document.projectDirectory).standardizedFileURL
-                guard let ns = NSImage(contentsOf: url), ns.size.width > 0 else { return 1.0 }
-                return ns.size.height / ns.size.width
+            // Honor an explicit (free-stretch) height; fall back to the
+            // source aspect ratio only when the decoration is aspect-locked.
+            let h: CGFloat = {
+                if let height = decos[idx].height { return CGFloat(height) }
+                guard let path = decos[idx].path,
+                      let aspect = ImageSizeCache.aspect(ofPath: path,
+                                                         relativeTo: document.projectDirectory)
+                else { return w }
+                return w * aspect
             }()
             return CGPoint(x: CGFloat(decos[idx].x ?? 0) + w / 2,
-                           y: CGFloat(decos[idx].y ?? 0) + w * aspect / 2)
+                           y: CGFloat(decos[idx].y ?? 0) + h / 2)
         }
     }
 

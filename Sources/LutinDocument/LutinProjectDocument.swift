@@ -207,9 +207,10 @@ public final class LutinProjectDocument: Identifiable {
             commit(newConfig: newConfig, undoLabel: "Rename")
             return
 
-        case .addImageDecoration(let path, let x, let y, let width):
+        case .addImageDecoration(let path, let x, let y, let width, let height):
             var newConfig = config
-            let deco = LutinConfig.Decoration(type: "image", path: path, x: x, y: y, width: width)
+            let deco = LutinConfig.Decoration(type: "image", path: path, x: x, y: y,
+                                              width: width, height: height)
             if newConfig.decorations == nil { newConfig.decorations = [] }
             newConfig.decorations?.append(deco)
             commit(newConfig: newConfig, undoLabel: "Add image")
@@ -226,7 +227,7 @@ public final class LutinProjectDocument: Identifiable {
             commit(newConfig: newConfig, undoLabel: "Delete image")
             return
 
-        case .moveImageDecoration(let index, let x, let y, let width):
+        case .moveImageDecoration(let index, let x, let y, let width, let height):
             var newConfig = config
             guard let decos = newConfig.decorations, index >= 0, index < decos.count,
                   decos[index].type == "image" else {
@@ -236,6 +237,10 @@ public final class LutinProjectDocument: Identifiable {
             newConfig.decorations?[index].x = x
             newConfig.decorations?[index].y = y
             newConfig.decorations?[index].width = width
+            // `nil` means "leave unchanged" (matching setWindow), so a
+            // reposition that omits height doesn't wipe an explicit stretch
+            // and editing width keeps an aspect-locked image aspect-locked.
+            if let height { newConfig.decorations?[index].height = height }
             commit(newConfig: newConfig, undoLabel: "Move image")
             return
 
