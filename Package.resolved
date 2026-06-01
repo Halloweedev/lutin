@@ -1,13 +1,13 @@
 {
-  "originHash" : "29528699017e623e6576eda7d505c69759c2818f38c8e79d4569e356ecfe466c",
+  "originHash" : "a926761be35ba0c656d54b83e27e24993b2a57f68ec83b20e30fbfde6eda137c",
   "pins" : [
     {
       "identity" : "keylight-swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Halloweedev/keylight-swift.git",
       "state" : {
-        "revision" : "37d24fee3a844e46de3329da0eee3f46a253f62b",
-        "version" : "0.3.2"
+        "revision" : "542cbdd2f8910e0bd179ec59260c731be4ab0c7e",
+        "version" : "0.6.0"
       }
     },
     {
