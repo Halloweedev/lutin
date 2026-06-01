@@ -24,11 +24,7 @@ enum Licensing {
                 trialDurationDays: 0,
                 branding: BrandingConfig(
                     appName: "Lutin",
-                    // TODO(keylight-checkout): replace with the Stripe Connect
-                    // checkout URL from app.keylight.dev once it's set up.
-                    // Placeholder points at the parent-brand site so the
-                    // `URL(string:)!` force-unwrap can't fail.
-                    purchaseURL: URL(string: "https://anotheragence.com/lutin/buy")!,
+                    purchaseURL: URL(string: "https://buy.stripe.com/5kQ7sL8y48AV2G5g8b5EY00")!,
                     supportEmail: "say@anotheragence.com",
                     tintColor: Tokens.color(.brandAccent)
                 )
