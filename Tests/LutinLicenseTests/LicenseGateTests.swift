@@ -44,4 +44,14 @@ final class LicenseGateTests: XCTestCase {
         let old = Date().addingTimeInterval(-365 * 24 * 60 * 60)
         XCTAssertFalse(LicenseGate.shouldShowSupportNag(lastShown: old, isEntitled: true))
     }
+
+    // MARK: - shouldShowUpgradePrompt
+
+    func testUpgradePromptShownForFreeUsers() {
+        XCTAssertTrue(LicenseGate.shouldShowUpgradePrompt(isEntitled: false))
+    }
+
+    func testUpgradePromptHiddenForProUsers() {
+        XCTAssertFalse(LicenseGate.shouldShowUpgradePrompt(isEntitled: true))
+    }
 }

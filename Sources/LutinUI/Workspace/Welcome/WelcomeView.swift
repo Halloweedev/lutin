@@ -43,6 +43,8 @@ public struct WelcomeView: View {
                     onReveal: revealInFinder,
                     onRemove: { name in try? registryStore.remove(name: name) })
                     .frame(maxWidth: 720)
+                UpgradeProRow(manager: Licensing.manager)
+                    .frame(maxWidth: 720)
             }
             .padding(.top, Tokens.spacing(.xl) * 2)
             .padding(.bottom, Tokens.spacing(.xl))

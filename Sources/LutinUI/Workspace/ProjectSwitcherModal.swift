@@ -135,6 +135,8 @@ public struct ProjectSwitcherModal: View {
                     .font(.system(size: 11))
                     .foregroundStyle(Tokens.color(.textTertiary))
                     .textLink(action: linkExistingProject)
+                UpgradeProRow(manager: Licensing.manager,
+                              projectCount: registryStore.entries.count)
             }
             .padding(Tokens.spacing(.md))
             .background(Tokens.color(.sheetBackground))

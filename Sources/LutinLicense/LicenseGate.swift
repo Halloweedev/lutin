@@ -32,4 +32,12 @@ public enum LicenseGate {
         guard let lastShown else { return true }
         return now.timeIntervalSince(lastShown) >= supportNagInterval
     }
+
+    /// Whether to surface a persistent, always-available "upgrade to Pro"
+    /// affordance (the project library, the welcome screen, …). Unlike
+    /// the nag this has no time gate — it's a passive button, not an
+    /// interruption — but Pro users still never see an upgrade prompt.
+    public static func shouldShowUpgradePrompt(isEntitled: Bool) -> Bool {
+        !isEntitled
+    }
 }
