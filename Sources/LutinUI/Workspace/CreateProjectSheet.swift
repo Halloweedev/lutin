@@ -83,13 +83,27 @@ public struct CreateProjectSheet: View {
         .padding(Tokens.spacing(.md))
     }
 
+    /// Leading glyph for the picker row: the bundle's real Finder icon
+    /// once an app is chosen, otherwise the dashed placeholder symbol.
+    @ViewBuilder
+    private var appIcon: some View {
+        if appPath.isEmpty {
+            Image(systemName: "app.dashed")
+                .font(.system(size: 22, weight: .regular))
+                .foregroundStyle(Tokens.color(.brandAccent))
+        } else {
+            Image(nsImage: NSWorkspace.shared.icon(forFile: appPath))
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+        }
+    }
+
     private var appPickerRow: some View {
         LutinButton(role: .secondary, action: pickApp) {
             HStack(spacing: Tokens.spacing(.md)) {
-                Image(systemName: appPath.isEmpty ? "app.dashed" : "app.fill")
-                    .font(.system(size: 22, weight: .regular))
-                    .foregroundStyle(Tokens.color(.brandAccent))
-                    .frame(width: 32)
+                appIcon
+                    .frame(width: 32, height: 32)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(appPath.isEmpty ? "Choose a .app to package" : "Selected .app")
                         .font(Typography.chrome)
