@@ -52,9 +52,15 @@ public struct ResizeHandles: View {
     private static let minSize = 16
 
     private func handle(at offset: CGPoint, direction: Direction) -> some View {
+        // Figma-style handle: a small white square ringed by the blue
+        // selection accent (matching the bounding box), with a soft
+        // shadow so it stays legible over any artwork — instead of the
+        // old opaque black (`brandAccent`) square.
         SquareShape()
-            .fill(Tokens.color(.brandAccent))
-            .frame(width: 8, height: 8)
+            .fill(Color.white)
+            .overlay(SquareShape().stroke(Tokens.color(.itemSelected), lineWidth: 1))
+            .frame(width: 9, height: 9)
+            .shadow(color: .black.opacity(0.22), radius: 1, x: 0, y: 0.5)
             .offset(x: offset.x, y: offset.y)
             .gesture(
                 DragGesture(coordinateSpace: .named("canvas"))
