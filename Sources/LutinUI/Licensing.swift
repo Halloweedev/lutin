@@ -10,7 +10,10 @@ import KeylightSDK
 /// `public` surface the @main App entry point needs for lifecycle.
 ///
 /// Free tier is the 10-project cap (`LutinLicense.LicenseGate`), not a
-/// time-based trial — hence `trialDurationDays: 0`.
+/// time-based trial — hence `trialDurationDays: 0`. The `lutn` dashboard
+/// has the keyless free tier enabled, so `freeTierEnabled: true` is
+/// required: without it, keyless users resolve to `.expired` (hard
+/// paywall + churned analytics) instead of `.freeTier`.
 @MainActor
 enum Licensing {
     static let manager: LicenseManager = {
@@ -27,7 +30,8 @@ enum Licensing {
                     purchaseURL: URL(string: "https://buy.stripe.com/5kQ7sL8y48AV2G5g8b5EY00")!,
                     supportEmail: "say@anotheragence.com",
                     tintColor: Tokens.color(.brandAccent)
-                )
+                ),
+                freeTierEnabled: true
             )
         } catch {
             fatalError("Keylight.manager init failed — check credentials in Sources/LutinUI/Licensing.swift: \(error)")
