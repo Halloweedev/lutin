@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Halloweedev/keylight-swift.git",
       "state" : {
-        "revision" : "542cbdd2f8910e0bd179ec59260c731be4ab0c7e",
-        "version" : "0.6.0"
+        "revision" : "679cca4fe73cb92cd0664d053c8b8c4e29794041",
+        "version" : "0.7.0"
       }
     },
     {
