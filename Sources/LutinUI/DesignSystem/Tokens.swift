@@ -101,7 +101,7 @@ public enum Tokens {
         // Fast path: compiled asset catalog (app bundle / Xcode tests).
         var namedColor: NSColor?
         appearance.performAsCurrentDrawingAppearance {
-            namedColor = NSColor(named: key.rawValue, bundle: .module)
+            namedColor = NSColor(named: key.rawValue, bundle: LutinAssets.bundle)
         }
         if let nc = namedColor,
            let resolved = nc.usingColorSpace(.sRGB) {
@@ -171,7 +171,7 @@ private func nsColorFromColorset(named name: String, dark: Bool) -> NSColor {
 }
 
 private func colorsetURL(named name: String) -> URL? {
-    let bundle = Bundle.module
+    let bundle = LutinAssets.bundle
     let colorsetName = "\(name).colorset"
     // SwiftPM copies the whole .xcassets directory into the bundle.
     // Try the nested path first, then a flat resource lookup.
