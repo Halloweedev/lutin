@@ -12,9 +12,9 @@
 class Lutin < Formula
   desc "Design, build, sign, and notarize macOS DMGs"
   homepage "https://github.com/Halloweedev/lutin"
-  url "https://github.com/Halloweedev/lutin/releases/download/v0.3.0/lutin-0.3.0-macos-universal.tar.gz"
-  version "0.3.0"
-  sha256 "e40879fc2431f141de71bfc8842bc0c45480d1096c7e39c5acc3aff4255fd03d"
+  url "https://github.com/Halloweedev/lutin/releases/download/v0.3.1/lutin-0.3.1-macos-universal.tar.gz"
+  version "0.3.1"
+  sha256 "e92b17f89322f66fb5306b435ad4b00cff3ab774367fc10eeab34dcb3cca4f38"
   license "GPL-3.0-only"
 
   depends_on macos: :sequoia
