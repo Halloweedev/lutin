@@ -246,6 +246,12 @@ enum CommandLogic {
                             : "notary profile '\(profile)' not found — run `lutin notary setup`"))
         }
 
+        // appStore — informational only (always ok): `asc` is an optional
+        // companion for the App Store channel and must never fail DMG
+        // release readiness when absent or unauthenticated.
+        checks.append(DoctorCheck(name: "appStore", ok: true,
+            detail: AppStoreLogic.doctorDetail(runner: runner)))
+
         return checks
     }
 
@@ -476,7 +482,7 @@ public struct Lutin: ParsableCommand {
         version: LutinVersion.current,
         subcommands: [Init.self, Projects.self, Add.self, Remove.self, Open.self,
                       Validate.self, Doctor.self, Build.self, Release.self, Preview.self,
-                      Notary.self, ApplyIntents.self])
+                      Notary.self, AppStore.self, ApplyIntents.self])
     public init() {}
 }
 

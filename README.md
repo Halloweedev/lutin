@@ -87,6 +87,8 @@ lutin preview         # mount and open the result in Finder
 | `lutin release [--config PATH \| --name NAME] [--json] [--dry-run]` | Build, sign, notarize, and staple. |
 | `lutin preview [--config PATH \| --name NAME] [--json]` | Build, mount, and open the DMG in Finder. |
 | `lutin notary setup [--profile NAME] ...` | Store a `notarytool` keychain profile. |
+| `lutin app-store upload --pkg PATH --app ID` | Upload a Mac PKG to App Store Connect via `asc` (`--ipa` for iOS/tvOS/visionOS; DMGs are not accepted). |
+| `lutin app-store status --app ID` | Show the App Store release dashboard (read-only). |
 | `lutin apply-intents --config PATH [--file intents.json] [--json]` | Apply editor intents to a project file (stdin if `--file` omitted). |
 
 Every command accepts `--help`, and `lutin --version` prints the version. Output-producing commands accept `--json` for machine consumption.
@@ -106,6 +108,7 @@ Pro licenses are issued and validated via [**Keylight.dev**](https://keylight.de
 - macOS 15 (Sequoia) or later
 - For signing: a Developer ID Application certificate in your keychain
 - For notarization: a `notarytool` keychain profile (`lutin notary setup --help`)
+- For the App Store channel (optional): [`asc`](https://asccli.sh) (`brew install asc`) + App Store Connect API credentials (`asc auth login`)
 
 ## Building from source
 
