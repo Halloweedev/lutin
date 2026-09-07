@@ -132,6 +132,10 @@ Full list and remediation: run any command with `--help`, or grep `LutinError(co
 - **Don't assume coordinates are points.** They're device pixels at the canvas's native scale.
 - **Don't try to drive the GUI directly** (no AppleScript / no synthetic mouse events). The intent layer is the supported surface — use it.
 
+## Developing Lutin itself (repo notes)
+
+- After updating a `binaryTarget` dependency (e.g. `keylight-swift`), if you get `Undefined symbols` link errors referencing an **old** API shape even though the new XCFramework is consistent: the build graph is holding a stale explicit precompiled module. `touch` won't help — `rm -rf .build` and rebuild from scratch.
+
 ## Where to look
 
 | Source of truth | Location |
