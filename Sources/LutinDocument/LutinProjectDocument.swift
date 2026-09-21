@@ -333,6 +333,21 @@ public final class LutinProjectDocument: Identifiable {
             commit(newConfig: newConfig, undoLabel: "Sparkle")
             return
 
+        case let .setStoreApp(appID, bundleID, platform):
+            var store = config.store ?? StoreInfo()
+            store.appID = appID
+            if let bundleID { store.bundleID = bundleID }
+            if let platform { store.platform = platform }
+            config.store = store
+        case let .setStoreMetadataDir(path):
+            var store = config.store ?? StoreInfo()
+            store.metadataDir = path
+            config.store = store
+        case let .setStoreASCPath(path):
+            var store = config.store ?? StoreInfo()
+            store.ascPath = path
+            config.store = store
+
         }
         isDirty = true
         registerUndo(previous: previous)

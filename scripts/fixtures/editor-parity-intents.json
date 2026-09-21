@@ -4,5 +4,6 @@
   {"kind": "moveMany", "deltas": [
     {"kind": "item", "id": "app", "dx": 10, "dy": -5}
   ]},
-  {"kind": "setItemHidden", "id": "applications", "hidden": false}
+  {"kind": "setItemHidden", "id": "applications", "hidden": false},
+  {"kind": "setStoreApp", "appID": "42", "platform": "MAC_OS"}
 ]

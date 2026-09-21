@@ -33,7 +33,7 @@ let package = Package(
         .target(name: "LutinCLI", dependencies: [
             "LutinCore", "LutinConfig", "LutinRegistry", "LutinBuilder",
             "LutinSigning", "LutinNotarization", "LutinRelease",
-            "LutinIntentBridge", "LutinStoreConnect",
+            "LutinIntentBridge", "LutinStoreConnect", "LutinStoreMetadata",
             .product(name: "ArgumentParser", package: "swift-argument-parser"),
         ]),
         .target(
