@@ -46,7 +46,7 @@ public struct ASCAuthState: Codable, Equatable, Sendable {
         let result = try runner.runAllowingFailure(ascPath, ["auth", "status", "--output", "json"])
         guard result.exitCode == 0 else {
             throw LutinError(
-                code: "store_unauthenticated",
+                code: "store_asc_failed",
                 message: "`asc auth status` failed with exit \(result.exitCode). "
                        + "Run `asc auth login`.",
                 details: ["stderr": result.stderr])

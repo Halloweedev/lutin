@@ -1,6 +1,7 @@
 import XCTest
 @testable import LutinStoreConnect
 import LutinCore
+import TestSupport
 
 final class ASCAuthStateTests: XCTestCase {
 
@@ -43,6 +44,20 @@ final class ASCAuthStateTests: XCTestCase {
     func testMalformedAuthStatusRaises() {
         XCTAssertThrowsError(try ASCAuthState.parse(Data("nope".utf8))) { error in
             XCTAssertEqual((error as? LutinError)?.code, "store_asc_failed")
+        }
+    }
+
+    /// A non-zero exit from `asc auth status` is an execution failure, not an
+    /// auth-state answer (an unauthenticated machine reports exit 0 with empty
+    /// credentials) — so it raises `store_asc_failed`, never a login hint code.
+    func testFailedAuthStatusLoadRaisesAscFailed() {
+        let fake = FakeCommandRunner()
+        fake.stub(executable: "/fake/asc",
+                  result: ShellResult(exitCode: 1, stdout: "", stderr: "keychain denied"))
+        XCTAssertThrowsError(try ASCAuthState.load(ascPath: "/fake/asc", runner: fake)) { error in
+            let e = error as? LutinError
+            XCTAssertEqual(e?.code, "store_asc_failed")
+            XCTAssertEqual(e?.details?["stderr"], "keychain denied")
         }
     }
 
