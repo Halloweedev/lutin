@@ -80,22 +80,37 @@ public struct ASCCapabilities: Codable, Equatable, Sendable {
         return try parse(Data(result.stdout.utf8))
     }
 
-    /// The status governing a command, matched on the longest registered
+    /// The entry governing a command, matched on the longest registered
     /// command that the query starts with. Longest-match matters because
     /// `asc metadata` and `asc metadata validate` are distinct entries.
-    public func status(forCommand command: String) -> ASCCapabilityStatus {
-        let query = command.split(whereSeparator: \.isWhitespace).map(String.init)
-        var best: (length: Int, status: ASCCapabilityStatus)?
+    ///
+    /// A leading `asc` token is normalized away on **both** sides, so
+    /// `"metadata validate"` and `"asc metadata validate"` resolve to the
+    /// same entry. The bridge queries unprefixed, while asc's own `commands`
+    /// array is `asc `-prefixed — 110/110 in the recorded fixture.
+    public func capability(forCommand command: String) -> ASCCapability? {
+        let query = normalized(command.split(whereSeparator: \.isWhitespace).map(String.init))
+        var best: (length: Int, entry: ASCCapability)?
         for entry in capabilities {
             for registered in entry.commands {
-                let parts = registered.split(whereSeparator: \.isWhitespace).map(String.init)
-                guard !parts.isEmpty, parts.count <= query.count else { continue }
-                guard Array(query.prefix(parts.count)) == parts else { continue }
+                let parts = normalized(registered.split(whereSeparator: \.isWhitespace).map(String.init))
+                guard !parts.isEmpty, parts.count <= query.count,
+                      Array(query.prefix(parts.count)) == parts else { continue }
                 if parts.count > (best?.length ?? 0) {
-                    best = (parts.count, entry.status)
+                    best = (parts.count, entry)
                 }
             }
         }
-        return best?.status ?? .unknown
+        return best?.entry
+    }
+
+    /// The status governing a command. Absence of a matching entry is
+    /// `.unknown` — allowed through, never blocked.
+    public func status(forCommand command: String) -> ASCCapabilityStatus {
+        capability(forCommand: command)?.status ?? .unknown
+    }
+
+    private func normalized(_ parts: [String]) -> [String] {
+        parts.first == "asc" ? Array(parts.dropFirst()) : parts
     }
 }

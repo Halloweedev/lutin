@@ -81,6 +81,9 @@ Every `--json` output is shaped:
 | `deleteImageDecoration` | `index` | |
 | `setImageHidden` | `index`, `hidden` | |
 | `reorderImageDecoration` | `x` (fromIndex), `index` (toIndex) | |
+| `setStoreApp` | `appID`, `bundleID`, `platform` (all optional) | Sets the `store:` block's App Store Connect app fields. |
+| `setStoreMetadataDir` | `path` (optional) | Directory holding the canonical metadata tree. |
+| `setStoreASCPath` | `path` (optional) | Explicit `asc` binary; `null` means auto-detect. |
 
 Arrows: drawn arrows were removed — add an arrow PNG via `addImageDecoration` instead. Any `addArrow`/`deleteArrow`/etc. intent will return an error.
 
@@ -94,6 +97,8 @@ Arrows: drawn arrows were removed — add an arrow PNG via `addImageDecoration` 
 | Check the config is structurally valid | `lutin validate --config X --json` |
 | Check release readiness | `lutin doctor --config X --json` |
 | Preview before shipping | `lutin preview --config X --json` (mounts the DMG in Finder) |
+| Check the store connection (asc, credentials, web session) | `lutin store status --config X --json` |
+| Validate store metadata | `lutin store validate --config X --json` — offline; works with no `asc` installed |
 
 There is no `lutin show` or `lutin get` — for read access, just read `lutin.yml`. The config format is stable and YAML-parseable.
 
@@ -108,6 +113,8 @@ There is no `lutin show` or `lutin get` — for read access, just read `lutin.ym
 
 If an intent kind you need doesn't exist, that's a real gap — open an issue, don't work around it with raw YAML.
 
+One exception: the store workflow — `lutin store plan|approve|apply|pull` — is driven through `asc`, not intents, because it mutates App Store Connect state and local metadata files, not `lutin.yml`. `lutin store apply` is the only remote writer; `lutin store pull` writes local metadata files (pass `--force` to overwrite).
+
 ## Error codes you'll actually see
 
 Branch on `error.code`, not on the message. Common ones:
@@ -121,6 +128,8 @@ Branch on `error.code`, not on the message. Common ones:
 | `LTN_NOTARIZE_...` | `notarytool` failed or timed out. |
 | `LTN_STAPLE_...` | `stapler` failed. |
 | `LTN_INTENT_...` | An intent envelope was malformed or referenced an unknown ID. |
+
+The `lutin store` family uses **unprefixed** snake_case codes instead: `store_asc_missing`, `store_asc_too_old`, `store_unauthenticated`, `store_web_session_missing`, `store_app_not_found`, `store_layout_mismatch`, `store_metadata_schema`, `store_validation_failed`, `store_confirmation_required`, `store_pull_would_overwrite`, `store_unsupported`, `store_rate_limited`, `store_asc_failed`. Branch on the exact code, not the message.
 
 Full list and remediation: run any command with `--help`, or grep `LutinError(code:` in `Sources/`.
 

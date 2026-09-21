@@ -66,13 +66,19 @@ enum StoreLogic {
     /// Enumerates and decodes the canonical metadata tree without ever
     /// touching asc. Decoding is strict — an unknown key throws
     /// `store_metadata_schema` exactly as asc would on push. Structural
-    /// stray-directory findings populate `issues`.
+    /// stray-directory findings populate `issues`, and an empty tree is an
+    /// error (spec §3.4), not a clean bill of health.
     static func validateOffline(configURL: URL,
                                 runner: CommandRunning) throws -> StoreValidateReport {
         let config = try LutinConfig.load(from: configURL)
         let dir = try metadataDirectory(for: config, configURL: configURL)
         let storeDir = StoreMetadataDirectory(root: dir)
 
+        // `default.json` fallback files are deliberately NOT decoded here:
+        // the locale enumeration excludes them, so an unknown key in a
+        // fallback file is only caught by the asc-backed path. The offline
+        // subset validates what asc would push per locale; the fallback is
+        // asc's own merge input.
         for locale in try storeDir.appInfoLocales() {
             _ = try storeDir.localization(scope: .appInfo, locale: locale, version: nil)
         }
@@ -92,8 +98,18 @@ enum StoreLogic {
                 length: nil, limit: nil))
         }
 
+        let fileCount = try storeDir.enumeratedFileCount()
+        if fileCount == 0 {
+            issues.append(StoreValidationIssue(
+                scope: nil, file: dir.path, locale: nil, version: nil, field: nil,
+                severity: "error",
+                message: "The metadata directory holds no metadata files. Run "
+                       + "`lutin store pull` to fetch the listing first.",
+                length: nil, limit: nil))
+        }
+
         return StoreValidateReport(
-            fileCount: try storeDir.enumeratedFileCount(),
+            fileCount: fileCount,
             issues: issues,
             offline: true,
             errorCount: issues.count,
@@ -341,47 +357,28 @@ enum StoreLogic {
     /// Capability gating (spec §4.3): a `.webSession` capability needs an
     /// authenticated web session; `.notPublicAPI` is disabled outright with
     /// asc's own `nextAction`; `.cliSupported`/`.partial`/`.unknown` pass
-    /// through. A failed capabilities probe is absence of evidence, not a
+    /// through, and so does a command the capabilities payload does not
+    /// enumerate. A failed capabilities probe is absence of evidence, not a
     /// reason to disable a working feature — only the probe is best-effort,
     /// never the command the caller asked for.
     private static func gate(ascPath: String, runner: CommandRunning,
                              command: String) throws {
         guard let capabilities = try? ASCCapabilities.load(ascPath: ascPath,
                                                            runner: runner) else { return }
-        switch capabilities.status(forCommand: command) {
+        guard let entry = capabilities.capability(forCommand: command) else { return }
+        switch entry.status {
         case .webSession:
             let web = try ASCWebSessionState.load(ascPath: ascPath, runner: runner)
             try web.assertAvailable(forCapability: command)
         case .notPublicAPI:
-            let nextAction = matchingCapability(for: command, in: capabilities)?.nextAction
             throw LutinError(
                 code: "store_unsupported",
-                message: nextAction
+                message: entry.nextAction
                     ?? "asc reports `\(command)` is not available over a public API.",
                 details: ["ascCommand": command])
         case .cliSupported, .partial, .unknown:
             break
         }
-    }
-
-    /// Longest-match lookup mirroring `ASCCapabilities.status(forCommand:)`,
-    /// returning the whole entry so `.notPublicAPI` can surface asc's own
-    /// `nextAction` text.
-    private static func matchingCapability(for command: String,
-                                           in capabilities: ASCCapabilities) -> ASCCapability? {
-        let query = command.split(whereSeparator: \.isWhitespace).map(String.init)
-        var best: (length: Int, entry: ASCCapability)?
-        for entry in capabilities.capabilities {
-            for registered in entry.commands {
-                let parts = registered.split(whereSeparator: \.isWhitespace).map(String.init)
-                guard !parts.isEmpty, parts.count <= query.count,
-                      Array(query.prefix(parts.count)) == parts else { continue }
-                if parts.count > (best?.length ?? 0) {
-                    best = (parts.count, entry)
-                }
-            }
-        }
-        return best?.entry
     }
 
     /// Runs an asc command, and — when no explicit app was configured —

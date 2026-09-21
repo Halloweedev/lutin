@@ -36,6 +36,27 @@ final class ASCCapabilitiesTests: XCTestCase {
         XCTAssertEqual(caps.status(forCommand: "asc metadata validate"), .cliSupported)
     }
 
+    /// The bridge queries unprefixed (`metadata validate`) while asc's own
+    /// `commands` array is `asc `-prefixed — 110/110 in the recorded fixture.
+    /// Both shapes must resolve to the same entry.
+    func testCapabilityLookupAcceptsPrefixedAndUnprefixedQueries() throws {
+        let caps = try recorded()
+        let prefixed = caps.capability(forCommand: "asc metadata validate")
+        let unprefixed = caps.capability(forCommand: "metadata validate")
+        XCTAssertEqual(unprefixed, prefixed)
+        XCTAssertEqual(unprefixed?.area, "metadata")
+        XCTAssertEqual(unprefixed?.status, .cliSupported)
+    }
+
+    /// Absence of a matching entry is `.unknown` — no evidence, not an error.
+    /// The recorded fixture has no `metadata plan` command, so the gating
+    /// pass-through for our own plan/approve verbs rests on this.
+    func testCapabilityLookupAbsentCommandIsUnknown() throws {
+        let caps = try recorded()
+        XCTAssertNil(caps.capability(forCommand: "metadata plan"))
+        XCTAssertEqual(caps.status(forCommand: "metadata plan"), .unknown)
+    }
+
     func testStatusForCommandMatchesPrefixesWithFlags() throws {
         let caps = try recorded()
         XCTAssertEqual(caps.status(forCommand: "asc metadata apply --app 123 --confirm"),
