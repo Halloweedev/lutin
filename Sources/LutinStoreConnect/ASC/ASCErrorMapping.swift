@@ -49,7 +49,7 @@ public enum ASCErrorMapping {
         // Auth wording. Checked before the fallback so an installed-but-
         // unauthenticated asc is never reported as missing.
         let authMarkers = ["unauthorized", "401", "api key", "issuer",
-                           "credential", "not authenticated", "auth"]
+                           "credential", "not authenticated"]
         if authMarkers.contains(where: { haystack.contains($0) }) {
             return LutinError(
                 code: "store_unauthenticated",

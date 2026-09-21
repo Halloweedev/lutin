@@ -68,6 +68,16 @@ final class ASCErrorMappingTests: XCTestCase {
         XCTAssertNotEqual(mapped.code, "store_asc_missing")
     }
 
+    /// A word that merely embeds "auth" (e.g. "author" in app metadata) must
+    /// not be misreported as an authentication failure.
+    func testNonAuthFailureContainingAuthorIsNotMisreportedAsUnauthenticated() {
+        let mapped = ASCErrorMapping.map(
+            result: result(1, err: "Error: app metadata mentions its author"),
+            command: ["metadata", "plan"],
+            fallbackCode: "store_plan_failed")
+        XCTAssertEqual(mapped.code, "store_plan_failed")
+    }
+
     // MARK: - Rate limiting
 
     func testRateLimitMapsToStoreRateLimited() {
