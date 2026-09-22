@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
-# Builds Lutin.app, assembles it into a .app via LutinAppPackager, then
-# releases it using lutin itself (dogfood).
+# Builds Lutin.app, assembles it into a .app via LutinAppPackager, releases it
+# using lutin itself (dogfood), and packages the universal CLI tarball that
+# ships alongside the DMG. Two artifacts, one command:
+#
+#   release/Lutin-<version>.dmg                     the app
+#   release/lutin-<version>-macos-universal.tar.gz  the CLI (arm64 + x86_64)
+#
+# Publishing is a separate, deliberate step — the script prints the
+# `gh release create` command for the artifacts it produced.
 #
 # Set LUTIN_UNSIGNED_DOGFOOD=1 to run the unsigned `lutin build --json` path
 # instead of the real signed/notarized `lutin release --json` path.
@@ -72,4 +79,21 @@ else
     "$LUTIN" release --json
 fi
 
-echo "→ Done. DMG in $REPO_ROOT/release/"
+# Every 0.3.x release also shipped the CLI next to the DMG, and that tarball
+# used to be built by hand — so a release was two procedures and could drift.
+# Same shape as always: one universal `lutin` in a version-named tar.gz.
+echo "→ Package the universal CLI"
+swift build -c release --arch arm64 --arch x86_64 --product lutin
+CLI_DIR="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)"
+TARBALL="$REPO_ROOT/release/lutin-${VERSION}-macos-universal.tar.gz"
+rm -f "$TARBALL"
+tar -czf "$TARBALL" -C "$CLI_DIR" lutin
+
+echo "→ Done. Artifacts in $REPO_ROOT/release/:"
+ls -1 "$REPO_ROOT/release" | sed 's/^/   /'
+echo
+echo "   Publish with:"
+echo "     gh release create v$VERSION --prerelease --title \"Lutin $VERSION\" \\"
+echo "       --notes-file <notes> \\"
+echo "       \"$REPO_ROOT/release/Lutin-$VERSION.dmg\" \\"
+echo "       \"$TARBALL\""
