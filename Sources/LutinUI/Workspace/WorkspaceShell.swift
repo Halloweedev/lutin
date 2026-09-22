@@ -243,6 +243,31 @@ private struct ProjectWorkspace: View {
     @Binding var showingDoctor: Bool
     @Binding var sidePanelHidden: Bool
     @State private var selectionModel = CanvasSelectionModel()
+    /// The Store tab's state: connection, listing, and the preview variants.
+    /// Hoisted here because the tab owns the column and the canvas owns the page.
+    @State private var storeState = StoreTabState()
+
+    /// The canvas shows the artefact in progress: the DMG's Finder window for
+    /// the release tabs, the App Store product page for the Store tab.
+    @ViewBuilder
+    private var canvas: some View {
+        if editorState.selectedTab == .store {
+            StoreCanvas(state: storeState)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Tokens.color(.canvasBackground))
+        } else {
+            CanvasView(document: document,
+                       selectionModel: selectionModel,
+                       editorState: editorState,
+                       runner: pipelineRunner,
+                       showingDoctor: $showingDoctor,
+                       sidePanelHidden: $sidePanelHidden,
+                       projectName: registryEntryName,
+                       registryStore: registryStore)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Tokens.color(.canvasBackground))
+        }
+    }
     @State private var pipelineRunner = PipelineRunner()
     /// Brief "Reloaded from disk" badge surfaced after an external
     /// rewrite of the project's `lutin.yml` (typically an agent or
@@ -302,20 +327,12 @@ private struct ProjectWorkspace: View {
                         PanelHeader(editorState.selectedTab.title)
                         TabPanelHost(document: document,
                                      editorState: editorState,
-                                     selectionModel: selectionModel)
+                                     selectionModel: selectionModel,
+                                     storeState: storeState)
                     }
                 }
             }
-            CanvasView(document: document,
-                       selectionModel: selectionModel,
-                       editorState: editorState,
-                       runner: pipelineRunner,
-                       showingDoctor: $showingDoctor,
-                       sidePanelHidden: $sidePanelHidden,
-                       projectName: registryEntryName,
-                       registryStore: registryStore)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Tokens.color(.canvasBackground))
+            canvas
         }
         .animation(.easeInOut(duration: 0.18), value: sidePanelHidden)
         .sheet(isPresented: $showingDoctor) { DoctorSheet(document: document) }
@@ -387,6 +404,7 @@ private struct TabPanelHost: View {
     let document: LutinProjectDocument
     @Bindable var editorState: EditorState
     let selectionModel: CanvasSelectionModel
+    let storeState: StoreTabState
 
     var body: some View {
         switch editorState.selectedTab {
@@ -395,6 +413,7 @@ private struct TabPanelHost: View {
         case .window:  WindowTab(document: document)
         case .project: ProjectTab(document: document)
         case .release: ReleaseTab(document: document)
+        case .store:   StoreTab(document: document, state: storeState)
         }
     }
 }

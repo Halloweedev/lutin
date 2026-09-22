@@ -64,8 +64,8 @@ let package = Package(
             "LutinSigning", "LutinNotarization", "LutinLicense",
             // The listing preview renders from the metadata model, which is
             // why it needs no asc, no network and no auth (§7.1). The bridge
-            // arrives with the Store tab.
-            "LutinStoreMetadata",
+            // arrived with the Store tab, which runs the same engine as the CLI.
+            "LutinStoreMetadata", "LutinStoreConnect",
             .product(name: "KeylightSDK", package: "keylight-swift"),
         ], exclude: ["Secrets.swift.example"], resources: [.process("Resources")]),
         .target(name: "LutinAppPackagerCore", dependencies: ["LutinCore", "LutinConfig", "LutinSigning"]),
@@ -101,7 +101,8 @@ let package = Package(
         .testTarget(name: "LutinDocumentTests", dependencies: [
             "LutinDocument", "LutinCore", "LutinConfig", "LutinRegistry", "TestSupport"]),
         .testTarget(name: "LutinUITests", dependencies: [
-            "LutinUI", "LutinDocument", "LutinCore", "LutinConfig", "LutinStoreMetadata", "TestSupport"]),
+            "LutinUI", "LutinDocument", "LutinCore", "LutinConfig", "LutinStoreMetadata",
+            "LutinStoreConnect", "TestSupport"]),
         .testTarget(name: "LutinAppPackagerTests", dependencies: [
             "LutinAppPackagerCore", "LutinCore", "LutinConfig", "TestSupport"]),
     ],

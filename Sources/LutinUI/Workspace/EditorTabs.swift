@@ -5,6 +5,7 @@ public enum EditorTab: String, CaseIterable, Sendable, Hashable {
     case window
     case project
     case release
+    case store
 
     public var iconName: String {
         switch self {
@@ -12,6 +13,7 @@ public enum EditorTab: String, CaseIterable, Sendable, Hashable {
         case .window:  "app-window"
         case .project: "package"
         case .release: "rocket-launch"
+        case .store:   "storefront"
         }
     }
 
@@ -21,6 +23,7 @@ public enum EditorTab: String, CaseIterable, Sendable, Hashable {
         case .window:  "Window"
         case .project: "Project"
         case .release: "Release"
+        case .store:   "Store"
         }
     }
 }
