@@ -29,6 +29,12 @@ public final class StoreTabState {
     public private(set) var isBusy = false
     public private(set) var applyResult: String?
     public private(set) var applyFailure: StoreFailure?
+    /// An `approve` failure belongs to Pending changes, where the approve
+    /// controls are — reporting it under Apply reads as an apply failure.
+    public private(set) var approveFailure: StoreFailure?
+    /// Why asc's status could not be read. Kept so Apply can explain the
+    /// real error and its fix instead of assuming asc is simply absent.
+    public private(set) var statusFailure: StoreFailure?
     public private(set) var listing = StoreListing(locale: "en-US")
     public private(set) var assets = StoreAssets()
     /// Set when the metadata tree is missing, empty, or has nothing for the
@@ -145,15 +151,27 @@ public final class StoreTabState {
             guard let plan = try StoreLogic.reviewPlan(configURL: document.configURL,
                                                        runner: runner) else {
                 hasReviewPlan = false
+                statusFailure = nil
                 review = .loaded(.empty)
                 return
             }
             hasReviewPlan = true
             // Both reads are best-effort: asc's status is the only source of
             // approval facts, and its absence is reported, never inferred.
-            let status = try? StoreLogic.reviewStatus(configURL: document.configURL,
-                                                      runner: runner,
-                                                      isExecutable: isExecutable)
+            // The status error is kept rather than discarded — "asc is not
+            // installed" and "asc refused: not authenticated" are different
+            // things to tell someone, and only the code knows which.
+            var status: ASCReviewStatus?
+            do {
+                status = try StoreLogic.reviewStatus(configURL: document.configURL,
+                                                     runner: runner,
+                                                     isExecutable: isExecutable)
+                statusFailure = nil
+            } catch let error as LutinError {
+                statusFailure = StoreFailure(error)
+            } catch {
+                statusFailure = StoreFailure(code: "store_asc_failed", message: "\(error)")
+            }
             let approval = try? StoreLogic.reviewApproval(configURL: document.configURL,
                                                           runner: runner)
             review = .loaded(StoreReviewModel.make(plan: plan, status: status,
@@ -178,6 +196,7 @@ public final class StoreTabState {
             _ = try StoreLogic.plan(configURL: document.configURL, reviewDir: nil,
                                     runner: runner, isExecutable: isExecutable)
             applyFailure = nil
+            approveFailure = nil
             applyResult = nil
             loadReview(document: document)
         } catch let error as LutinError {
@@ -200,12 +219,16 @@ public final class StoreTabState {
                 configURL: document.configURL, reviewDir: nil, all: all, keys: keys,
                 scope: scope, note: reviewerNote.isEmpty ? nil : reviewerNote,
                 runner: runner, isExecutable: isExecutable)
+            approveFailure = nil
             applyFailure = nil
+            // The apply line described the previous plan state; a new approval
+            // makes it stale, so it goes rather than sitting under Apply.
+            applyResult = nil
             loadReview(document: document)
         } catch let error as LutinError {
-            applyFailure = StoreFailure(error)
+            approveFailure = StoreFailure(error)
         } catch {
-            applyFailure = StoreFailure(code: "store_asc_failed", message: "\(error)")
+            approveFailure = StoreFailure(code: "store_asc_failed", message: "\(error)")
         }
     }
 
@@ -218,6 +241,10 @@ public final class StoreTabState {
     /// The only remote writer: `StoreLogic.apply(..., confirmed: true)`, then
     /// asc's status is re-read.
     public func confirmApply(document: LutinProjectDocument) async {
+        // The confirm gate is the only thing standing between a click and a
+        // write to a live listing. It is enforced here, not merely by which
+        // buttons the view happens to be drawing.
+        guard isConfirmingApply else { return }
         guard !isBusy else { return }
         isBusy = true
         defer { isBusy = false }

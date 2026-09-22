@@ -195,13 +195,16 @@ final class StoreSectionsRenderTests: XCTestCase {
                                hasPlan: Bool = true,
                                isConfirmingApply: Bool = false,
                                applyResult: String? = nil,
-                               applyFailure: StoreFailure? = nil) -> some View {
+                               applyFailure: StoreFailure? = nil,
+                               approveFailure: StoreFailure? = nil,
+                               statusFailure: StoreFailure? = nil) -> some View {
         TabBody {
             StoreReviewSection(
                 state: state, hasPlan: hasPlan,
                 reviewerNote: .constant("Checked the French subtitle."),
                 isConfirmingApply: isConfirmingApply, isBusy: false,
                 applyResult: applyResult, applyFailure: applyFailure,
+                approveFailure: approveFailure, statusFailure: statusFailure,
                 actions: StoreReviewSection.Actions(
                     plan: {}, approveKey: { _ in }, approveScope: { _ in },
                     approveAll: {}, beginApply: {}, cancelApply: {}, confirmApply: {}))

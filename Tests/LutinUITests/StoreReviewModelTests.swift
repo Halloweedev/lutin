@@ -111,6 +111,23 @@ final class StoreReviewModelTests: XCTestCase {
         XCTAssertTrue(model.groups.isEmpty)
         XCTAssertTrue(model.isReady, "asc says there is nothing to apply")
         XCTAssertEqual(model.totalCount, 0)
+        XCTAssertFalse(model.canApply,
+                       "ready with nothing to send is not an Apply — the button "
+                       + "would buy a remote round-trip for no change")
+    }
+
+    /// `canApply` combines asc's own answers and nothing else; without a status
+    /// there is no approval to act on, so Apply is never offered.
+    func testApplyIsOfferedOnlyWhenAscSaysReadyWithChangesToSend() throws {
+        let ready = try status(#"{"planHash":"p","approvalPlanHash":"p","approvalMatchesPlan":true,"ready":true,"totalCount":4,"approvedCount":4,"pendingCount":0}"#)
+        XCTAssertTrue(StoreReviewModel.make(plan: try plan(), status: ready).canApply)
+
+        let pending = try status(#"{"planHash":"p","approvalMatchesPlan":true,"ready":false,"totalCount":4,"approvedCount":1,"pendingCount":3}"#)
+        XCTAssertFalse(StoreReviewModel.make(plan: try plan(), status: pending).canApply)
+
+        XCTAssertFalse(StoreReviewModel.make(plan: try plan(), status: nil).canApply,
+                       "no status is no approval — never a guess")
+        XCTAssertFalse(StoreReviewModel.empty.canApply)
     }
 
     /// asc's numbers are asc's, not a recount of the plan: a status that

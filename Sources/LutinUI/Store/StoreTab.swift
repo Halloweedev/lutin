@@ -151,6 +151,8 @@ public struct StoreTab: View {
             isBusy: state.isBusy,
             applyResult: state.applyResult,
             applyFailure: state.applyFailure,
+            approveFailure: state.approveFailure,
+            statusFailure: state.statusFailure,
             actions: StoreReviewSection.Actions(
                 plan: { Task { await state.runPlan(document: document) } },
                 approveKey: { key in

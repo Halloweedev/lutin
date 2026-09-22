@@ -155,8 +155,10 @@ final class StoreTabStateTests: XCTestCase {
                                       stderr: "Error: json: unknown field \"bogus\"\n"))
         await state.approve(document: document, all: true, keys: [], scope: nil)
 
-        XCTAssertEqual(state.applyFailure?.code, "store_metadata_schema")
-        XCTAssertNotNil(state.applyFailure?.fix, "the failure carries its fix")
+        XCTAssertEqual(state.approveFailure?.code, "store_metadata_schema")
+        XCTAssertNotNil(state.approveFailure?.fix, "the failure carries its fix")
+        XCTAssertNil(state.applyFailure,
+                     "an approve failure is not an apply failure — Apply keeps its own")
         guard case .loaded(let after) = state.review else { return XCTFail("review: \(state.review)") }
         XCTAssertEqual(after.planHash, before.planHash, "the status is left alone")
         XCTAssertEqual(statusInvocations(fake).count, statusCallsBefore,
@@ -177,6 +179,41 @@ final class StoreTabStateTests: XCTestCase {
                        "beginApply arms the gate; it does not write")
         state.cancelApply()
         XCTAssertFalse(state.isConfirmingApply)
+    }
+
+    /// The gate is the only thing between a click and a live listing write, so
+    /// the state enforces it — not the view's choice of which buttons to draw.
+    func testConfirmApplyRefusesWhenTheGateWasNeverArmed() async throws {
+        let document = try makeDocument()
+        let (state, fake) = try makeState(document)
+        await state.refresh(document: document)
+
+        await state.confirmApply(document: document)
+
+        XCTAssertFalse(fake.invocations.contains { $0.arguments.contains("apply") },
+                       "an unarmed confirmApply writes nothing")
+        XCTAssertNil(state.applyResult)
+    }
+
+    /// asc answering "not authenticated" is not the same as asc being absent.
+    /// The code and its fix survive to the Apply section instead of being
+    /// discarded into a hard-coded "install asc".
+    func testAFailedStatusKeepsItsCodeInsteadOfLookingLikeAMissingAsc() async throws {
+        let document = try makeDocument()
+        let (state, fake) = try makeState(document)
+        fake.stub(executable: Self.fakeAsc,
+                  arguments: ["metadata", "status", "--review-dir", reviewDir(document),
+                              "--output", "json"],
+                  result: ShellResult(exitCode: 1, stdout: "",
+                                      stderr: "Error: not authenticated\n"))
+
+        await state.refresh(document: document)
+
+        XCTAssertEqual(state.statusFailure?.code, "store_unauthenticated")
+        XCTAssertNotNil(state.statusFailure?.fix, "the failure carries its fix")
+        guard case .loaded(let model) = state.review else { return XCTFail("review: \(state.review)") }
+        XCTAssertFalse(model.hasStatus, "the changes still render; the approval does not")
+        XCTAssertFalse(model.isReady, "Lutin never guesses an approval")
     }
 
     func testApplyRunsOnceConfirmedAndReloadsTheStatus() async throws {

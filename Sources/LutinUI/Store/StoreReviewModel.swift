@@ -66,6 +66,12 @@ public struct StoreReviewModel: Equatable {
     /// reporting a count it did not read.
     public let hasStatus: Bool
 
+    /// Whether Apply has anything to do. Every term is asc's own answer —
+    /// this combines them, it does not recompute any of them (§4.5). An empty
+    /// plan is `ready` as far as asc is concerned (there is nothing left to
+    /// approve), so readiness alone would offer a write that sends nothing.
+    public var canApply: Bool { hasStatus && isReady && !isEmpty }
+
     /// The state before asc has written a plan at all. Honest by construction:
     /// nothing is ready, and no status was read.
     public static let empty = StoreReviewModel(

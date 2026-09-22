@@ -13,6 +13,11 @@ public struct StoreReviewSection: View {
     let isBusy: Bool
     let applyResult: String?
     let applyFailure: StoreFailure?
+    /// An approve failure, shown under the approve controls that caused it.
+    let approveFailure: StoreFailure?
+    /// Why asc's status is missing, when it is. `nil` with no status means asc
+    /// itself is absent — the one case the "install asc" wording belongs to.
+    let statusFailure: StoreFailure?
     let actions: Actions
 
     public struct Actions {
@@ -48,6 +53,8 @@ public struct StoreReviewSection: View {
                 isBusy: Bool,
                 applyResult: String?,
                 applyFailure: StoreFailure?,
+                approveFailure: StoreFailure? = nil,
+                statusFailure: StoreFailure? = nil,
                 actions: Actions) {
         self.state = state
         self.hasPlan = hasPlan
@@ -56,6 +63,8 @@ public struct StoreReviewSection: View {
         self.isBusy = isBusy
         self.applyResult = applyResult
         self.applyFailure = applyFailure
+        self.approveFailure = approveFailure
+        self.statusFailure = statusFailure
         self.actions = actions
     }
 
@@ -115,6 +124,9 @@ public struct StoreReviewSection: View {
                 LutinButton("Run plan", action: actions.plan)
             }
             .disabled(isBusy)
+            if let approveFailure {
+                StoreSectionFailure(approveFailure)
+            }
         }
     }
 
@@ -249,15 +261,25 @@ public struct StoreReviewSection: View {
 
     @ViewBuilder
     private func applyBody(_ model: StoreReviewModel) -> some View {
-        if !model.hasStatus {
-            // asc is the only thing that knows what is approved. Without it,
-            // Lutin says so and keeps Apply disabled rather than guessing.
-            StatusRow(.warn, "asc's approval state is unavailable, so Lutin "
-                           + "will not guess what is approved. Install asc to "
-                           + "review and apply.")
-        } else if !model.isReady {
-            StatusRow(.warn, "\(model.pendingCount) of \(model.totalCount) changes "
-                           + "are not approved — apply needs every change approved.")
+        if !model.canApply {
+            // One place decides whether Apply is offered — `canApply`. These
+            // arms only say why it is not, so no branch can accidentally hand
+            // back an enabled button.
+            if model.isEmpty {
+                StatusRow(.ok, "Nothing to apply — asc's plan has no changes.")
+            } else if let statusFailure {
+                // asc answered, and said no. Its own code and fix, not a guess.
+                StoreSectionFailure(statusFailure)
+            } else if !model.hasStatus {
+                // asc is the only thing that knows what is approved. Without
+                // it, Lutin says so rather than guessing.
+                StatusRow(.warn, "asc's approval state is unavailable, so Lutin "
+                               + "will not guess what is approved. Install asc to "
+                               + "review and apply.")
+            } else {
+                StatusRow(.warn, "\(model.pendingCount) of \(model.totalCount) changes "
+                               + "are not approved — apply needs every change approved.")
+            }
         } else if isConfirmingApply {
             StatusRow(.blocked, "This writes to your live App Store listing.")
             HStack(spacing: Tokens.spacing(.sm)) {
