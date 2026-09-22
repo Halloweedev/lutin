@@ -47,7 +47,8 @@ VERSION="$(sed -n 's/.*current = "\(.*\)".*/\1/p' Sources/LutinCore/LutinVersion
 BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 "$PRODUCT_DIR/lutin-app-packager" \
     "$PRODUCT_DIR/lutin-app" "$RES_DIR" "$OUT_DIR" \
-    --name=Lutin --bundle-id=com.lutin.app --version="${VERSION:-0.0.0}" --build="$BUILD" > /dev/null
+    --name=Lutin --bundle-id=com.lutin.app --version="${VERSION:-0.0.0}" --build="$BUILD" \
+    --asset-catalog="$REPO_ROOT/Sources/LutinUI/Resources/Assets.xcassets" > /dev/null
 echo "   $OUT_DIR/Lutin.app (v$VERSION build $BUILD)"
 
 # Framework embedding (KeylightSDK), the Frameworks rpath, and the

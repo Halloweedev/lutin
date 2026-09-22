@@ -14,6 +14,8 @@ import LutinCore
 ///
 /// Error codes emitted:
 /// - `app_packager_missing_binary`: spec.binaryURL does not exist.
+/// - `app_packager_missing_asset_catalog`: spec.assetCatalogURL does not exist.
+/// - `app_packager_actool_failed`: `actool` rejected the source catalog.
 /// - `app_packager_layout_invalid`: Info.plist serialization or write failed
 ///   (re-thrown from `InfoPlistWriter`).
 public enum BundleAssembler {
@@ -46,6 +48,23 @@ public enum BundleAssembler {
         // compiled `Assets.car` + an extracted `AppIcon.icns`, matching what
         // a real Xcode-built app produces. Anything else is copied verbatim.
         var partialPlistKeys: [String: Any] = [:]
+
+        // The app icon and the top-level `Assets.car` can only come from the
+        // *source* catalog: `actool` is what extracts `AppIcon.icns` and the
+        // icon keys. The scripts hand us SwiftPM's built bundle (a compiled car
+        // and nothing else), so without an explicit catalog the app would ship
+        // with `CFBundleIconFile` pointing at a file that was never staged.
+        if let catalog = spec.assetCatalogURL {
+            guard fm.fileExists(atPath: catalog.path) else {
+                throw LutinError(
+                    code: "app_packager_missing_asset_catalog",
+                    message: "Asset catalog not found at \(catalog.path).")
+            }
+            partialPlistKeys = try compileAssetCatalog(
+                catalog, into: resources,
+                minimumDeployment: spec.minimumSystemVersion)
+        }
+
         if fm.fileExists(atPath: spec.resourcesURL.path) {
             if spec.resourcesURL.pathExtension == "bundle" {
                 try stageResourceBundle(spec.resourcesURL, into: resources)
@@ -53,6 +72,9 @@ public enum BundleAssembler {
                 for item in (try? fm.contentsOfDirectory(at: spec.resourcesURL,
                                                          includingPropertiesForKeys: nil)) ?? [] {
                     if item.lastPathComponent == "Assets.xcassets" {
+                        // Compile a catalog found by convention only when the
+                        // caller did not already supply one explicitly.
+                        guard spec.assetCatalogURL == nil else { continue }
                         partialPlistKeys = try compileAssetCatalog(
                             item, into: resources,
                             minimumDeployment: spec.minimumSystemVersion)

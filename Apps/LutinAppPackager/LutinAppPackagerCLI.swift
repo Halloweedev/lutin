@@ -8,7 +8,7 @@ enum LutinAppPackagerCLI {
         let args = CommandLine.arguments
         guard args.count >= 4 else {
             FileHandle.standardError.write(Data("""
-            usage: lutin-app-packager <binary> <resources-dir> <output-dir> [--name=Lutin] [--bundle-id=com.lutin.app] [--version=1.0.0] [--build=1]
+            usage: lutin-app-packager <binary> <resources-dir> <output-dir> [--name=Lutin] [--bundle-id=com.lutin.app] [--version=1.0.0] [--build=1] [--asset-catalog=PATH/Assets.xcassets]
             """.utf8))
             exit(64)
         }
@@ -17,18 +17,21 @@ enum LutinAppPackagerCLI {
         let resources = URL(fileURLWithPath: args[2])
         let output = URL(fileURLWithPath: args[3])
         var name = "Lutin", bundleID = "com.lutin.app", version = "1.0.0", build = "1"
+        var assetCatalog: URL?
         for arg in args.dropFirst(4) {
             if let v = arg.afterPrefix("--name=") { name = v }
             else if let v = arg.afterPrefix("--bundle-id=") { bundleID = v }
             else if let v = arg.afterPrefix("--version=") { version = v }
             else if let v = arg.afterPrefix("--build=") { build = v }
+            else if let v = arg.afterPrefix("--asset-catalog=") { assetCatalog = URL(fileURLWithPath: v) }
         }
 
         do {
             let url = try BundleAssembler.assemble(AppBundleSpec(
                 binaryURL: binary, resourcesURL: resources, outputDirectory: output,
                 bundleName: name, bundleIdentifier: bundleID,
-                shortVersion: version, buildNumber: build, minimumSystemVersion: "15.0"))
+                shortVersion: version, buildNumber: build, minimumSystemVersion: "15.0",
+                assetCatalogURL: assetCatalog))
             print(url.path)
         } catch let error as LutinError {
             FileHandle.standardError.write(Data("error[\(error.code)]: \(error.message)\n".utf8))
