@@ -3,8 +3,8 @@ import XCTest
 
 final class EditorTabsTests: XCTestCase {
     func testAllTabsExist() {
-        XCTAssertEqual(EditorTab.allCases.count, 4)
-        XCTAssertEqual(EditorTab.allCases, [.design, .window, .project, .release])
+        XCTAssertEqual(EditorTab.allCases.count, 5)
+        XCTAssertEqual(EditorTab.allCases, [.design, .window, .project, .release, .store])
     }
     func testIconNamesNonEmpty() {
         for tab in EditorTab.allCases {
