@@ -34,3 +34,6 @@
 # notary profile name. Template at Apps/LutinApp/lutin.yml.example;
 # release-app.sh bootstraps a copy from the template if missing.
 /Apps/LutinApp/lutin.yml
+
+# Git worktrees for isolated feature work (superpowers).
+.worktrees/

@@ -14,6 +14,8 @@ import LutinCore
 ///
 /// Error codes emitted:
 /// - `app_packager_missing_binary`: spec.binaryURL does not exist.
+/// - `app_packager_missing_asset_catalog`: spec.assetCatalogURL does not exist.
+/// - `app_packager_actool_failed`: `actool` rejected the source catalog.
 /// - `app_packager_layout_invalid`: Info.plist serialization or write failed
 ///   (re-thrown from `InfoPlistWriter`).
 public enum BundleAssembler {
@@ -46,34 +48,41 @@ public enum BundleAssembler {
         // compiled `Assets.car` + an extracted `AppIcon.icns`, matching what
         // a real Xcode-built app produces. Anything else is copied verbatim.
         var partialPlistKeys: [String: Any] = [:]
-        if fm.fileExists(atPath: spec.resourcesURL.path) {
-            for item in (try? fm.contentsOfDirectory(at: spec.resourcesURL,
-                                                    includingPropertiesForKeys: nil)) ?? [] {
-                if item.lastPathComponent == "Assets.xcassets" {
-                    partialPlistKeys = try compileAssetCatalog(
-                        item, into: resources,
-                        minimumDeployment: spec.minimumSystemVersion)
-                } else {
-                    let target = resources.appendingPathComponent(item.lastPathComponent)
-                    try fm.copyItem(at: item, to: target)
-                }
+
+        // The app icon and the top-level `Assets.car` can only come from the
+        // *source* catalog: `actool` is what extracts `AppIcon.icns` and the
+        // icon keys. The scripts hand us SwiftPM's built bundle (a compiled car
+        // and nothing else), so without an explicit catalog the app would ship
+        // with `CFBundleIconFile` pointing at a file that was never staged.
+        if let catalog = spec.assetCatalogURL {
+            guard fm.fileExists(atPath: catalog.path) else {
+                throw LutinError(
+                    code: "app_packager_missing_asset_catalog",
+                    message: "Asset catalog not found at \(catalog.path).")
             }
+            partialPlistKeys = try compileAssetCatalog(
+                catalog, into: resources,
+                minimumDeployment: spec.minimumSystemVersion)
         }
 
-        // SwiftPM's `Bundle.module` accessor (and LutinUI's LutinAssets) look
-        // for the resource bundle at `Contents/Resources/<Package>_<Target>.bundle`.
-        // We compiled its Assets.xcassets to a top-level `Assets.car` above (for
-        // the app icon); also stage a copy inside a nested bundle of the same
-        // name so module-scoped `Image(_:bundle:)` lookups resolve at runtime.
-        if spec.resourcesURL.pathExtension == "bundle" {
-            let compiledCar = resources.appendingPathComponent("Assets.car")
-            if fm.fileExists(atPath: compiledCar.path) {
-                let moduleBundle = resources
-                    .appendingPathComponent(spec.resourcesURL.lastPathComponent, isDirectory: true)
-                try fm.createDirectory(at: moduleBundle, withIntermediateDirectories: true)
-                let dest = moduleBundle.appendingPathComponent("Assets.car")
-                if fm.fileExists(atPath: dest.path) { try fm.removeItem(at: dest) }
-                try fm.copyItem(at: compiledCar, to: dest)
+        if fm.fileExists(atPath: spec.resourcesURL.path) {
+            if spec.resourcesURL.pathExtension == "bundle" {
+                try stageResourceBundle(spec.resourcesURL, into: resources)
+            } else {
+                for item in (try? fm.contentsOfDirectory(at: spec.resourcesURL,
+                                                         includingPropertiesForKeys: nil)) ?? [] {
+                    if item.lastPathComponent == "Assets.xcassets" {
+                        // Compile a catalog found by convention only when the
+                        // caller did not already supply one explicitly.
+                        guard spec.assetCatalogURL == nil else { continue }
+                        partialPlistKeys = try compileAssetCatalog(
+                            item, into: resources,
+                            minimumDeployment: spec.minimumSystemVersion)
+                    } else {
+                        let target = resources.appendingPathComponent(item.lastPathComponent)
+                        try fm.copyItem(at: item, to: target)
+                    }
+                }
             }
         }
 
@@ -95,6 +104,41 @@ public enum BundleAssembler {
             searchDirectory: spec.binaryURL.deletingLastPathComponent())
 
         return appURL
+    }
+
+    /// Stages the built `<Package>_<Target>.bundle` the dev and release scripts
+    /// hand us, so `Bundle.module` resolves at runtime.
+    ///
+    /// The generated accessor looks for that bundle under the app's
+    /// `Contents/Resources/`, and its lookup ends in a `fatalError` — so a
+    /// bundle that is not staged there crashes the app on the first asset
+    /// lookup, before any window appears (issue #2: `_assertionFailure` in
+    /// `NSBundle.module`, reached from `Tokens.nsColor`).
+    ///
+    /// SwiftPM's own layout is kept (compiled `Assets.car` under the bundle's
+    /// `Contents/Resources/`), minus its build-time signature; the compiled car
+    /// is mirrored at the top level where the app-icon and legacy lookups
+    /// expect it.
+    private static func stageResourceBundle(_ bundle: URL, into resources: URL) throws {
+        let fm = FileManager.default
+        let staged = resources.appendingPathComponent(bundle.lastPathComponent, isDirectory: true)
+        if fm.fileExists(atPath: staged.path) { try fm.removeItem(at: staged) }
+
+        try fm.copyItem(at: bundle, to: staged)
+        try? fm.removeItem(at: staged.appendingPathComponent("Contents/_CodeSignature"))
+
+        let topLevelCar = resources.appendingPathComponent("Assets.car")
+        if let car = resourceCar(in: staged), !fm.fileExists(atPath: topLevelCar.path) {
+            try fm.copyItem(at: car, to: topLevelCar)
+        }
+    }
+
+    /// The compiled asset catalog inside a resource bundle, in either layout
+    /// SwiftPM has produced (nested `Contents/Resources/` or flat).
+    private static func resourceCar(in bundle: URL) -> URL? {
+        let candidates = [bundle.appendingPathComponent("Contents/Resources/Assets.car"),
+                          bundle.appendingPathComponent("Assets.car")]
+        return candidates.first { FileManager.default.fileExists(atPath: $0.path) }
     }
 
     /// Compiles `Assets.xcassets` into `Assets.car` + extracted icon set via

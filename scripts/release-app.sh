@@ -60,7 +60,8 @@ mkdir -p "$OUT_DIR"
 "$PACKAGER" \
     "$BIN" "$RES_DIR" "$OUT_DIR" \
     --name=Lutin --bundle-id=com.lutin.app \
-    --version="$VERSION" --build="$BUILD"
+    --version="$VERSION" --build="$BUILD" \
+    --asset-catalog="$REPO_ROOT/Sources/LutinUI/Resources/Assets.xcassets"
 
 cd "$REPO_ROOT/Apps/LutinApp"
 if [[ "${LUTIN_UNSIGNED_DOGFOOD:-0}" == "1" ]]; then
