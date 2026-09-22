@@ -315,6 +315,62 @@ public enum StoreLogic {
                                   command: rendered(asc, arguments), output: output)
     }
 
+    // MARK: - Catalog
+
+    /// The resolved app record, when `store.appID` names it. `nil` when the app
+    /// is left for asc to resolve — Lutin cannot see which app asc picks, and
+    /// says so rather than guessing (§4.2).
+    ///
+    /// When `store.bundleID` is present it is **verified** against this record;
+    /// a mismatch is an error. It is never used to resolve.
+    public static func app(configURL: URL, runner: CommandRunning,
+                           isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) }) throws -> ASCApp? {
+        let config = try LutinConfig.load(from: configURL)
+        guard let appID = normalized(config.store?.appID) else { return nil }
+        let asc = try resolveAsc(for: config, runner: runner, isExecutable: isExecutable)
+        let client = ASCClient(ascPath: asc, runner: runner)
+        let app = try client.runJSON(["apps", "view", "--id", appID],
+                                     as: ASCApp.self).payload
+        // Blank is absent on both sides: a whitespace-only `store.bundleID` is
+        // not an expectation to enforce, and a blank record value is not a
+        // bundle ID to compare against. Only a real, differing pair is a
+        // mismatch (§4.2). The UI derives its "verified"/"could not verify"
+        // note from the same pair, so the two cannot disagree.
+        if let expected = normalized(config.store?.bundleID),
+           let actual = normalized(app.bundleID), expected != actual {
+            throw LutinError(
+                code: "store_bundle_id_mismatch",
+                message: "store.bundleID is \(expected), but the resolved app "
+                       + "\(appID) is \(actual).",
+                details: ["expected": expected, "actual": actual, "appID": appID])
+        }
+        return app
+    }
+
+    // MARK: - App resolution rules
+
+    /// Trims, and treats the empty result as absent. Public so the Store tab's
+    /// App model reads "stated" exactly as the engine does — the note must not
+    /// advertise a verification the engine skipped.
+    public static func normalized(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// App Store versions, newest first. Read-only (§7.3).
+    public static func versions(configURL: URL, runner: CommandRunning,
+                                isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) }) throws -> [ASCAppStoreVersion] {
+        let config = try LutinConfig.load(from: configURL)
+        let asc = try resolveAsc(for: config, runner: runner, isExecutable: isExecutable)
+        let client = ASCClient(ascPath: asc, runner: runner)
+        var arguments = ["versions", "list"] + appArguments(for: config.store)
+        arguments += ["--platform", platform(for: config.store), "--paginate"]
+        let list = try runMappedJSON(client, arguments,
+                                     as: ASCAppStoreVersionList.self,
+                                     resolvingApp: config.store?.appID).payload
+        return ASCAppStoreVersion.newestFirst(list.data)
+    }
+
     // MARK: - Shared helpers
 
     private static func resolveAsc(for config: LutinConfig,
@@ -403,16 +459,37 @@ public enum StoreLogic {
         do {
             return try client.run(arguments)
         } catch let error as LutinError {
-            guard appID == nil,
-                  let stderr = error.details?["stderr"] else { throw error }
-            let haystack = stderr.lowercased()
-            let markers = ["--app is required", "asc_app_id", "app not found", "no app"]
-            guard markers.contains(where: { haystack.contains($0) }) else { throw error }
-            throw LutinError(
-                code: "store_app_not_found",
-                message: "asc could not resolve an App Store Connect app. Set "
-                       + "store.appID in lutin.yml (or ASC_APP_ID / a .asc/config.json) and retry.",
-                details: error.details)
+            throw appResolutionFailure(error, appID: appID)
         }
+    }
+
+    /// `runMapped`'s JSON counterpart: `runJSON` still owns the decode and
+    /// exit-code mapping, and the "asc cannot resolve an app" wording is
+    /// reused so both catalog calls fail identically.
+    private static func runMappedJSON<Payload: Decodable>(
+        _ client: ASCClient, _ arguments: [String],
+        as type: Payload.Type, resolvingApp appID: String?) throws -> ASCResult<Payload> {
+        do {
+            return try client.runJSON(arguments, as: type)
+        } catch let error as LutinError {
+            throw appResolutionFailure(error, appID: appID)
+        }
+    }
+
+    /// Re-writes an asc failure as `store_app_not_found` when no explicit app
+    /// was configured and asc said it could not resolve one; returns the error
+    /// unchanged otherwise.
+    private static func appResolutionFailure(_ error: LutinError,
+                                             appID: String?) -> LutinError {
+        guard appID == nil,
+              let stderr = error.details?["stderr"] else { return error }
+        let haystack = stderr.lowercased()
+        let markers = ["--app is required", "asc_app_id", "app not found", "no app"]
+        guard markers.contains(where: { haystack.contains($0) }) else { return error }
+        return LutinError(
+            code: "store_app_not_found",
+            message: "asc could not resolve an App Store Connect app. Set "
+                   + "store.appID in lutin.yml (or ASC_APP_ID / a .asc/config.json) and retry.",
+            details: error.details)
     }
 }

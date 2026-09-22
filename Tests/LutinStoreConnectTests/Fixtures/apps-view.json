@@ -1,0 +1,10 @@
+{
+  "type": "apps",
+  "id": "1234567890",
+  "attributes": {
+    "name": "MyApp",
+    "bundleId": "com.example.myapp",
+    "sku": "MYAPP",
+    "primaryLocale": "en-US"
+  }
+}

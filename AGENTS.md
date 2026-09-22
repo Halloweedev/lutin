@@ -129,7 +129,7 @@ Branch on `error.code`, not on the message. Common ones:
 | `LTN_STAPLE_...` | `stapler` failed. |
 | `LTN_INTENT_...` | An intent envelope was malformed or referenced an unknown ID. |
 
-The `lutin store` family uses **unprefixed** snake_case codes instead: `store_asc_missing`, `store_asc_too_old`, `store_unauthenticated`, `store_web_session_missing`, `store_app_not_found`, `store_layout_mismatch`, `store_metadata_schema`, `store_validation_failed`, `store_confirmation_required`, `store_pull_would_overwrite`, `store_unsupported`, `store_rate_limited`, `store_asc_failed`. Branch on the exact code, not the message.
+The `lutin store` family uses **unprefixed** snake_case codes instead: `store_asc_missing`, `store_asc_too_old`, `store_unauthenticated`, `store_web_session_missing`, `store_app_not_found`, `store_bundle_id_mismatch`, `store_layout_mismatch`, `store_metadata_schema`, `store_validation_failed`, `store_confirmation_required`, `store_pull_would_overwrite`, `store_unsupported`, `store_rate_limited`, `store_asc_failed`. Branch on the exact code, not the message.
 
 Full list and remediation: run any command with `--help`, or grep `LutinError(code:` in `Sources/`.
 

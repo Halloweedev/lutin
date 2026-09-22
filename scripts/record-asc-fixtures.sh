@@ -6,10 +6,19 @@
 # an incidental one, because invented fixtures encode the wrong contract.
 #
 # Usage: ./scripts/record-asc-fixtures.sh
+#
+# Set ASC_APP_ID to also record the real Catalog and review artifacts
+# (network + auth). ASC_VERSION selects the version those review artifacts are
+# read from and defaults to 1.2.3; it is only read when ASC_APP_ID is set.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$REPO_ROOT/Tests/LutinStoreConnectTests/Fixtures"
+
+# Resolve the optional inputs before anything destructive runs: `set -u` would
+# otherwise abort on ASC_VERSION partway through, after `rm -rf` had already
+# removed the committed fixtures.
+ASC_VERSION="${ASC_VERSION:-1.2.3}"
 
 if ! command -v asc >/dev/null 2>&1; then
     echo "error: asc not found. brew install asc" >&2
@@ -92,6 +101,38 @@ asc auth status --output json \
 asc web auth status --output json \
     | python3 -c 'import json,sys; d=json.load(sys.stdin); d.update({"appleId":"REDACTED","developerTeamId":"REDACTED"}); print(json.dumps(d,sort_keys=True))' \
     > "$OUT/web-auth-status.json"
+
+# Optional: real Catalog and review artifacts. Set ASC_APP_ID (network + auth).
+if [ -n "${ASC_APP_ID:-}" ]; then
+    asc apps view --id "$ASC_APP_ID" --output json > "$OUT/apps-view.json"
+    asc versions list --app "$ASC_APP_ID" --paginate --output json > "$OUT/versions-list.json"
+    # pull into a temp dir, make one local edit, plan into a temp review dir —
+    # plan and approve are local-only; apply is never run by this script.
+    asc metadata pull --app "$ASC_APP_ID" --version "$ASC_VERSION" --dir "$WORK/real/metadata" --platform MAC_OS
+    python3 - "$WORK/real/metadata" <<'PY'
+import json, os, sys
+
+root = sys.argv[1]
+for base, _, files in os.walk(root):
+    for name in files:
+        if name.endswith(".json"):
+            path = os.path.join(base, name)
+            with open(path) as f:
+                data = json.load(f)
+            data["subtitle"] = (data.get("subtitle") or "Recorded by Lutin")[:30]
+            with open(path, "w") as f:
+                json.dump(data, f)
+            sys.exit(0)
+PY
+    asc metadata plan --app "$ASC_APP_ID" --version "$ASC_VERSION" --platform MAC_OS \
+        --dir "$WORK/real/metadata" --review-dir "$WORK/real/review" --output json > /dev/null
+    cp "$WORK/real/review/plan.json" "$OUT/plan.json"
+    asc metadata approve --review-dir "$WORK/real/review" --key "subtitle" --note "recorded" --output json > "$OUT/approved.json"
+    asc metadata status --review-dir "$WORK/real/review" --output json > "$OUT/review-status.json"
+    echo "→ recorded real Catalog + review fixtures for app $ASC_APP_ID" >&2
+else
+    echo "→ ASC_APP_ID unset: Catalog/review fixtures are the derived ones" >&2
+fi
 
 cat > "$OUT/RECORDED_WITH" <<EOF
 Recorded with: $(asc --version)

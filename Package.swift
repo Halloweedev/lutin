@@ -77,7 +77,7 @@ let package = Package(
             "LutinAppPackagerCore",
         ], path: "Apps/LutinAppPackager"),
 
-        .target(name: "TestSupport", dependencies: ["LutinCore"], path: "Tests/TestSupport"),
+        .target(name: "TestSupport", dependencies: ["LutinCore", "LutinConfig"], path: "Tests/TestSupport"),
         .testTarget(name: "LutinCoreTests", dependencies: ["LutinCore", "TestSupport"]),
         .testTarget(name: "LutinConfigTests", dependencies: ["LutinConfig", "LutinCore", "TestSupport"]),
         .testTarget(name: "LutinRegistryTests", dependencies: ["LutinRegistry", "LutinCore", "TestSupport"]),
