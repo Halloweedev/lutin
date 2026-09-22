@@ -83,7 +83,17 @@ final class StoreTabStateTests: XCTestCase {
                   arguments: ["metadata", "status", "--review-dir", reviewDir(document),
                               "--output", "json"],
                   result: ShellResult(exitCode: 0, stdout: try text("review-status.json"), stderr: ""))
-        return (StoreTabState(runner: fake, isExecutable: isExecutable), fake)
+        let cache = ASCCapabilitiesCache(url: cacheURL(), ttl: 3600)
+        return (StoreTabState(runner: fake, isExecutable: isExecutable, cache: cache), fake)
+    }
+
+    /// Every state under test caches into a throwaway file — the real cache
+    /// lives in `~/Library`, and no test may read or write it.
+    private func cacheURL() -> URL {
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("lutin-asc-cache-\(UUID().uuidString).json")
+        addTeardownBlock { try? FileManager.default.removeItem(at: url) }
+        return url
     }
 
     private func text(_ name: String) throws -> String {
@@ -93,6 +103,28 @@ final class StoreTabStateTests: XCTestCase {
 
     private func statusInvocations(_ fake: FakeCommandRunner) -> [FakeCommandRunner.Invocation] {
         fake.invocations.filter { $0.arguments.starts(with: ["metadata", "status"]) }
+    }
+
+    private func probes(_ fake: FakeCommandRunner, _ argument: String) -> Int {
+        fake.invocations.filter {
+            $0.executable == Self.fakeAsc && $0.arguments.contains(argument)
+        }.count
+    }
+
+    /// §4.3: one refresh runs `status`, `validate`, the Catalog calls and the
+    /// review reads. Before the cache each of those that gates re-asked asc
+    /// what it could do; now the tab probes once and reuses the answer.
+    func testTheCapabilityProbeIsSharedAcrossTheWholeTab() async throws {
+        let document = try makeDocument()
+        let (state, fake) = try makeState(document)
+
+        await state.refresh(document: document)
+        await state.refresh(document: document)
+
+        XCTAssertEqual(probes(fake, "capabilities"), 1,
+                       "asc capabilities is probed once for the whole tab")
+        XCTAssertEqual(probes(fake, "--version"), 1,
+                       "asc --version is probed once for the whole tab")
     }
 
     // MARK: - Loading

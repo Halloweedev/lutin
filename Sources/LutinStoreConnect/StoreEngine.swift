@@ -129,24 +129,18 @@ public enum StoreLogic {
 
     public static func status(configURL: URL,
                               runner: CommandRunning,
-                              isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) }) throws -> StoreStatusPayload {
+                              isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) },
+                              cache: ASCCapabilitiesCache? = nil) throws -> StoreStatusPayload {
         let config = try LutinConfig.load(from: configURL)
         let dir = try metadataDirectory(for: config, configURL: configURL)
         let fileCount = try StoreMetadataDirectory(root: dir).enumeratedFileCount()
 
         let asc = try resolveAsc(for: config, runner: runner, isExecutable: isExecutable)
 
-        let versionResult = try runner.runAllowingFailure(asc, ["--version"])
-        guard versionResult.exitCode == 0 else {
-            throw ASCErrorMapping.map(result: versionResult, command: ["--version"],
-                                      fallbackCode: "store_asc_failed")
-        }
-        try ASCToolVersion.assertSupported(versionResult.stdout)
-        let version = ASCToolVersion(versionResult.stdout)?.description
-            ?? versionResult.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        let version = try ASCProbe.version(ascPath: asc, runner: runner, cache: cache)
 
         let auth = try ASCAuthState.load(ascPath: asc, runner: runner)
-        let capabilities = try ASCCapabilities.load(ascPath: asc, runner: runner)
+        let capabilities = try ASCProbe.capabilities(ascPath: asc, runner: runner, cache: cache)
         // Best-effort: an asc build without `web auth status` must not break
         // an informational command. The throwing path (`assertAvailable`) runs
         // as capability gating on the mutating commands.
@@ -176,7 +170,8 @@ public enum StoreLogic {
     /// against Lutin's own enumeration via `StoreMetadataGuard`.
     public static func validate(configURL: URL,
                                 runner: CommandRunning,
-                                isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) }) throws -> StoreValidateReport {
+                                isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) },
+                                cache: ASCCapabilitiesCache? = nil) throws -> StoreValidateReport {
         let config = try LutinConfig.load(from: configURL)
         let dir = try metadataDirectory(for: config, configURL: configURL)
 
@@ -188,7 +183,7 @@ public enum StoreLogic {
         }
 
         let client = ASCClient(ascPath: asc, runner: runner)
-        try gate(ascPath: asc, runner: runner, command: "metadata validate")
+        try gate(ascPath: asc, runner: runner, command: "metadata validate", cache: cache)
 
         let (stdout, _) = try client.runAllowingValidationFailure(
             ["metadata", "validate", "--dir", dir.path])
@@ -217,12 +212,13 @@ public enum StoreLogic {
 
     public static func plan(configURL: URL, reviewDir: String?,
                             runner: CommandRunning,
-                            isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) }) throws -> StoreCommandResult {
+                            isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) },
+                            cache: ASCCapabilitiesCache? = nil) throws -> StoreCommandResult {
         let config = try LutinConfig.load(from: configURL)
         let dir = try metadataDirectory(for: config, configURL: configURL)
         let asc = try resolveAsc(for: config, runner: runner, isExecutable: isExecutable)
         let client = ASCClient(ascPath: asc, runner: runner)
-        try gate(ascPath: asc, runner: runner, command: "metadata plan")
+        try gate(ascPath: asc, runner: runner, command: "metadata plan", cache: cache)
 
         var arguments = ["metadata", "plan"] + appArguments(for: config.store)
         // `--version` only when the tree names exactly one version; otherwise
@@ -242,11 +238,12 @@ public enum StoreLogic {
     public static func approve(configURL: URL, reviewDir: String?, all: Bool,
                                keys: [String], scope: String?, note: String?,
                                runner: CommandRunning,
-                               isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) }) throws -> StoreCommandResult {
+                               isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) },
+                               cache: ASCCapabilitiesCache? = nil) throws -> StoreCommandResult {
         let config = try LutinConfig.load(from: configURL)
         let asc = try resolveAsc(for: config, runner: runner, isExecutable: isExecutable)
         let client = ASCClient(ascPath: asc, runner: runner)
-        try gate(ascPath: asc, runner: runner, command: "metadata approve")
+        try gate(ascPath: asc, runner: runner, command: "metadata approve", cache: cache)
 
         var arguments = ["metadata", "approve",
                          "--review-dir", reviewPath(for: reviewDir, configURL: configURL)]
@@ -261,7 +258,8 @@ public enum StoreLogic {
 
     public static func apply(configURL: URL, reviewDir: String?, confirmed: Bool,
                              runner: CommandRunning,
-                             isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) }) throws -> StoreCommandResult {
+                             isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) },
+                             cache: ASCCapabilitiesCache? = nil) throws -> StoreCommandResult {
         let config = try LutinConfig.load(from: configURL)
         // The guard runs before any resolution or runner call: an unconfirmed
         // apply must not invoke asc at all.
@@ -275,7 +273,7 @@ public enum StoreLogic {
         let dir = try metadataDirectory(for: config, configURL: configURL)
         let asc = try resolveAsc(for: config, runner: runner, isExecutable: isExecutable)
         let client = ASCClient(ascPath: asc, runner: runner)
-        try gate(ascPath: asc, runner: runner, command: "metadata apply")
+        try gate(ascPath: asc, runner: runner, command: "metadata apply", cache: cache)
 
         var arguments = ["metadata", "apply"] + appArguments(for: config.store)
         arguments += ["--platform", platform(for: config.store),
@@ -289,7 +287,8 @@ public enum StoreLogic {
 
     public static func pull(configURL: URL, version: String?, force: Bool,
                             runner: CommandRunning,
-                            isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) }) throws -> StoreCommandResult {
+                            isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) },
+                            cache: ASCCapabilitiesCache? = nil) throws -> StoreCommandResult {
         let config = try LutinConfig.load(from: configURL)
         let dir = try metadataDirectory(for: config, configURL: configURL)
         // Local guard first — before any resolution or runner call.
@@ -304,7 +303,7 @@ public enum StoreLogic {
         }
         let asc = try resolveAsc(for: config, runner: runner, isExecutable: isExecutable)
         let client = ASCClient(ascPath: asc, runner: runner)
-        try gate(ascPath: asc, runner: runner, command: "metadata pull")
+        try gate(ascPath: asc, runner: runner, command: "metadata pull", cache: cache)
 
         var arguments = ["metadata", "pull"] + appArguments(for: config.store)
         if let version, !version.isEmpty { arguments += ["--version", version] }
@@ -492,9 +491,10 @@ public enum StoreLogic {
     /// reason to disable a working feature — only the probe is best-effort,
     /// never the command the caller asked for.
     private static func gate(ascPath: String, runner: CommandRunning,
-                             command: String) throws {
-        guard let capabilities = try? ASCCapabilities.load(ascPath: ascPath,
-                                                           runner: runner) else { return }
+                             command: String,
+                             cache: ASCCapabilitiesCache? = nil) throws {
+        guard let capabilities = try? ASCProbe.capabilities(ascPath: ascPath, runner: runner,
+                                                            cache: cache) else { return }
         guard let entry = capabilities.capability(forCommand: command) else { return }
         switch entry.status {
         case .webSession:

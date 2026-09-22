@@ -183,4 +183,75 @@ final class StoreCatalogEngineTests: XCTestCase {
             XCTAssertEqual((error as? LutinError)?.code, "store_app_not_found")
         }
     }
+
+    // MARK: - The §4.3 capability cache
+
+    /// Two engine calls through one cache probe asc's capabilities once.
+    /// Without the cache the GUI re-probed `--version` and `capabilities` on
+    /// every command it ran.
+    func testTheCapabilityProbeIsCachedAcrossCalls() throws {
+        let dir = try project(appID: "42")
+        defer { try? FileManager.default.removeItem(at: dir.root) }
+        let cacheURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("lutin-asc-cache-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: cacheURL) }
+        let cache = ASCCapabilitiesCache(url: cacheURL, ttl: 3600)
+        let fake = FakeCommandRunner()
+        stubAsc(fake)
+        fake.stub(executable: fakeAsc, argumentsContaining: "--version",
+                  result: ShellResult(exitCode: 0, stdout: try Fixtures.text("version.txt"),
+                                      stderr: ""))
+        fake.stub(executable: fakeAsc, argumentsContaining: "capabilities",
+                  result: ShellResult(exitCode: 0,
+                                      stdout: try Fixtures.text("capabilities.json"), stderr: ""))
+        fake.stub(executable: fakeAsc, argumentsContaining: "auth",
+                  result: ShellResult(exitCode: 0,
+                                      stdout: try Fixtures.text("auth-status.json"), stderr: ""))
+        fake.stub(executable: fakeAsc, argumentsContaining: "web",
+                  result: ShellResult(exitCode: 0,
+                                      stdout: try Fixtures.text("web-auth-status.json"), stderr: ""))
+
+        _ = try StoreLogic.status(configURL: dir.configURL, runner: fake,
+                                  isExecutable: isExecutable, cache: cache)
+        _ = try StoreLogic.status(configURL: dir.configURL, runner: fake,
+                                  isExecutable: isExecutable, cache: cache)
+
+        XCTAssertEqual(probes(fake, "capabilities"), 1, "asc capabilities is probed once")
+        XCTAssertEqual(probes(fake, "--version"), 1, "asc --version is probed once")
+    }
+
+    /// No cache means today's behaviour: the CLI's one-shot commands probe
+    /// every time rather than reading a file they will never reuse.
+    func testWithoutACacheEveryCallProbesAsBefore() throws {
+        let dir = try project(appID: "42")
+        defer { try? FileManager.default.removeItem(at: dir.root) }
+        let fake = FakeCommandRunner()
+        stubAsc(fake)
+        fake.stub(executable: fakeAsc, argumentsContaining: "--version",
+                  result: ShellResult(exitCode: 0, stdout: try Fixtures.text("version.txt"),
+                                      stderr: ""))
+        fake.stub(executable: fakeAsc, argumentsContaining: "capabilities",
+                  result: ShellResult(exitCode: 0,
+                                      stdout: try Fixtures.text("capabilities.json"), stderr: ""))
+        fake.stub(executable: fakeAsc, argumentsContaining: "auth",
+                  result: ShellResult(exitCode: 0,
+                                      stdout: try Fixtures.text("auth-status.json"), stderr: ""))
+        fake.stub(executable: fakeAsc, argumentsContaining: "web",
+                  result: ShellResult(exitCode: 0,
+                                      stdout: try Fixtures.text("web-auth-status.json"), stderr: ""))
+
+        _ = try StoreLogic.status(configURL: dir.configURL, runner: fake,
+                                  isExecutable: isExecutable)
+        _ = try StoreLogic.status(configURL: dir.configURL, runner: fake,
+                                  isExecutable: isExecutable)
+
+        XCTAssertEqual(probes(fake, "capabilities"), 2)
+        XCTAssertEqual(probes(fake, "--version"), 2)
+    }
+
+    private func probes(_ fake: FakeCommandRunner, _ argument: String) -> Int {
+        fake.invocations.filter {
+            $0.executable == fakeAsc && $0.arguments.contains(argument)
+        }.count
+    }
 }

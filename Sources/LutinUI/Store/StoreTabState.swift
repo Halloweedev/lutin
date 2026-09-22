@@ -59,13 +59,19 @@ public final class StoreTabState {
     /// default is the real check; a test injects `{ _ in false }` so a machine
     /// with asc installed in `/opt/homebrew` cannot be reached by accident.
     private let isExecutable: (String) -> Bool
+    /// §4.3's capability cache, owned by the tab: one probe serves the whole
+    /// session instead of one per command. A test injects a temp-URL cache so
+    /// the suite never reads or writes the real one in `~/Library`.
+    private let cache: ASCCapabilitiesCache
 
     public init(runner: CommandRunning = ShellCommandRunner(),
                 isExecutable: @escaping (String) -> Bool = {
                     FileManager.default.isExecutableFile(atPath: $0)
-                }) {
+                },
+                cache: ASCCapabilitiesCache = ASCCapabilitiesCache()) {
         self.runner = runner
         self.isExecutable = isExecutable
+        self.cache = cache
         monitor.pathUpdateHandler = { [weak self] path in
             let online = path.status == .satisfied
             Task { @MainActor [weak self] in self?.isOnline = online }
@@ -91,7 +97,7 @@ public final class StoreTabState {
         var failure: LutinError?
         do {
             status = try StoreLogic.status(configURL: document.configURL, runner: runner,
-                                           isExecutable: isExecutable)
+                                           isExecutable: isExecutable, cache: cache)
         } catch let error as LutinError {
             failure = error
         } catch {
@@ -128,7 +134,7 @@ public final class StoreTabState {
 
         do {
             let report = try StoreLogic.validate(configURL: document.configURL, runner: runner,
-                                                 isExecutable: isExecutable)
+                                                 isExecutable: isExecutable, cache: cache)
             validation = .loaded(StoreValidationModel.make(report: report))
         } catch let error as LutinError {
             validation = .failed(StoreFailure(error))
@@ -194,7 +200,7 @@ public final class StoreTabState {
         defer { isBusy = false }
         do {
             _ = try StoreLogic.plan(configURL: document.configURL, reviewDir: nil,
-                                    runner: runner, isExecutable: isExecutable)
+                                    runner: runner, isExecutable: isExecutable, cache: cache)
             applyFailure = nil
             approveFailure = nil
             applyResult = nil
@@ -218,7 +224,7 @@ public final class StoreTabState {
             _ = try StoreLogic.approve(
                 configURL: document.configURL, reviewDir: nil, all: all, keys: keys,
                 scope: scope, note: reviewerNote.isEmpty ? nil : reviewerNote,
-                runner: runner, isExecutable: isExecutable)
+                runner: runner, isExecutable: isExecutable, cache: cache)
             approveFailure = nil
             applyFailure = nil
             // The apply line described the previous plan state; a new approval
@@ -252,7 +258,7 @@ public final class StoreTabState {
         do {
             let result = try StoreLogic.apply(configURL: document.configURL, reviewDir: nil,
                                               confirmed: true, runner: runner,
-                                              isExecutable: isExecutable)
+                                              isExecutable: isExecutable, cache: cache)
             let trimmed = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
             applyResult = trimmed.isEmpty ? "asc applied the approved plan." : trimmed
             applyFailure = nil
