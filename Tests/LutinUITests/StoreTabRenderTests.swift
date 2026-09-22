@@ -86,6 +86,26 @@ final class StoreTabRenderTests: XCTestCase {
                              "the tab must paint the column and the page, not a flat rectangle")
     }
 
+    /// The shell's composition at a narrow window: rail + column + canvas.
+    /// The Store surface must fit — a minimum wider than the window clips the
+    /// rail and the panel, which is what a user sees as a "wrongly designed
+    /// sidebar".
+    @MainActor
+    func testTheSurfaceFitsANarrowWindow() async throws {
+        let document = try makeDocument()
+        let state = StoreTabState(runner: FakeCommandRunner())
+        await state.refresh(document: document)
+
+        let surface = HStack(spacing: 0) {
+            EditorRail(selectedTab: .constant(.store))
+            StoreTab(document: document, state: state)
+                .frame(width: 430)
+            StoreCanvas(state: state)
+        }
+        let rep = snapshot(surface, size: CGSize(width: 850, height: 900), name: "lutin-storetab-narrow")
+        XCTAssertGreaterThan(distinctColours(rep), 4)
+    }
+
     /// A tree with a real listing: the preview should show the values, and the
     /// missing ones as slots.
     @MainActor

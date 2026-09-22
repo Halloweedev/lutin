@@ -27,7 +27,9 @@ public struct ProductPagePreview: View {
             honesty
         }
         .padding(20)
-        .frame(width: model.pageWidth, alignment: .leading)
+        // A maximum, not a fixed width: on a narrow window the page shrinks
+        // and reflows rather than being clipped at the right edge.
+        .frame(minWidth: 300, maxWidth: model.pageWidth, alignment: .leading)
         .background(Tokens.color(.surface))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         // Applied last so it wraps everything above: the appearance axis
@@ -99,7 +101,7 @@ public struct ProductPagePreview: View {
                         Image(nsImage: shot)
                             .resizable()
                             .aspectRatio(model.screenshotAspectRatio, contentMode: .fit)
-                            .frame(height: 260)
+                            .frame(maxHeight: 260)
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
                 }
@@ -114,7 +116,7 @@ public struct ProductPagePreview: View {
             .strokeBorder(Tokens.color(.divider),
                           style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
             .aspectRatio(model.screenshotAspectRatio, contentMode: .fit)
-            .frame(height: 260)
+            .frame(maxWidth: .infinity)
             .overlay(
                 VStack(spacing: 6) {
                     Image(systemName: "photo.on.rectangle.angled")
