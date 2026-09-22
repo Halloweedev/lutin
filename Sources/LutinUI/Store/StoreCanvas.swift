@@ -13,7 +13,10 @@ public struct StoreCanvas: View {
     }
 
     public var body: some View {
-        ScrollView([.vertical, .horizontal]) {
+        // Vertical only: a horizontal ScrollView proposes unbounded width to its
+        // content, which would let the page take its full 680 and get clipped by
+        // the window instead of shrinking into it.
+        ScrollView(.vertical) {
             ProductPagePreview(model: state.previewModel, assets: state.assets)
                 .padding(28)
                 .frame(maxWidth: .infinity)
