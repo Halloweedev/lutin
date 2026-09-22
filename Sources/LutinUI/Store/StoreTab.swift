@@ -79,11 +79,9 @@ public struct StoreTab: View {
                     .foregroundStyle(Tokens.color(.textTertiary))
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Button("Re-check") {
+            LutinButton("Re-check") {
                 Task { await state.refresh(document: document) }
             }
-            .buttonStyle(.link)
-            .font(Typography.inspectorLabel)
         }
         .padding(.bottom, 2)
     }
@@ -102,33 +100,21 @@ public struct StoreTab: View {
     private var listingSection: some View {
         SettingsSection("Listing") {
             variantRow("Locale") {
-                Picker("", selection: $state.locale) {
-                    ForEach(state.availableLocales.isEmpty ? [state.locale] : state.availableLocales,
-                            id: \.self) { locale in
-                        Text(locale).tag(locale)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .frame(width: 160)
+                LutinPicker(selection: $state.locale,
+                            options: (state.availableLocales.isEmpty ? [state.locale] : state.availableLocales)
+                                .map { LutinPicker<String>.Option(id: $0, label: $0) })
+                    .frame(width: 200)
             }
             variantRow("Device") {
-                Picker("", selection: $state.device) {
-                    ForEach(StorePreviewDevice.allCases) { device in
-                        Text(device.displayName).tag(device)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .frame(width: 200)
+                LutinPicker(selection: $state.device,
+                            options: StorePreviewDevice.allCases.map {
+                                LutinPicker<StorePreviewDevice>.Option(id: $0, label: $0.displayName)
+                            })
+                    .frame(width: 200)
             }
-            variantRow("Appearance") {
-                Toggle("Dark", isOn: Binding(
-                    get: { state.appearance == .dark },
-                    set: { state.appearance = $0 ? .dark : .light }))
-                .toggleStyle(.switch)
-                .labelsHidden()
-            }
+            LutinToggle("Dark appearance", isOn: Binding(
+                get: { state.appearance == .dark },
+                set: { state.appearance = $0 ? .dark : .light }))
             if let note = state.listingNote {
                 Text(note)
                     .font(Typography.inspectorLabel)
