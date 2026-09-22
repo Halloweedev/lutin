@@ -161,4 +161,119 @@ final class StoreSectionsRenderTests: XCTestCase {
         XCTAssertGreaterThan(distinctColors(rep).count, 4,
                              "an empty list must explain itself, never paint nothing")
     }
+
+    // MARK: - Pending changes + Apply (§7.6–7.7)
+
+    private static let reviewFixtures = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()                       // Tests/LutinUITests
+        .deletingLastPathComponent()                       // Tests
+        .appendingPathComponent("LutinStoreConnectTests/Fixtures")
+
+    private func reviewPlan() throws -> ASCReviewPlan {
+        try ASCReviewPlan.decode(
+            Data(contentsOf: Self.reviewFixtures.appendingPathComponent("plan.json")),
+            path: "plan.json")
+    }
+
+    private func reviewStatus() throws -> ASCReviewStatus {
+        try ASCReviewStatus.decode(
+            Data(contentsOf: Self.reviewFixtures.appendingPathComponent("review-status.json")),
+            path: "review-status.json")
+    }
+
+    private func reviewApproval() throws -> ASCReviewApproval {
+        try ASCReviewApproval.decode(
+            Data(contentsOf: Self.reviewFixtures.appendingPathComponent("approved.json")),
+            path: "approved.json")
+    }
+
+    private func reviewStatus(_ json: String) throws -> ASCReviewStatus {
+        try JSONDecoder().decode(ASCReviewStatus.self, from: Data(json.utf8))
+    }
+
+    private func reviewSection(_ state: StoreSectionState<StoreReviewModel>,
+                               hasPlan: Bool = true,
+                               isConfirmingApply: Bool = false,
+                               applyResult: String? = nil,
+                               applyFailure: StoreFailure? = nil) -> some View {
+        TabBody {
+            StoreReviewSection(
+                state: state, hasPlan: hasPlan,
+                reviewerNote: .constant("Checked the French subtitle."),
+                isConfirmingApply: isConfirmingApply, isBusy: false,
+                applyResult: applyResult, applyFailure: applyFailure,
+                actions: StoreReviewSection.Actions(
+                    plan: {}, approveKey: { _ in }, approveScope: { _ in },
+                    approveAll: {}, beginApply: {}, cancelApply: {}, confirmApply: {}))
+        }
+    }
+
+    /// 4 changes (2 app-info, 2 version), 1 approved: the section must paint
+    /// every field/from/to/reason, the per-change controls, and the pill.
+    func testPendingChangesPaintsEveryChangeWithItsApprovalState() throws {
+        let model = StoreReviewModel.make(plan: try reviewPlan(), status: try reviewStatus(),
+                                          approval: try reviewApproval())
+        let rep = snapshot(reviewSection(.loaded(model)), name: "review")
+        XCTAssertGreaterThan(distinctColors(rep).count, 4,
+                             "the section must paint the changes, not a flat rectangle")
+    }
+
+    /// A stale approval reads as a warning, not a hard error, and Apply stays
+    /// disabled.
+    func testAStaleApprovalPaintsAWarning() throws {
+        let stale = try reviewStatus(#"{"planHash":"new","approvalPlanHash":"old","approvalMatchesPlan":false,"ready":false,"totalCount":4,"approvedCount":0,"pendingCount":4,"approvedKeys":[],"pendingKeys":[]}"#)
+        let model = StoreReviewModel.make(plan: try reviewPlan(), status: stale)
+        let rep = snapshot(reviewSection(.loaded(model)), name: "review-stale")
+        XCTAssertGreaterThan(distinctColors(rep).count, 4)
+    }
+
+    /// asc says every change is approved: the Apply section shows the approval
+    /// summary and an enabled primary button.
+    func testAReadyPlanShowsTheApplySummary() throws {
+        let ready = try reviewStatus(#"{"planHash":"9f2c","approvalPlanHash":"9f2c","approvalMatchesPlan":true,"ready":true,"totalCount":4,"approvedCount":4,"pendingCount":0,"approvedKeys":["app-info:en-US:name","app-info:fr-FR:subtitle","version:1.2.3:en-US:description","version:1.2.3:fr-FR:whatsNew"],"pendingKeys":[]}"#)
+        let approval = try JSONDecoder().decode(
+            ASCReviewApproval.self,
+            from: Data(#"{"schemaVersion":1,"approvedAt":"2026-09-21T10:40:00Z","planHash":"9f2c","mode":"all","note":"Ship it.","approvedKeys":[]}"#.utf8))
+        let model = StoreReviewModel.make(plan: try reviewPlan(), status: ready,
+                                          approval: approval)
+        XCTAssertTrue(model.isReady)
+        let rep = snapshot(reviewSection(.loaded(model)), name: "review-ready")
+        XCTAssertGreaterThan(distinctColors(rep).count, 4)
+    }
+
+    /// The confirm gate: the destructive line and the two choices must be
+    /// unmistakable.
+    func testTheConfirmGateIsUnambiguous() throws {
+        let ready = try reviewStatus(#"{"planHash":"9f2c","approvalPlanHash":"9f2c","approvalMatchesPlan":true,"ready":true,"totalCount":4,"approvedCount":4,"pendingCount":0}"#)
+        let model = StoreReviewModel.make(plan: try reviewPlan(), status: ready,
+                                          approval: try reviewApproval())
+        let rep = snapshot(reviewSection(.loaded(model), isConfirmingApply: true),
+                           name: "review-confirm")
+        XCTAssertGreaterThan(distinctColors(rep).count, 4)
+    }
+
+    func testAnEmptyPlanPaintsItsExplanation() throws {
+        let empty = try JSONDecoder().decode(
+            ASCReviewPlan.self,
+            from: Data(#"{"schemaVersion":1,"planHash":"h","plan":{"adds":[],"updates":[],"deletes":[]}}"#.utf8))
+        let status = try reviewStatus(#"{"planHash":"h","approvalMatchesPlan":false,"ready":true,"totalCount":0,"approvedCount":0,"pendingCount":0}"#)
+        let model = StoreReviewModel.make(plan: empty, status: status)
+        let rep = snapshot(reviewSection(.loaded(model)), name: "review-empty")
+        XCTAssertGreaterThan(distinctColors(rep).count, 4,
+                             "an empty plan must explain itself, never paint nothing")
+    }
+
+    /// No plan artifact at all: the empty state that invites `Run plan`.
+    func testNoPlanPaintsTheEmptyState() {
+        let rep = snapshot(reviewSection(.loaded(.empty), hasPlan: false),
+                           name: "review-noplan")
+        XCTAssertGreaterThan(distinctColors(rep).count, 4)
+    }
+
+    func testAFailedReviewPaintsTheSharedExplanation() {
+        let failure = StoreFailure(code: "store_plan_failed",
+                                   message: "No review artifact in .asc/metadata/review. Run plan first.")
+        let rep = snapshot(reviewSection(.failed(failure)), name: "review-failed")
+        XCTAssertGreaterThan(distinctColors(rep).count, 4)
+    }
 }

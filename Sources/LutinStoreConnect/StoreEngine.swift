@@ -315,6 +315,68 @@ public enum StoreLogic {
                                   command: rendered(asc, arguments), output: output)
     }
 
+    // MARK: - Review (plan / approval state)
+
+    /// Reads asc's plan artifact. `nil` when there is no plan yet — an empty
+    /// state, not an error; a malformed artifact is `store_metadata_schema`.
+    /// No asc, no network: this is a file read.
+    public static func reviewPlan(configURL: URL, reviewDir: String? = nil,
+                                  runner: CommandRunning) throws -> ASCReviewPlan? {
+        _ = try LutinConfig.load(from: configURL)
+        let path = URL(fileURLWithPath: reviewPath(for: reviewDir, configURL: configURL))
+            .appendingPathComponent("plan.json")
+        guard let data = try? Data(contentsOf: path) else { return nil }
+        return try ASCReviewPlan.decode(data, path: path.path)
+    }
+
+    /// asc's own approval state (`asc metadata status`), so Lutin never
+    /// computes its own approval (§4.5). Local: asc reads two files.
+    ///
+    /// `nil` when there is no plan artifact — the empty state, not an error,
+    /// and no subprocess is spawned to discover it.
+    ///
+    /// Exit 2 from `asc metadata status` normally means a schema error, but its
+    /// one legitimate exit 2 here is "metadata plan artifact not found" (the
+    /// recorded `review-status-missing` fixture). That maps to
+    /// `store_plan_failed`, not `store_metadata_schema`, so the UI says "run
+    /// plan first" instead of "fix the named file and field".
+    public static func reviewStatus(configURL: URL, reviewDir: String? = nil,
+                                    runner: CommandRunning,
+                                    isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) }) throws -> ASCReviewStatus? {
+        let config = try LutinConfig.load(from: configURL)
+        let dir = reviewPath(for: reviewDir, configURL: configURL)
+        guard FileManager.default.fileExists(
+            atPath: URL(fileURLWithPath: dir).appendingPathComponent("plan.json").path
+        ) else { return nil }
+
+        let asc = try resolveAsc(for: config, runner: runner, isExecutable: isExecutable)
+        let arguments = ["metadata", "status", "--review-dir", dir]
+        let result = try runner.runAllowingFailure(asc, arguments + ["--output", "json"])
+        if result.exitCode != 0 {
+            let first = ASCErrorMapping.firstLine(of: result.stderr)
+            if first.lowercased().contains("plan artifact not found") {
+                throw LutinError(
+                    code: "store_plan_failed",
+                    message: "No review artifact in \(dir). Run plan first.",
+                    details: ["reviewDir": dir, "stderr": first])
+            }
+            throw ASCErrorMapping.map(result: result, command: arguments,
+                                      fallbackCode: "store_asc_failed")
+        }
+        return try ASCReviewStatus.decode(Data(result.stdout.utf8), path: dir)
+    }
+
+    /// asc's approval record — the reviewer note and mode live only here, so
+    /// Apply's "what was approved" reads it. `nil` when nothing is approved yet.
+    public static func reviewApproval(configURL: URL, reviewDir: String? = nil,
+                                      runner: CommandRunning) throws -> ASCReviewApproval? {
+        _ = try LutinConfig.load(from: configURL)
+        let path = URL(fileURLWithPath: reviewPath(for: reviewDir, configURL: configURL))
+            .appendingPathComponent("approved.json")
+        guard let data = try? Data(contentsOf: path) else { return nil }
+        return try ASCReviewApproval.decode(data, path: path.path)
+    }
+
     // MARK: - Catalog
 
     /// The resolved app record, when `store.appID` names it. `nil` when the app

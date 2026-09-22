@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-21T10:36:24Z",
+  "command": "metadata plan",
+  "reviewDir": "/tmp/lutin-review",
+  "planPath": "/tmp/lutin-review/plan.json",
+  "approvalPath": "/tmp/lutin-review/approved.json",
+  "planHash": "9f2c1b0e5d4a3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b",
+  "options": {
+    "appId": "1234567890",
+    "appInfoId": "app-info-1",
+    "version": "1.2.3",
+    "platform": "MAC_OS",
+    "dir": "store/metadata",
+    "includes": ["app-info", "version"],
+    "allowDeletes": true
+  },
+  "plan": {
+    "appId": "1234567890",
+    "appInfoId": "app-info-1",
+    "version": "1.2.3",
+    "versionId": "version-1",
+    "dir": "store/metadata",
+    "dryRun": true,
+    "includes": ["app-info", "version"],
+    "adds": [
+      {
+        "key": "app-info:en-US:name",
+        "scope": "app-info",
+        "locale": "en-US",
+        "field": "name",
+        "reason": "field exists locally but not remotely",
+        "to": "Sayrise"
+      },
+      {
+        "key": "app-info:fr-FR:subtitle",
+        "scope": "app-info",
+        "locale": "fr-FR",
+        "field": "subtitle",
+        "reason": "field exists locally but not remotely",
+        "to": "Lancez votre app"
+      }
+    ],
+    "updates": [
+      {
+        "key": "version:1.2.3:en-US:description",
+        "scope": "version",
+        "locale": "en-US",
+        "version": "1.2.3",
+        "field": "description",
+        "reason": "field value differs",
+        "from": "Old description.",
+        "to": "New description."
+      }
+    ],
+    "deletes": [
+      {
+        "key": "version:1.2.3:fr-FR:whatsNew",
+        "scope": "version",
+        "locale": "fr-FR",
+        "version": "1.2.3",
+        "field": "whatsNew",
+        "reason": "localization missing locally",
+        "from": "Ancienne note."
+      }
+    ]
+  }
+}
