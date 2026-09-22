@@ -26,6 +26,7 @@ public struct StoreTab: View {
         TabBody {
             connectionSection
             listingSection
+            validationSection
         }
         .task { await state.refresh(document: document) }
     }
@@ -114,5 +115,13 @@ public struct StoreTab: View {
     private var isDark: Binding<Bool> {
         Binding(get: { state.appearance == .dark },
                 set: { state.appearance = $0 ? .dark : .light })
+    }
+
+    // MARK: - Validation
+
+    private var validationSection: some View {
+        StoreValidationSection(state: state.validation) {
+            Task { await state.refresh(document: document) }
+        }
     }
 }

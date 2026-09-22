@@ -46,27 +46,23 @@ public enum StoreLogic {
         public let capabilitiesByStatus: [String: Int]
     }
 
-    /// One validation finding — asc's shape (decoded leniently), plus the
-    /// offline path's stray-directory findings.
-    public struct StoreValidationIssue: Codable {
-        public let scope: String?
-        public let file: String?
-        public let locale: String?
-        public let version: String?
-        public let field: String?
-        public let severity: String
-        public let message: String
-        public let length: Int?
-        public let limit: Int?
-    }
-
     public struct StoreValidateReport: Encodable {
         public let fileCount: Int
-        public let issues: [StoreValidationIssue]
+        public let issues: [StoreMetadataIssue]
         public let offline: Bool
         public let errorCount: Int
         public let warningCount: Int
         public let valid: Bool
+
+        public init(fileCount: Int, issues: [StoreMetadataIssue], offline: Bool,
+                    errorCount: Int, warningCount: Int, valid: Bool) {
+            self.fileCount = fileCount
+            self.issues = issues
+            self.offline = offline
+            self.errorCount = errorCount
+            self.warningCount = warningCount
+            self.valid = valid
+        }
     }
 
     public struct StoreCommandResult: Encodable {
@@ -77,7 +73,7 @@ public enum StoreLogic {
 
     private struct ASCValidateOutput: Decodable {
         let filesScanned: Int
-        let issues: [StoreValidationIssue]
+        let issues: [StoreMetadataIssue]
         let errorCount: Int
         let warningCount: Int
         let valid: Bool
@@ -110,24 +106,14 @@ public enum StoreLogic {
             }
         }
 
-        var issues: [StoreValidationIssue] = []
+        var issues: [StoreMetadataIssue] = []
         for stray in (try? storeDir.strayDirectories()) ?? [] {
-            issues.append(StoreValidationIssue(
-                scope: nil, file: stray, locale: nil, version: nil, field: nil,
-                severity: "error",
-                message: "asc ignores unrecognised paths silently, so nothing "
-                       + "here would be pushed. Remove or relocate this path.",
-                length: nil, limit: nil))
+            issues.append(.strayPath(stray))
         }
 
         let fileCount = try storeDir.enumeratedFileCount()
         if fileCount == 0 {
-            issues.append(StoreValidationIssue(
-                scope: nil, file: dir.path, locale: nil, version: nil, field: nil,
-                severity: "error",
-                message: "The metadata directory holds no metadata files. Run "
-                       + "`lutin store pull` to fetch the listing first.",
-                length: nil, limit: nil))
+            issues.append(.emptyTree(dir.path))
         }
 
         return StoreValidateReport(
@@ -343,8 +329,20 @@ public enum StoreLogic {
     private static func metadataDirectory(for config: LutinConfig,
                                           configURL: URL) throws -> URL {
         let relative = config.store?.resolvedMetadataDir ?? StoreInfo.defaultMetadataDir
-        return URL(fileURLWithPath: relative,
-                   relativeTo: configURL.deletingLastPathComponent()).standardizedFileURL
+        let url = URL(fileURLWithPath: relative,
+                      relativeTo: configURL.deletingLastPathComponent()).standardizedFileURL
+        // `ConfigValidator` is pure, so the "directory, not a file" rule lives
+        // here, at resolution time, where the filesystem can be asked (§4.2).
+        var isDirectory: ObjCBool = false
+        if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
+           !isDirectory.boolValue {
+            throw LutinError(
+                code: "store_layout_mismatch",
+                message: "store.metadataDir points at a file, not a directory. "
+                       + "asc reads a directory of app-info/ and version/<v>/ files.",
+                details: ["path": url.path])
+        }
+        return url
     }
 
     private static func platform(for store: StoreInfo?) -> String {

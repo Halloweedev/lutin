@@ -226,4 +226,27 @@ final class StoreCommandTests: XCTestCase {
         XCTAssertEqual(report.issues.first?.severity, "error")
         XCTAssertFalse(report.valid)
     }
+
+    // MARK: - metadataDir shape
+
+    /// Spec §4.2: a metadataDir that points at a file is a layout error.
+    /// `ConfigValidator` is pure and cannot stat the filesystem, so the check
+    /// belongs at resolution time — and it must name the path, not report
+    /// "0 files".
+    func testMetadataDirPointingAtAFileIsALayoutError() throws {
+        let dir = try FixtureProject.make(metadata: [:])
+        defer { try? FileManager.default.removeItem(at: dir.root) }
+        let fileURL = dir.root.appendingPathComponent("store/metadata")
+        try FileManager.default.createDirectory(
+            at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try "not a directory".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        XCTAssertThrowsError(
+            try StoreLogic.validateOffline(configURL: dir.configURL, runner: FakeCommandRunner())
+        ) { error in
+            let lutin = error as? LutinError
+            XCTAssertEqual(lutin?.code, "store_layout_mismatch")
+            XCTAssertEqual(lutin?.details?["path"], fileURL.path)
+        }
+    }
 }

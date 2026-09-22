@@ -17,6 +17,7 @@ import SwiftUI
 @MainActor
 public final class StoreTabState {
     public private(set) var connection: StoreConnectionSnapshot?
+    public private(set) var validation: StoreSectionState<StoreValidationModel> = .loading
     public private(set) var listing = StoreListing(locale: "en-US")
     public private(set) var assets = StoreAssets()
     /// Set when the metadata tree is missing, empty, or has nothing for the
@@ -71,6 +72,15 @@ public final class StoreTabState {
             failure = LutinError(code: "store_asc_failed", message: "\(error)")
         }
         connection = StoreConnectionSnapshot.make(status: status, error: failure, isOnline: isOnline)
+
+        do {
+            let report = try StoreLogic.validate(configURL: document.configURL, runner: runner)
+            validation = .loaded(StoreValidationModel.make(report: report))
+        } catch let error as LutinError {
+            validation = .failed(StoreFailure(error))
+        } catch {
+            validation = .failed(StoreFailure(code: "store_asc_failed", message: "\(error)"))
+        }
 
         loadListing(document: document)
     }
