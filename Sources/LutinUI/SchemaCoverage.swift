@@ -25,6 +25,12 @@ public enum SchemaCoverage {
         "notarization.enabled", "notarization.profile", "notarization.staple",
         "sparkle.enabled", "sparkle.appcastPath",
         "sparkle.releaseNotesDirectory", "sparkle.downloadBaseURL",
+        // The `store:` block is driven by `lutin store` today and by the
+        // Store tab once Spec 1a step 7 lands (gated on the visual audit) —
+        // nothing in it is editable from the current editor surfaces, so it
+        // is recorded as an explicit entry rather than as pretended coverage.
+        // Replace this with the leaf paths when the tab wires them up.
+        "store",
     ]
 
     public static func fieldsFromConfig(_ config: LutinConfig) -> Set<String> {
