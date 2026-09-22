@@ -31,14 +31,7 @@ public struct ASCAuthState: Codable, Equatable, Sendable {
     }
 
     public static func parse(_ data: Data) throws -> ASCAuthState {
-        do {
-            return try JSONDecoder().decode(ASCAuthState.self, from: data)
-        } catch {
-            throw LutinError(
-                code: "store_asc_failed",
-                message: "Could not read `asc auth status --output json`: \(error)",
-                details: nil)
-        }
+        try ASCJSON.decode(ASCAuthState.self, from: data, command: "asc auth status")
     }
 
     public static func load(ascPath: String,
@@ -71,14 +64,7 @@ public struct ASCWebSessionState: Codable, Equatable, Sendable {
     public var isAvailable: Bool { authenticated }
 
     public static func parse(_ data: Data) throws -> ASCWebSessionState {
-        do {
-            return try JSONDecoder().decode(ASCWebSessionState.self, from: data)
-        } catch {
-            throw LutinError(
-                code: "store_asc_failed",
-                message: "Could not read `asc web auth status --output json`: \(error)",
-                details: nil)
-        }
+        try ASCJSON.decode(ASCWebSessionState.self, from: data, command: "asc web auth status")
     }
 
     public static func load(ascPath: String,

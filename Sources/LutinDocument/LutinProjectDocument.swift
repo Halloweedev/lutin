@@ -334,19 +334,15 @@ public final class LutinProjectDocument: Identifiable {
             return
 
         case let .setStoreApp(appID, bundleID, platform):
-            var store = config.store ?? StoreInfo()
-            store.appID = appID
-            if let bundleID { store.bundleID = bundleID }
-            if let platform { store.platform = platform }
-            config.store = store
+            mutateStore { store in
+                store.appID = appID
+                if let bundleID { store.bundleID = bundleID }
+                if let platform { store.platform = platform }
+            }
         case let .setStoreMetadataDir(path):
-            var store = config.store ?? StoreInfo()
-            store.metadataDir = path
-            config.store = store
+            mutateStore { $0.metadataDir = path }
         case let .setStoreASCPath(path):
-            var store = config.store ?? StoreInfo()
-            store.ascPath = path
-            config.store = store
+            mutateStore { $0.ascPath = path }
 
         }
         isDirty = true
@@ -463,6 +459,14 @@ public final class LutinProjectDocument: Identifiable {
         guard var items = config.items, let idx = items.firstIndex(where: { $0.id == id }) else { return }
         mutate(&items[idx])
         config.items = items
+    }
+
+    /// Edits the `store:` block in place, creating it on first write and
+    /// leaving every other field untouched.
+    private func mutateStore(_ mutate: (inout StoreInfo) -> Void) {
+        var store = config.store ?? StoreInfo()
+        mutate(&store)
+        config.store = store
     }
 
 

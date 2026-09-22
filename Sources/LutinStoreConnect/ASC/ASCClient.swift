@@ -71,3 +71,24 @@ public struct ASCClient: Sendable {
         }
     }
 }
+
+// MARK: - JSON decoding
+
+/// Decodes one `asc --output json` payload, mapping a decoding failure to the
+/// `store_asc_failed` shape every caller surfaces. Each of the three payloads
+/// (`capabilities`, `auth status`, `web auth status`) failed identically
+/// before this existed.
+enum ASCJSON {
+    static func decode<T: Decodable>(_ type: T.Type,
+                                     from data: Data,
+                                     command: String) throws -> T {
+        do {
+            return try JSONDecoder().decode(type, from: data)
+        } catch {
+            throw LutinError(
+                code: "store_asc_failed",
+                message: "Could not read `\(command) --output json`: \(error)",
+                details: nil)
+        }
+    }
+}

@@ -1,4 +1,3 @@
-import Foundation
 import LutinCore
 
 /// The `asc` release Lutin is built and tested against.
@@ -45,14 +44,15 @@ public struct ASCToolVersion: Equatable, Comparable, CustomStringConvertible, Se
     /// - Throws: `LutinError(code: "store_asc_too_old")` when `raw` is
     ///   unparseable or below `minimum`.
     public static func assertSupported(_ raw: String) throws {
-        guard let found = ASCToolVersion(raw), found >= minimum else {
+        let parsed = ASCToolVersion(raw)
+        guard let found = parsed, found >= minimum else {
             throw LutinError(
                 code: "store_asc_too_old",
                 message: "Lutin needs asc \(minimum) or newer; found "
-                       + (ASCToolVersion(raw)?.description ?? "\"\(raw)\"")
+                       + (parsed?.description ?? "\"\(raw)\"")
                        + ". Run `brew upgrade asc`.",
                 details: ["required": minimum.description,
-                          "found": ASCToolVersion(raw)?.description ?? raw])
+                          "found": parsed?.description ?? raw])
         }
     }
 }

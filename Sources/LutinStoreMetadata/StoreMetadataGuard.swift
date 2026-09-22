@@ -1,4 +1,3 @@
-import Foundation
 import LutinCore
 
 /// Cross-checks Lutin's reading of the metadata tree against asc's.

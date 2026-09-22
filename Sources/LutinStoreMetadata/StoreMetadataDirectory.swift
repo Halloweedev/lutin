@@ -31,11 +31,23 @@ public struct StoreMetadataDirectory: Sendable {
 
     // MARK: - Enumeration
 
-    private func locales(in directory: URL) throws -> [String] {
+    /// Every `*.json` directly inside `directory`, or `[]` when it is absent.
+    private func jsonURLs(in directory: URL) throws -> [URL] {
         guard FileManager.default.fileExists(atPath: directory.path) else { return [] }
         return try FileManager.default.contentsOfDirectory(at: directory,
                                                            includingPropertiesForKeys: nil)
             .filter { $0.pathExtension == "json" }
+    }
+
+    /// Every immediate subdirectory of `directory`.
+    private func childDirectories(of directory: URL) throws -> [URL] {
+        try FileManager.default.contentsOfDirectory(at: directory,
+                                                    includingPropertiesForKeys: [.isDirectoryKey])
+            .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+    }
+
+    private func locales(in directory: URL) throws -> [String] {
+        try jsonURLs(in: directory)
             .map { $0.deletingPathExtension().lastPathComponent }
             .filter { $0 != Self.defaultLocale }
             .sorted()
@@ -59,11 +71,7 @@ public struct StoreMetadataDirectory: Sendable {
     public func versionDirectories() throws -> [String] {
         let base = root.appendingPathComponent("version")
         guard FileManager.default.fileExists(atPath: base.path) else { return [] }
-        return try FileManager.default.contentsOfDirectory(at: base,
-                                                           includingPropertiesForKeys: [.isDirectoryKey])
-            .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
-            .map { $0.lastPathComponent }
-            .sorted()
+        return try childDirectories(of: base).map { $0.lastPathComponent }.sorted()
     }
 
     /// True when a `default.json` exists in either scope.
@@ -79,19 +87,11 @@ public struct StoreMetadataDirectory: Sendable {
     /// and directly under each `version/<v>/`. Nested files are **not** counted,
     /// because asc does not read them — see `strayDirectories()`.
     public func enumeratedFileCount() throws -> Int {
-        var count = try jsonFileCount(in: appInfoURL)
+        var count = try jsonURLs(in: appInfoURL).count
         for version in try versionDirectories() {
-            count += try jsonFileCount(in: versionURL(version))
+            count += try jsonURLs(in: versionURL(version)).count
         }
         return count
-    }
-
-    private func jsonFileCount(in directory: URL) throws -> Int {
-        guard FileManager.default.fileExists(atPath: directory.path) else { return 0 }
-        return try FileManager.default.contentsOfDirectory(at: directory,
-                                                           includingPropertiesForKeys: nil)
-            .filter { $0.pathExtension == "json" }
-            .count
     }
 
     /// Directories whose contents asc would **silently ignore**: the plural
@@ -102,23 +102,18 @@ public struct StoreMetadataDirectory: Sendable {
     /// stray `versions/` validates clean and pushes nothing.
     public func strayDirectories() throws -> [String] {
         guard FileManager.default.fileExists(atPath: root.path) else { return [] }
-        let fm = FileManager.default
         var stray: [String] = []
 
-        for entry in try fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey]) {
-            guard (try? entry.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else { continue }
+        for entry in try childDirectories(of: root) {
             switch entry.lastPathComponent {
             case "app-info":
                 // Only files may live here.
-                for child in try fm.contentsOfDirectory(at: entry, includingPropertiesForKeys: [.isDirectoryKey])
-                where (try? child.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+                for child in try childDirectories(of: entry) {
                     stray.append(child.path)
                 }
             case "version":
-                for versionDir in try fm.contentsOfDirectory(at: entry, includingPropertiesForKeys: [.isDirectoryKey])
-                where (try? versionDir.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
-                    for child in try fm.contentsOfDirectory(at: versionDir, includingPropertiesForKeys: [.isDirectoryKey])
-                    where (try? child.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+                for versionDir in try childDirectories(of: entry) {
+                    for child in try childDirectories(of: versionDir) {
                         stray.append(child.path)
                     }
                 }

@@ -259,26 +259,6 @@ public struct LutinConfig: Codable, Equatable {
         self.sparkle = sparkle
         self.store = store
     }
-
-    public func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(project, forKey: .project)
-        try c.encode(app, forKey: .app)
-        try c.encode(output, forKey: .output)
-        try c.encodeIfPresent(window, forKey: .window)
-        try c.encodeIfPresent(background, forKey: .background)
-        try c.encodeIfPresent(items, forKey: .items)
-        try c.encodeIfPresent(decorations, forKey: .decorations)
-        try c.encodeIfPresent(signing, forKey: .signing)
-        try c.encodeIfPresent(notarization, forKey: .notarization)
-        try c.encodeIfPresent(sparkle, forKey: .sparkle)
-        try c.encodeIfPresent(store, forKey: .store)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case project, app, output, window, background, items, decorations
-        case signing, notarization, sparkle, store
-    }
 }
 
 /// App Store channel configuration. Every field is optional — a project that

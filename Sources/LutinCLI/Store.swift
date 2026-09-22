@@ -61,6 +61,14 @@ enum StoreLogic {
         let output: String
     }
 
+    private struct ASCValidateOutput: Decodable {
+        let filesScanned: Int
+        let issues: [StoreValidationIssue]
+        let errorCount: Int
+        let warningCount: Int
+        let valid: Bool
+    }
+
     // MARK: - Offline validation (no asc, no network)
 
     /// Enumerates and decodes the canonical metadata tree without ever
@@ -203,14 +211,6 @@ enum StoreLogic {
             errorCount: findings.errorCount,
             warningCount: findings.warningCount,
             valid: findings.valid)
-    }
-
-    private struct ASCValidateOutput: Decodable {
-        let filesScanned: Int
-        let issues: [StoreValidationIssue]
-        let errorCount: Int
-        let warningCount: Int
-        let valid: Bool
     }
 
     // MARK: - plan / approve / apply / pull

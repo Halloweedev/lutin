@@ -58,14 +58,7 @@ public struct ASCCapabilities: Codable, Equatable, Sendable {
     public let capabilities: [ASCCapability]
 
     public static func parse(_ data: Data) throws -> ASCCapabilities {
-        do {
-            return try JSONDecoder().decode(ASCCapabilities.self, from: data)
-        } catch {
-            throw LutinError(
-                code: "store_asc_failed",
-                message: "Could not read `asc capabilities --output json`: \(error)",
-                details: nil)
-        }
+        try ASCJSON.decode(ASCCapabilities.self, from: data, command: "asc capabilities")
     }
 
     public static func load(ascPath: String,

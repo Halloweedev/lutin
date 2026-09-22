@@ -1,4 +1,3 @@
-import Foundation
 
 /// Which half of the canonical metadata tree a field belongs to.
 /// Raw values match asc's `--include` scope names and the directory names.
@@ -46,8 +45,4 @@ public enum StoreMetadataField: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    /// Fields that must be present in an app-info localization before asc
-    /// considers the file non-empty.
-    public static var appInfoFields: [StoreMetadataField] { allCases.filter { $0.scope == .appInfo } }
-    public static var versionFields: [StoreMetadataField] { allCases.filter { $0.scope == .version } }
 }
