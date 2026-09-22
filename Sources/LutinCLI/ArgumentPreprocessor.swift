@@ -8,9 +8,12 @@ public enum ArgumentPreprocessor {
         "build", "release", "doctor", "validate", "preview", "open",
     ]
 
-    /// All known subcommand names.
+    /// All known top-level subcommand names. Must stay in sync with the
+    /// `subcommands` list on `Lutin`; a name missing here gets mistaken for a
+    /// project name and hijacked by `rewrite`.
     static let subcommands: Set<String> = projectVerbs.union([
         "init", "projects", "add", "remove",
+        "store", "app-store", "notary", "apply-intents",
     ])
 
     public static func rewrite(_ args: [String]) -> [String] {
