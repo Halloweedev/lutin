@@ -80,8 +80,9 @@ public final class StoreTabState {
     /// gaps explicitly, so an incomplete listing is information, not an error.
     private func loadListing(document: LutinProjectDocument) {
         let store = document.config.store
-        let root = document.projectDirectory
-            .appendingPathComponent(store?.resolvedMetadataDir ?? StoreInfo.defaultMetadataDir)
+        let projectDir = document.projectDirectory
+        let root = Self.resolve(store?.resolvedMetadataDir ?? StoreInfo.defaultMetadataDir,
+                                in: projectDir)
         let tree = StoreMetadataDirectory(root: root)
 
         let locales = tree.allLocales
@@ -108,7 +109,18 @@ public final class StoreTabState {
             listingNote = nil
         }
 
-        assets = StoreAssets.forApp(at: root.deletingLastPathComponent()
-            .appendingPathComponent(document.config.app.path))
+        // Only a real bundle gets an icon: `NSWorkspace` hands back a generic
+        // document glyph for a path that isn't there, which reads as "your app
+        // is a text file" rather than as "no app built yet".
+        let appURL = Self.resolve(document.config.app.path, in: projectDir)
+        assets = FileManager.default.fileExists(atPath: appURL.path)
+            ? StoreAssets.forApp(at: appURL)
+            : StoreAssets()
+    }
+
+    /// `store.metadataDir` and `app.path` are documented relative to the config
+    /// file; an absolute path is honoured as-is, matching the CLI.
+    static func resolve(_ path: String, in base: URL) -> URL {
+        path.hasPrefix("/") ? URL(fileURLWithPath: path) : base.appendingPathComponent(path)
     }
 }

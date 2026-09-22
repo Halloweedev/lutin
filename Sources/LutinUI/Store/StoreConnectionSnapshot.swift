@@ -29,11 +29,15 @@ public struct StoreConnectionSnapshot: Equatable {
         /// `true`/`false` where the row itself is a pass/fail fact; `nil` where
         /// it is context.
         public let isHealthy: Bool?
+        /// A provenance chip, for a value Lutin did not choose itself.
+        public let info: String?
 
-        public init(label: String, value: String, isHealthy: Bool? = nil) {
+        public init(label: String, value: String,
+                    isHealthy: Bool? = nil, info: String? = nil) {
             self.label = label
             self.value = value
             self.isHealthy = isHealthy
+            self.info = info
         }
     }
 
@@ -156,7 +160,9 @@ public struct StoreConnectionSnapshot: Equatable {
             Row(label: "Web session",
                 value: status.hasWebSession ? "authenticated" : "not authenticated",
                 isHealthy: status.hasWebSession),
-            Row(label: "App", value: status.appID ?? "resolved by asc"),
+            Row(label: "App",
+                value: status.appID ?? "none in lutin.yml",
+                info: status.appID == nil ? "resolved by asc" : nil),
             Row(label: "Metadata files", value: "\(status.fileCount)"),
         ]
         if !status.capabilitiesByStatus.isEmpty {
