@@ -34,8 +34,12 @@ public final class StoreTabState {
     private let monitor = NWPathMonitor()
     private let monitorQueue = DispatchQueue(label: "lutin.store.connectivity")
     public private(set) var isOnline = true
+    /// Injected so the tab's loading is testable — and so a test can never
+    /// reach the real `asc` by accident.
+    private let runner: CommandRunning
 
-    public init() {
+    public init(runner: CommandRunning = ShellCommandRunner()) {
+        self.runner = runner
         monitor.pathUpdateHandler = { [weak self] path in
             let online = path.status == .satisfied
             Task { @MainActor [weak self] in self?.isOnline = online }
@@ -60,7 +64,7 @@ public final class StoreTabState {
         var status: StoreLogic.StoreStatusPayload?
         var failure: LutinError?
         do {
-            status = try StoreLogic.status(configURL: document.configURL, runner: ShellCommandRunner())
+            status = try StoreLogic.status(configURL: document.configURL, runner: runner)
         } catch let error as LutinError {
             failure = error
         } catch {
