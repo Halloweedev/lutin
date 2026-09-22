@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "approvedAt": "2026-09-21T10:40:00Z",
+  "planHash": "9f2c1b0e5d4a3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b",
+  "reviewDir": "/tmp/lutin-review",
+  "planPath": "/tmp/lutin-review/plan.json",
+  "approvalPath": "/tmp/lutin-review/approved.json",
+  "mode": "key",
+  "note": "Checked the French subtitle against the app.",
+  "approvedKeys": ["app-info:en-US:name"],
+  "pendingKeys": [
+    "app-info:fr-FR:subtitle",
+    "version:1.2.3:en-US:description",
+    "version:1.2.3:fr-FR:whatsNew"
+  ]
+}

@@ -20,6 +20,21 @@ public final class StoreTabState {
     public private(set) var app: StoreSectionState<StoreAppModel> = .loading
     public private(set) var versions: StoreSectionState<StoreVersionsModel> = .loading
     public private(set) var validation: StoreSectionState<StoreValidationModel> = .loading
+    public private(set) var review: StoreSectionState<StoreReviewModel> = .loading
+    /// Whether asc's plan artifact exists. `false` with a loaded (empty) model
+    /// is the "no plan yet" state — distinct from a plan with no changes.
+    public private(set) var hasReviewPlan = false
+    public var reviewerNote: String = ""
+    public private(set) var isConfirmingApply = false
+    public private(set) var isBusy = false
+    public private(set) var applyResult: String?
+    public private(set) var applyFailure: StoreFailure?
+    /// An `approve` failure belongs to Pending changes, where the approve
+    /// controls are — reporting it under Apply reads as an apply failure.
+    public private(set) var approveFailure: StoreFailure?
+    /// Why asc's status could not be read. Kept so Apply can explain the
+    /// real error and its fix instead of assuming asc is simply absent.
+    public private(set) var statusFailure: StoreFailure?
     public private(set) var listing = StoreListing(locale: "en-US")
     public private(set) var assets = StoreAssets()
     /// Set when the metadata tree is missing, empty, or has nothing for the
@@ -44,13 +59,19 @@ public final class StoreTabState {
     /// default is the real check; a test injects `{ _ in false }` so a machine
     /// with asc installed in `/opt/homebrew` cannot be reached by accident.
     private let isExecutable: (String) -> Bool
+    /// §4.3's capability cache, owned by the tab: one probe serves the whole
+    /// session instead of one per command. A test injects a temp-URL cache so
+    /// the suite never reads or writes the real one in `~/Library`.
+    private let cache: ASCCapabilitiesCache
 
     public init(runner: CommandRunning = ShellCommandRunner(),
                 isExecutable: @escaping (String) -> Bool = {
                     FileManager.default.isExecutableFile(atPath: $0)
-                }) {
+                },
+                cache: ASCCapabilitiesCache = ASCCapabilitiesCache()) {
         self.runner = runner
         self.isExecutable = isExecutable
+        self.cache = cache
         monitor.pathUpdateHandler = { [weak self] path in
             let online = path.status == .satisfied
             Task { @MainActor [weak self] in self?.isOnline = online }
@@ -76,7 +97,7 @@ public final class StoreTabState {
         var failure: LutinError?
         do {
             status = try StoreLogic.status(configURL: document.configURL, runner: runner,
-                                           isExecutable: isExecutable)
+                                           isExecutable: isExecutable, cache: cache)
         } catch let error as LutinError {
             failure = error
         } catch {
@@ -113,7 +134,7 @@ public final class StoreTabState {
 
         do {
             let report = try StoreLogic.validate(configURL: document.configURL, runner: runner,
-                                                 isExecutable: isExecutable)
+                                                 isExecutable: isExecutable, cache: cache)
             validation = .loaded(StoreValidationModel.make(report: report))
         } catch let error as LutinError {
             validation = .failed(StoreFailure(error))
@@ -121,7 +142,132 @@ public final class StoreTabState {
             validation = .failed(StoreFailure(code: "store_asc_failed", message: "\(error)"))
         }
 
+        loadReview(document: document)
         loadListing(document: document)
+    }
+
+    // MARK: - Review (§7.6–7.7)
+
+    /// Reads asc's plan, status and approval artifacts. A malformed plan is a
+    /// failed section; an unavailable status is not — the changes still
+    /// render, and the Apply section says the approval state is unavailable
+    /// rather than guessing (§7.7).
+    public func loadReview(document: LutinProjectDocument) {
+        do {
+            guard let plan = try StoreLogic.reviewPlan(configURL: document.configURL,
+                                                       runner: runner) else {
+                hasReviewPlan = false
+                statusFailure = nil
+                review = .loaded(.empty)
+                return
+            }
+            hasReviewPlan = true
+            // Both reads are best-effort: asc's status is the only source of
+            // approval facts, and its absence is reported, never inferred.
+            // The status error is kept rather than discarded — "asc is not
+            // installed" and "asc refused: not authenticated" are different
+            // things to tell someone, and only the code knows which.
+            var status: ASCReviewStatus?
+            do {
+                status = try StoreLogic.reviewStatus(configURL: document.configURL,
+                                                     runner: runner,
+                                                     isExecutable: isExecutable)
+                statusFailure = nil
+            } catch let error as LutinError {
+                statusFailure = StoreFailure(error)
+            } catch {
+                statusFailure = StoreFailure(code: "store_asc_failed", message: "\(error)")
+            }
+            let approval = try? StoreLogic.reviewApproval(configURL: document.configURL,
+                                                          runner: runner)
+            review = .loaded(StoreReviewModel.make(plan: plan, status: status,
+                                                   approval: approval))
+        } catch let error as LutinError {
+            hasReviewPlan = true
+            review = .failed(StoreFailure(error))
+        } catch {
+            hasReviewPlan = true
+            review = .failed(StoreFailure(code: "store_asc_failed", message: "\(error)"))
+        }
+    }
+
+    /// Runs asc's plan (a local artifact write — no remote mutation) and
+    /// reloads. `Run plan` exists so the section can produce the artifact, not
+    /// merely display one made in the CLI.
+    public func runPlan(document: LutinProjectDocument) async {
+        guard !isBusy else { return }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            _ = try StoreLogic.plan(configURL: document.configURL, reviewDir: nil,
+                                    runner: runner, isExecutable: isExecutable, cache: cache)
+            applyFailure = nil
+            approveFailure = nil
+            applyResult = nil
+            loadReview(document: document)
+        } catch let error as LutinError {
+            review = .failed(StoreFailure(error))
+        } catch {
+            review = .failed(StoreFailure(code: "store_asc_failed", message: "\(error)"))
+        }
+    }
+
+    /// Approves through asc (`--key` / `--scope` / `--all`) with the reviewer
+    /// note, then reloads asc's status. A failure surfaces its fix and leaves
+    /// the loaded plan alone.
+    public func approve(document: LutinProjectDocument, all: Bool = false,
+                        keys: [String] = [], scope: String? = nil) async {
+        guard !isBusy else { return }
+        isBusy = true
+        defer { isBusy = false }
+        do {
+            _ = try StoreLogic.approve(
+                configURL: document.configURL, reviewDir: nil, all: all, keys: keys,
+                scope: scope, note: reviewerNote.isEmpty ? nil : reviewerNote,
+                runner: runner, isExecutable: isExecutable, cache: cache)
+            approveFailure = nil
+            applyFailure = nil
+            // The apply line described the previous plan state; a new approval
+            // makes it stale, so it goes rather than sitting under Apply.
+            applyResult = nil
+            loadReview(document: document)
+        } catch let error as LutinError {
+            approveFailure = StoreFailure(error)
+        } catch {
+            approveFailure = StoreFailure(code: "store_asc_failed", message: "\(error)")
+        }
+    }
+
+    /// Arms the confirmation gate. The remote write happens only in
+    /// `confirmApply` — the confirm is the UI's, the `--confirm` flag is asc's.
+    public func beginApply() { isConfirmingApply = true }
+
+    public func cancelApply() { isConfirmingApply = false }
+
+    /// The only remote writer: `StoreLogic.apply(..., confirmed: true)`, then
+    /// asc's status is re-read.
+    public func confirmApply(document: LutinProjectDocument) async {
+        // The confirm gate is the only thing standing between a click and a
+        // write to a live listing. It is enforced here, not merely by which
+        // buttons the view happens to be drawing.
+        guard isConfirmingApply else { return }
+        guard !isBusy else { return }
+        isBusy = true
+        defer { isBusy = false }
+        isConfirmingApply = false
+        do {
+            let result = try StoreLogic.apply(configURL: document.configURL, reviewDir: nil,
+                                              confirmed: true, runner: runner,
+                                              isExecutable: isExecutable, cache: cache)
+            let trimmed = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
+            applyResult = trimmed.isEmpty ? "asc applied the approved plan." : trimmed
+            applyFailure = nil
+            loadReview(document: document)
+        } catch let error as LutinError {
+            applyFailure = StoreFailure(error)
+        } catch {
+            applyFailure = StoreFailure(code: "store_asc_failed", message: "\(error)")
+        }
     }
 
     /// Reads `app-info/<locale>.json` and the single `version/<v>/<locale>.json`

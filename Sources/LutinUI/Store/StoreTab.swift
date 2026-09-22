@@ -29,6 +29,7 @@ public struct StoreTab: View {
             versionsSection
             listingSection
             validationSection
+            reviewSection
         }
         .task { await state.refresh(document: document) }
     }
@@ -137,5 +138,32 @@ public struct StoreTab: View {
         StoreValidationSection(state: state.validation) {
             Task { await state.refresh(document: document) }
         }
+    }
+
+    // MARK: - Pending changes + Apply (§7.6–7.7)
+
+    private var reviewSection: some View {
+        StoreReviewSection(
+            state: state.review,
+            hasPlan: state.hasReviewPlan,
+            reviewerNote: $state.reviewerNote,
+            isConfirmingApply: state.isConfirmingApply,
+            isBusy: state.isBusy,
+            applyResult: state.applyResult,
+            applyFailure: state.applyFailure,
+            approveFailure: state.approveFailure,
+            statusFailure: state.statusFailure,
+            actions: StoreReviewSection.Actions(
+                plan: { Task { await state.runPlan(document: document) } },
+                approveKey: { key in
+                    Task { await state.approve(document: document, keys: [key]) }
+                },
+                approveScope: { scope in
+                    Task { await state.approve(document: document, scope: scope) }
+                },
+                approveAll: { Task { await state.approve(document: document, all: true) } },
+                beginApply: { state.beginApply() },
+                cancelApply: { state.cancelApply() },
+                confirmApply: { Task { await state.confirmApply(document: document) } }))
     }
 }
