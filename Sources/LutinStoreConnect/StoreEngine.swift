@@ -326,13 +326,18 @@ public enum StoreLogic {
     public static func app(configURL: URL, runner: CommandRunning,
                            isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) }) throws -> ASCApp? {
         let config = try LutinConfig.load(from: configURL)
-        guard let appID = config.store?.appID, !appID.isEmpty else { return nil }
+        guard let appID = normalized(config.store?.appID) else { return nil }
         let asc = try resolveAsc(for: config, runner: runner, isExecutable: isExecutable)
         let client = ASCClient(ascPath: asc, runner: runner)
         let app = try client.runJSON(["apps", "view", "--id", appID],
                                      as: ASCApp.self).payload
-        if let expected = config.store?.bundleID, !expected.isEmpty,
-           let actual = app.bundleID, expected != actual {
+        // Blank is absent on both sides: a whitespace-only `store.bundleID` is
+        // not an expectation to enforce, and a blank record value is not a
+        // bundle ID to compare against. Only a real, differing pair is a
+        // mismatch (§4.2). The UI derives its "verified"/"could not verify"
+        // note from the same pair, so the two cannot disagree.
+        if let expected = normalized(config.store?.bundleID),
+           let actual = normalized(app.bundleID), expected != actual {
             throw LutinError(
                 code: "store_bundle_id_mismatch",
                 message: "store.bundleID is \(expected), but the resolved app "
@@ -340,6 +345,16 @@ public enum StoreLogic {
                 details: ["expected": expected, "actual": actual, "appID": appID])
         }
         return app
+    }
+
+    // MARK: - App resolution rules
+
+    /// Trims, and treats the empty result as absent. Public so the Store tab's
+    /// App model reads "stated" exactly as the engine does — the note must not
+    /// advertise a verification the engine skipped.
+    public static func normalized(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     /// App Store versions, newest first. Read-only (§7.3).

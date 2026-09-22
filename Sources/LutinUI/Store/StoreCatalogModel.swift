@@ -33,11 +33,18 @@ public struct StoreAppModel: Equatable {
         }
         rows.append(Row(label: "Platform", value: platform, isMonospaced: true))
 
+        // `normalized` is the engine's own rule, so "stated" means the same
+        // thing on both sides: a blank configured or record value never
+        // produces a verification claim §4.2 did not make.
+        let expected = StoreLogic.normalized(bundleID)
+        let actual = StoreLogic.normalized(app?.bundleID)
         let note: String
-        if appID == nil {
+        if StoreLogic.normalized(appID) == nil {
             note = "asc resolves the app (ASC_APP_ID or .asc/config.json). Set store.appID to pin it — bundleID can only be verified against a pinned app."
-        } else if bundleID == nil {
+        } else if expected == nil {
             note = "Set store.bundleID to have Lutin verify the resolved app is the one you meant."
+        } else if actual == nil {
+            note = "asc returned no bundle ID for the resolved app, so store.bundleID could not be verified."
         } else {
             note = "store.bundleID is verified against the resolved app."
         }
@@ -51,7 +58,6 @@ public struct StoreVersionsModel: Equatable {
     public struct Version: Equatable, Identifiable {
         public let id: String
         public let versionString: String
-        public let platform: String?
         public let state: String?
         public let releaseType: String?
         public let createdLabel: String?
@@ -72,8 +78,7 @@ public struct StoreVersionsModel: Equatable {
         StoreVersionsModel(
             versions: ASCAppStoreVersion.newestFirst(versions).map { version in
                 Version(id: version.id, versionString: version.versionString,
-                        platform: version.platform, state: version.state,
-                        releaseType: version.releaseType,
+                        state: version.state, releaseType: version.releaseType,
                         createdLabel: version.createdDate.map { String($0.prefix(10)) })
             },
             platform: platform, isEmpty: versions.isEmpty)

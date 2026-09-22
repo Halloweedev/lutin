@@ -6,10 +6,19 @@
 # an incidental one, because invented fixtures encode the wrong contract.
 #
 # Usage: ./scripts/record-asc-fixtures.sh
+#
+# Set ASC_APP_ID to also record the real Catalog and review artifacts
+# (network + auth). ASC_VERSION selects the version those review artifacts are
+# read from and defaults to 1.2.3; it is only read when ASC_APP_ID is set.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$REPO_ROOT/Tests/LutinStoreConnectTests/Fixtures"
+
+# Resolve the optional inputs before anything destructive runs: `set -u` would
+# otherwise abort on ASC_VERSION partway through, after `rm -rf` had already
+# removed the committed fixtures.
+ASC_VERSION="${ASC_VERSION:-1.2.3}"
 
 if ! command -v asc >/dev/null 2>&1; then
     echo "error: asc not found. brew install asc" >&2

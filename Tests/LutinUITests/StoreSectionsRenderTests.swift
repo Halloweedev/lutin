@@ -103,15 +103,30 @@ final class StoreSectionsRenderTests: XCTestCase {
     /// §4.2's failure mode: a mismatched bundleID is an error, never a calm row
     /// of data. It must read as blocked, with the fix.
     func testTheBundledMismatchReadsAsBlockedWithItsFix() {
-        let failure = StoreFailure(LutinError(
-            code: "store_bundle_id_mismatch",
-            message: "store.bundleID is com.other.app, but the resolved app "
-                   + "1234567890 is com.example.myapp.",
-            details: ["expected": "com.other.app"]))
+        let failure = mismatchFailure
         XCTAssertNotNil(failure.fix)
         let rep = snapshot(appSection(.failed(failure)), name: "app-mismatch")
         XCTAssertGreaterThan(distinctColors(rep).count, 4,
                              "the mismatch must paint the blocked row and the fix")
+    }
+
+    /// The section splits its failed state into a body (the message) and a
+    /// footer (the fix); drawing the fix in both is the duplication this guards.
+    func testTheFailedBodyAndFooterNeverBothCarryTheFix() {
+        let failure = mismatchFailure
+        let content = StoreAppSection.content(for: .failed(failure))
+        XCTAssertEqual(content.bodyMessage, failure.message)
+        XCTAssertEqual(content.footer, failure.fix)
+        XCTAssertFalse(content.bodyMessage?.contains(failure.fix ?? "\u{0}") ?? false,
+                       "the body must not repeat the footer's fix")
+    }
+
+    private var mismatchFailure: StoreFailure {
+        StoreFailure(LutinError(
+            code: "store_bundle_id_mismatch",
+            message: "store.bundleID is com.other.app, but the resolved app "
+                   + "1234567890 is com.example.myapp.",
+            details: ["expected": "com.other.app"]))
     }
 
     // MARK: - Versions (§7.3)

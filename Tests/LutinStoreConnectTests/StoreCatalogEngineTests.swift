@@ -112,6 +112,46 @@ final class StoreCatalogEngineTests: XCTestCase {
         }
     }
 
+    /// The resolved record carries no `bundleId`, so there is nothing to
+    /// compare against: the engine must not throw, and it must not pretend the
+    /// configured value was verified. The app is returned as-is and the UI
+    /// derives the "could not verify" note from the same absent pair.
+    func testAppVerificationPassesWhenTheRecordHasNoBundleID() throws {
+        let dir = try project(appID: "42", bundleID: "com.example.myapp")
+        defer { try? FileManager.default.removeItem(at: dir.root) }
+        let fake = FakeCommandRunner()
+        stubAsc(fake)
+        fake.stub(executable: fakeAsc, argumentsContaining: "apps",
+                  result: ShellResult(exitCode: 0,
+                                      stdout: #"{"type":"apps","id":"42","attributes":{"name":"MyApp"}}"#,
+                                      stderr: ""))
+
+        let app = try StoreLogic.app(configURL: dir.configURL, runner: fake,
+                                     isExecutable: isExecutable)
+        XCTAssertEqual(app?.id, "42")
+        XCTAssertNil(app?.bundleID)
+    }
+
+    /// A blank `store.bundleID` is absent, not an expectation — it must not
+    /// throw against a perfectly good resolved app.
+    func testABlankConfiguredBundleIDDoesNotThrow() throws {
+        for blank in ["", "   ", "\n"] {
+            let dir = try project(appID: "42", bundleID: blank)
+            defer { try? FileManager.default.removeItem(at: dir.root) }
+            let fake = FakeCommandRunner()
+            stubAsc(fake)
+            fake.stub(executable: fakeAsc, argumentsContaining: "apps",
+                      result: ShellResult(exitCode: 0,
+                                          stdout: try Fixtures.text("apps-view.json"),
+                                          stderr: ""))
+
+            let app = try StoreLogic.app(configURL: dir.configURL, runner: fake,
+                                         isExecutable: isExecutable)
+            XCTAssertEqual(app?.bundleID, "com.example.myapp",
+                           "\(blank.debugDescription) is not an expectation to enforce")
+        }
+    }
+
     /// With no store.appID there is nothing to verify against — asc resolves
     /// the app, and Lutin says so rather than inventing one.
     func testAppIsNilWhenNoAppIDIsConfigured() throws {
