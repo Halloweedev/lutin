@@ -25,6 +25,8 @@ public struct StoreTab: View {
     public var body: some View {
         TabBody {
             connectionSection
+            appSection
+            versionsSection
             listingSection
             validationSection
         }
@@ -80,6 +82,18 @@ public struct StoreTab: View {
         case .ascMissing, .ascTooOld,
              .unauthenticated, .unexpected:             return .blocked
         }
+    }
+
+    // MARK: - App
+
+    private var appSection: some View {
+        StoreAppSection(state: state.app)
+    }
+
+    // MARK: - Versions
+
+    private var versionsSection: some View {
+        StoreVersionsSection(state: state.versions)
     }
 
     // MARK: - Listing

@@ -1,4 +1,3 @@
-import LutinStoreConnect
 import SwiftUI
 
 /// §7's Validation section: asc's findings, grouped by scope and locale, with

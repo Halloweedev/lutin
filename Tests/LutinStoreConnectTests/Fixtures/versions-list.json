@@ -1,0 +1,46 @@
+{
+  "data": [
+    {
+      "type": "appStoreVersions",
+      "id": "9000000001",
+      "attributes": {
+        "platform": "MAC_OS",
+        "versionString": "2.0",
+        "appStoreState": "READY_FOR_SALE",
+        "appVersionState": "READY_FOR_SALE",
+        "createdDate": "2026-01-01T00:00:00Z",
+        "releaseType": "AFTER_APPROVAL",
+        "downloadable": true
+      }
+    },
+    {
+      "type": "appStoreVersions",
+      "id": "9000000002",
+      "attributes": {
+        "platform": "MAC_OS",
+        "versionString": "1.5",
+        "appStoreState": "",
+        "appVersionState": "IN_REVIEW",
+        "createdDate": "2025-06-01T00:00:00Z",
+        "releaseType": "MANUAL",
+        "downloadable": false
+      }
+    },
+    {
+      "type": "appStoreVersions",
+      "id": "9000000003",
+      "attributes": {
+        "platform": "MAC_OS",
+        "versionString": "1.0",
+        "appStoreState": "READY_FOR_SALE",
+        "appVersionState": "READY_FOR_SALE",
+        "createdDate": "2025-01-01T00:00:00Z",
+        "releaseType": "AFTER_APPROVAL",
+        "downloadable": true
+      }
+    }
+  ],
+  "links": {
+    "self": "https://api.appstoreconnect.apple.com/v1/apps/1234567890/appStoreVersions"
+  }
+}

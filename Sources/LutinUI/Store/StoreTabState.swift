@@ -17,6 +17,8 @@ import SwiftUI
 @MainActor
 public final class StoreTabState {
     public private(set) var connection: StoreConnectionSnapshot?
+    public private(set) var app: StoreSectionState<StoreAppModel> = .loading
+    public private(set) var versions: StoreSectionState<StoreVersionsModel> = .loading
     public private(set) var validation: StoreSectionState<StoreValidationModel> = .loading
     public private(set) var listing = StoreListing(locale: "en-US")
     public private(set) var assets = StoreAssets()
@@ -38,9 +40,17 @@ public final class StoreTabState {
     /// Injected so the tab's loading is testable — and so a test can never
     /// reach the real `asc` by accident.
     private let runner: CommandRunning
+    /// The `asc`-resolution seam, threaded through to every engine call. The
+    /// default is the real check; a test injects `{ _ in false }` so a machine
+    /// with asc installed in `/opt/homebrew` cannot be reached by accident.
+    private let isExecutable: (String) -> Bool
 
-    public init(runner: CommandRunning = ShellCommandRunner()) {
+    public init(runner: CommandRunning = ShellCommandRunner(),
+                isExecutable: @escaping (String) -> Bool = {
+                    FileManager.default.isExecutableFile(atPath: $0)
+                }) {
         self.runner = runner
+        self.isExecutable = isExecutable
         monitor.pathUpdateHandler = { [weak self] path in
             let online = path.status == .satisfied
             Task { @MainActor [weak self] in self?.isOnline = online }
@@ -65,7 +75,8 @@ public final class StoreTabState {
         var status: StoreLogic.StoreStatusPayload?
         var failure: LutinError?
         do {
-            status = try StoreLogic.status(configURL: document.configURL, runner: runner)
+            status = try StoreLogic.status(configURL: document.configURL, runner: runner,
+                                           isExecutable: isExecutable)
         } catch let error as LutinError {
             failure = error
         } catch {
@@ -73,8 +84,36 @@ public final class StoreTabState {
         }
         connection = StoreConnectionSnapshot.make(status: status, error: failure, isOnline: isOnline)
 
+        // Each section loads in its own do/catch: one failure must never blank
+        // the others (§7 — every section degrades to an explanation, alone).
         do {
-            let report = try StoreLogic.validate(configURL: document.configURL, runner: runner)
+            let resolved = try StoreLogic.app(configURL: document.configURL, runner: runner,
+                                              isExecutable: isExecutable)
+            app = .loaded(StoreAppModel.make(app: resolved, appID: document.config.store?.appID,
+                                             bundleID: document.config.store?.bundleID,
+                                             platform: document.config.store?.resolvedPlatform
+                                                ?? StoreInfo.defaultPlatform))
+        } catch let error as LutinError {
+            app = .failed(StoreFailure(error))
+        } catch {
+            app = .failed(StoreFailure(code: "store_asc_failed", message: "\(error)"))
+        }
+
+        do {
+            let list = try StoreLogic.versions(configURL: document.configURL, runner: runner,
+                                               isExecutable: isExecutable)
+            versions = .loaded(StoreVersionsModel.make(
+                versions: list,
+                platform: document.config.store?.resolvedPlatform ?? StoreInfo.defaultPlatform))
+        } catch let error as LutinError {
+            versions = .failed(StoreFailure(error))
+        } catch {
+            versions = .failed(StoreFailure(code: "store_asc_failed", message: "\(error)"))
+        }
+
+        do {
+            let report = try StoreLogic.validate(configURL: document.configURL, runner: runner,
+                                                 isExecutable: isExecutable)
             validation = .loaded(StoreValidationModel.make(report: report))
         } catch let error as LutinError {
             validation = .failed(StoreFailure(error))

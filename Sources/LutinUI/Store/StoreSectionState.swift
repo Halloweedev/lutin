@@ -24,4 +24,12 @@ public enum StoreSectionState<Model: Equatable>: Equatable {
     case loading
     case loaded(Model)
     case failed(StoreFailure)
+
+    /// The failure's fix hint — what a degraded section shows as its footer.
+    /// `nil` while loading or loaded; a loaded section's footer is its model's
+    /// to supply, because only the model knows what it can say.
+    public var failureFix: String? {
+        if case .failed(let failure) = self { return failure.fix }
+        return nil
+    }
 }

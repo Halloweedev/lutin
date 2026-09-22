@@ -10,7 +10,53 @@ import TestSupport
 ///
 /// The runner is injected and fake, so this can never reach a real `asc`.
 /// Set `LUTIN_PREVIEW_DUMP=1` to write the render to `/tmp` for eyeballing.
+@MainActor
 final class StoreTabRenderTests: XCTestCase {
+
+    /// A project with a pinned app, so the App section resolves instead of
+    /// degrading — the render should show the section working, not failing.
+    private func makeConfiguredDocument() throws -> LutinProjectDocument {
+        let dir = try Fixtures.makeTempDirectory()
+        let yaml = """
+        project:
+          name: Sayrise
+          bundleId: com.example.sayrise
+        app:
+          path: ./build/Sayrise.app
+        output:
+          directory: ./release
+          dmgName: Sayrise-${version}.dmg
+          volumeName: Sayrise
+        store:
+          appID: "1234567890"
+          bundleID: com.example.sayrise
+          metadataDir: store/metadata
+        """
+        let url = dir.appendingPathComponent("lutin.yml")
+        try Data(yaml.utf8).write(to: url)
+        return try LutinProjectDocument(configURL: url)
+    }
+
+    private static let fakeAsc = "/fake/asc"
+
+    /// One refresh runs several asc commands through one executable, so the
+    /// Catalog responses are stubbed by argument fragment. `isExecutable` is
+    /// pinned to the fake: a machine with a real asc in `/opt/homebrew` must
+    /// never be reached, and the locator's known paths are checked for real.
+    private func catalogState() throws -> StoreTabState {
+        let fake = FakeCommandRunner()
+        fake.stub(executable: "/usr/bin/which",
+                  result: ShellResult(exitCode: 0, stdout: "\(Self.fakeAsc)\n", stderr: ""))
+        fake.stub(executable: Self.fakeAsc, argumentsContaining: "apps",
+                  result: ShellResult(exitCode: 0,
+                                      stdout: #"{"type":"apps","id":"1234567890","attributes":{"name":"Sayrise","bundleId":"com.example.sayrise","sku":"SAYRISE","primaryLocale":"en-US"}}"#,
+                                      stderr: ""))
+        fake.stub(executable: Self.fakeAsc, argumentsContaining: "versions",
+                  result: ShellResult(exitCode: 0,
+                                      stdout: #"{"data":[{"type":"appStoreVersions","id":"1","attributes":{"platform":"MAC_OS","versionString":"1.2.3","appStoreState":"READY_FOR_SALE","createdDate":"2026-01-01T00:00:00Z","releaseType":"AFTER_APPROVAL"}},{"type":"appStoreVersions","id":"2","attributes":{"platform":"MAC_OS","versionString":"1.3.0","appStoreState":"","appVersionState":"IN_REVIEW","createdDate":"2026-02-01T00:00:00Z","releaseType":"MANUAL"}}]}"#,
+                                      stderr: ""))
+        return StoreTabState(runner: fake, isExecutable: { $0 == Self.fakeAsc })
+    }
 
     private func makeDocument() throws -> LutinProjectDocument {
         let dir = try Fixtures.makeTempDirectory()
@@ -32,57 +78,27 @@ final class StoreTabRenderTests: XCTestCase {
         return try LutinProjectDocument(configURL: url)
     }
 
-    private func snapshot<V: View>(_ view: V, size: CGSize, name: String) -> NSBitmapImageRep {
-        let host = NSHostingView(rootView: view)
-        host.frame = CGRect(origin: .zero, size: size)
-        let window = NSWindow(contentRect: host.frame, styleMask: [.borderless],
-                              backing: .buffered, defer: false)
-        window.contentView = host
-        host.layoutSubtreeIfNeeded()
-        window.displayIfNeeded()
-
-        let rep = NSBitmapImageRep(bitmapDataPlanes: nil,
-                                   pixelsWide: Int(size.width), pixelsHigh: Int(size.height),
-                                   bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
-                                   isPlanar: false, colorSpaceName: .deviceRGB,
-                                   bytesPerRow: 0, bitsPerPixel: 0)!
-        host.cacheDisplay(in: host.bounds, to: rep)
-
-        if ProcessInfo.processInfo.environment["LUTIN_PREVIEW_DUMP"] == "1" {
-            try? rep.representation(using: .png, properties: [:])?
-                .write(to: URL(fileURLWithPath: "/tmp/\(name).png"))
-        }
-        return rep
-    }
-
-    private func distinctColours(_ rep: NSBitmapImageRep) -> Int {
-        var seen = Set<UInt32>()
-        for x in stride(from: 0, to: rep.pixelsWide, by: 7) {
-            for y in stride(from: 0, to: rep.pixelsHigh, by: 7) {
-                guard let c = rep.colorAt(x: x, y: y) else { continue }
-                seen.insert((UInt32(c.redComponent * 255) << 16)
-                    | (UInt32(c.greenComponent * 255) << 8)
-                    | UInt32(c.blueComponent * 255))
-            }
-        }
-        return seen.count
-    }
-
     /// The whole surface as the shell composes it: column on the left, the
     /// product page on the canvas.
     @MainActor
     func testTheTabAndItsCanvasRender() async throws {
-        let document = try makeDocument()
-        let state = StoreTabState(runner: FakeCommandRunner())
+        let document = try makeConfiguredDocument()
+        let state = try catalogState()
         await state.refresh(document: document)
+        // The App section must be *shown working* here — a resolved row set,
+        // not the loading placeholder over a failure banner.
+        guard case .loaded = state.app else {
+            return XCTFail("the App section should be loaded in the tab render, got \(state.app)")
+        }
 
         let surface = HStack(spacing: 0) {
             StoreTab(document: document, state: state)
                 .frame(width: 430)
             StoreCanvas(state: state)
         }
-        let rep = snapshot(surface, size: CGSize(width: 1100, height: 720), name: "lutin-storetab")
-        XCTAssertGreaterThan(distinctColours(rep), 4,
+        let rep = snapshotPNG(surface, size: CGSize(width: 1100, height: 720),
+                              dumpName: "lutin-storetab")
+        XCTAssertGreaterThan(sampledColors(rep).count, 4,
                              "the tab must paint the column and the page, not a flat rectangle")
     }
 
@@ -92,8 +108,8 @@ final class StoreTabRenderTests: XCTestCase {
     /// sidebar".
     @MainActor
     func testTheSurfaceFitsANarrowWindow() async throws {
-        let document = try makeDocument()
-        let state = StoreTabState(runner: FakeCommandRunner())
+        let document = try makeConfiguredDocument()
+        let state = try catalogState()
         await state.refresh(document: document)
 
         let surface = HStack(spacing: 0) {
@@ -102,8 +118,9 @@ final class StoreTabRenderTests: XCTestCase {
                 .frame(width: 430)
             StoreCanvas(state: state)
         }
-        let rep = snapshot(surface, size: CGSize(width: 850, height: 900), name: "lutin-storetab-narrow")
-        XCTAssertGreaterThan(distinctColours(rep), 4)
+        let rep = snapshotPNG(surface, size: CGSize(width: 850, height: 900),
+                              dumpName: "lutin-storetab-narrow")
+        XCTAssertGreaterThan(sampledColors(rep).count, 4)
     }
 
     /// A tree with a real listing: the preview should show the values, and the
@@ -128,8 +145,8 @@ final class StoreTabRenderTests: XCTestCase {
         XCTAssertEqual(state.availableLocales, ["en-US"])
         XCTAssertNil(state.listingNote)
 
-        let rep = snapshot(StoreCanvas(state: state), size: CGSize(width: 900, height: 720),
-                           name: "lutin-storecanvas-listing")
-        XCTAssertGreaterThan(distinctColours(rep), 4)
+        let rep = snapshotPNG(StoreCanvas(state: state), size: CGSize(width: 900, height: 720),
+                              dumpName: "lutin-storecanvas-listing")
+        XCTAssertGreaterThan(sampledColors(rep).count, 4)
     }
 }
