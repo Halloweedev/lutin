@@ -1,6 +1,7 @@
 import Foundation
 import ArgumentParser
 import LutinCore
+import LutinStoreConnect
 
 // MARK: - App Store Connect via `asc`
 
@@ -15,10 +16,6 @@ import LutinCore
 /// DMG. `lutin app-store upload` therefore takes `--pkg` (macOS) or `--ipa`
 /// (iOS/tvOS/visionOS) — never a Lutin-built DMG.
 enum AppStoreLogic {
-    /// Well-known Homebrew install locations, checked before PATH lookup.
-    /// `which` alone can miss brew when the caller's PATH is sparse.
-    static let knownPaths = ["/opt/homebrew/bin/asc", "/usr/local/bin/asc"]
-
     enum ArtifactKind {
         case pkg, ipa
 
@@ -45,9 +42,14 @@ enum AppStoreLogic {
         let dryRun: Bool
     }
 
-    /// Resolves the `asc` binary. Explicit path wins, then the known Homebrew
-    /// locations, then `which asc`. Throws `app_store_tool_missing` with an
-    /// install hint when nothing resolves.
+    /// Resolves the `asc` binary via the shared locator in `LutinStoreConnect`.
+    /// Kept as a shim so `AppStoreCommandTests` and every call site here keep
+    /// working unchanged; the resolution logic itself now lives in one place.
+    ///
+    /// The locator reports its failure as `store_asc_missing`; this shim
+    /// re-raises it as the legacy `app_store_tool_missing` (same message and
+    /// details) so `lutin app-store`'s observable behaviour is unchanged, and
+    /// passes the legacy install hint — `--asc-path` is a real flag here.
     static func resolveAscPath(explicit: String?,
                                runner: CommandRunning = ShellCommandRunner()) throws -> String {
         try resolveAscPath(explicit: explicit, runner: runner,
@@ -57,31 +59,15 @@ enum AppStoreLogic {
     /// Injectable-filesystem variant for unit tests (`@testable import`).
     static func resolveAscPath(explicit: String?, runner: CommandRunning,
                                isExecutable: (String) -> Bool) throws -> String {
-        if let explicit, !explicit.isEmpty {
-            guard isExecutable(explicit) else {
-                throw LutinError(
-                    code: "app_store_tool_missing",
-                    message: "No executable `asc` at \(explicit). "
-                           + "Install with `brew install asc`.",
-                    details: ["ascPath": explicit])
-            }
-            return explicit
+        do {
+            return try ASCLocator.resolve(
+                explicit: explicit, ascPath: nil, runner: runner,
+                isExecutable: isExecutable,
+                installHint: "Install with `brew install asc`, or pass --asc-path.")
+        } catch let error as LutinError where error.code == "store_asc_missing" {
+            throw LutinError(code: "app_store_tool_missing",
+                             message: error.message, details: error.details)
         }
-        if let found = knownPaths.first(where: isExecutable) {
-            return found
-        }
-        let result = try? runner.runAllowingFailure("/usr/bin/which", ["asc"])
-        if let path = result?.stdout
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-            result?.exitCode == 0, !path.isEmpty,
-            isExecutable(path) {
-            return path
-        }
-        throw LutinError(
-            code: "app_store_tool_missing",
-            message: "The `asc` App Store Connect CLI was not found. "
-                   + "Install with `brew install asc`, or pass --asc-path.",
-            details: nil)
     }
 
     /// Builds the `asc builds upload` argument list (pure — also used for

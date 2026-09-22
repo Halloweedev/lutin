@@ -23,6 +23,9 @@ public struct IntentEnvelope: Decodable, Sendable {
     public let label: String?
     public let name: String?
     public let bundleId: String?
+    public let appID: String?
+    public let bundleID: String?
+    public let platform: String?
     public let directory: String?
     public let dmgName: String?
     public let volumeName: String?
@@ -74,6 +77,13 @@ public struct IntentEnvelope: Decodable, Sendable {
             try document.apply(.setOutput(directory: directory ?? "",
                                           dmgName: dmgName ?? "",
                                           volumeName: volumeName ?? ""))
+        case "setStoreApp":
+            try document.apply(.setStoreApp(appID: appID, bundleID: bundleID,
+                                            platform: platform))
+        case "setStoreMetadataDir":
+            try document.apply(.setStoreMetadataDir(path: path))
+        case "setStoreASCPath":
+            try document.apply(.setStoreASCPath(path: path))
         case "moveItem":
             try document.apply(.moveItem(id: id ?? "", x: x ?? 0, y: y ?? 0))
         case "renameItemLabel":

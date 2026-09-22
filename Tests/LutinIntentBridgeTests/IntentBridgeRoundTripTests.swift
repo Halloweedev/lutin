@@ -42,6 +42,22 @@ final class IntentBridgeRoundTripTests: XCTestCase {
         XCTAssertEqual(doc.config.window?.iconSize, 128)
     }
 
+    func testSetStoreAppEnvelope() throws {
+        let json = """
+        [
+          {"kind": "setStoreApp", "appID": "42", "platform": "MAC_OS"},
+          {"kind": "setStoreMetadataDir", "path": "store/meta"},
+          {"kind": "setStoreASCPath", "path": "/custom/asc"}
+        ]
+        """.data(using: .utf8)!
+        let doc = try makeDoc()
+        try IntentBridge.applySequence(jsonData: json, to: doc)
+        XCTAssertEqual(doc.config.store?.appID, "42")
+        XCTAssertEqual(doc.config.store?.platform, "MAC_OS")
+        XCTAssertEqual(doc.config.store?.metadataDir, "store/meta")
+        XCTAssertEqual(doc.config.store?.ascPath, "/custom/asc")
+    }
+
     func testSetItemHiddenEnvelope() throws {
         let json = """
         [{"kind": "setItemHidden", "id": "a", "hidden": true}]

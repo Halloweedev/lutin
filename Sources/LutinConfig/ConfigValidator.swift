@@ -72,6 +72,18 @@ public enum ConfigValidator {
                       "Unknown decoration type '\(decoration.type)'. Only 'image' is supported.")
             }
         }
+        if let store = config.store {
+            if let platform = store.platform,
+               !StoreInfo.supportedPlatforms.contains(platform) {
+                error("store.platform",
+                      "'\(platform)' is not a supported platform. Use one of: "
+                      + StoreInfo.supportedPlatforms.joined(separator: ", ") + ".")
+            }
+            if let dir = store.metadataDir,
+               dir.trimmingCharacters(in: .whitespaces).isEmpty {
+                error("store.metadataDir", "store.metadataDir must not be empty.")
+            }
+        }
         return issues
     }
 }

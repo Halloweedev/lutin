@@ -1,0 +1,33 @@
+Error: invalid metadata schema in /var/folders/yx/0_kwbhm16h3__g0yjwrjgk040000gn/T/tmp.Fb9ctczLy3/schema/metadata/version/1.2.3/en-US.json: json: unknown field "bogusField"
+DESCRIPTION
+  Validate canonical metadata files (offline by default).
+
+USAGE
+  asc metadata validate --dir "./metadata" [--check-urls] [--subscription-app]
+
+Validate canonical metadata files. Validation is offline by default;
+--check-urls opts into bounded HTTP checks.
+
+Checks:
+  - strict JSON schema decode (unknown keys rejected)
+  - required fields
+  - metadata character limits
+  - URL syntax and length for marketing, support, privacy policy, and privacy choices URLs
+  - optional redirect, final-host, status, and site-root checks for support and privacy policy URLs
+  - implausibly short app name and description values
+  - optional subscription-app Terms of Use / EULA description link heuristic
+
+Examples:
+  asc metadata validate --dir "./metadata"
+  asc metadata validate --dir "./metadata" --check-urls
+  asc metadata validate --dir "./metadata" --subscription-app
+  asc metadata validate --dir "./metadata" --output table
+
+FLAGS
+  --check-urls   Fetch support and privacy policy URLs to detect redirects and root pages (default: false)
+  --dir          Metadata root directory (required)
+  --output       Output format: json, table, markdown (default: json)
+  --pretty       Pretty-print JSON output (default: false)
+  --subscription-app Enable subscription-specific Terms of Use / EULA link checks (default: false)
+
+

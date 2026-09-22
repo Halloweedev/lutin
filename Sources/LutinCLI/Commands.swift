@@ -462,9 +462,9 @@ enum CommandLogic {
 // MARK: - CLI commands
 
 /// Resolves the target config URL from common options, using the registry.
-private func resolveConfigURL(config: String?,
-                              name: String?,
-                              registry: Registry = Registry()) throws -> URL {
+func resolveConfigURL(config: String?,
+                      name: String?,
+                      registry: Registry = Registry()) throws -> URL {
     return try ProjectResolver.resolve(
         explicitConfig: config,
         projectName: name,
@@ -482,7 +482,7 @@ public struct Lutin: ParsableCommand {
         version: LutinVersion.current,
         subcommands: [Init.self, Projects.self, Add.self, Remove.self, Open.self,
                       Validate.self, Doctor.self, Build.self, Release.self, Preview.self,
-                      Notary.self, AppStore.self, ApplyIntents.self])
+                      Notary.self, AppStore.self, Store.self, ApplyIntents.self])
     public init() {}
 }
 

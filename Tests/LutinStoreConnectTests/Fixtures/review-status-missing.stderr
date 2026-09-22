@@ -1,0 +1,17 @@
+Error: metadata plan artifact not found at /var/folders/yx/0_kwbhm16h3__g0yjwrjgk040000gn/T/tmp.Fb9ctczLy3/review/plan.json; run asc metadata plan first
+DESCRIPTION
+  Show local metadata review approval status.
+
+USAGE
+  asc metadata status [--review-dir ".asc/metadata/review"]
+
+Examples:
+  asc metadata status
+  asc metadata status --review-dir ".asc/metadata/review" --output json
+
+FLAGS
+  --output       Output format: json, table, markdown (default: json)
+  --pretty       Pretty-print JSON output (default: false)
+  --review-dir   Directory containing metadata review artifacts (default: .asc/metadata/review)
+
+

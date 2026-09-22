@@ -32,6 +32,9 @@ public enum DocumentIntent: Equatable {
     case setSigning(LutinConfig.SigningInfo)
     case setNotarization(LutinConfig.NotarizationInfo)
     case setSparkle(LutinConfig.SparkleInfo)
+    case setStoreApp(appID: String?, bundleID: String?, platform: String?)
+    case setStoreMetadataDir(path: String?)
+    case setStoreASCPath(path: String?)
 }
 
 public extension DocumentIntent {

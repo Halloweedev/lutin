@@ -12,6 +12,7 @@ public struct LutinConfig: Codable, Equatable {
     public var signing: SigningInfo?
     public var notarization: NotarizationInfo?
     public var sparkle: SparkleInfo?
+    public var store: StoreInfo?
 
     public struct ProjectInfo: Codable, Equatable {
         public var name: String
@@ -243,7 +244,8 @@ public struct LutinConfig: Codable, Equatable {
         decorations: [Decoration]?,
         signing: SigningInfo?,
         notarization: NotarizationInfo?,
-        sparkle: SparkleInfo?
+        sparkle: SparkleInfo?,
+        store: StoreInfo? = nil
     ) {
         self.project = project
         self.app = app
@@ -255,5 +257,35 @@ public struct LutinConfig: Codable, Equatable {
         self.signing = signing
         self.notarization = notarization
         self.sparkle = sparkle
+        self.store = store
     }
+}
+
+/// App Store channel configuration. Every field is optional — a project that
+/// only ships a DMG needs no `store:` block, and one that does can usually rely
+/// on the defaults.
+public struct StoreInfo: Codable, Equatable {
+    public static let defaultPlatform = "MAC_OS"
+    public static let defaultMetadataDir = "store/metadata"
+    public static let supportedPlatforms = ["IOS", "MAC_OS", "TV_OS", "VISION_OS"]
+
+    /// App Store Connect app ID. When nil, asc resolves it from ASC_APP_ID or
+    /// its own nearest-ancestor `.asc/config.json`.
+    public var appID: String?
+    /// Verified against the resolved app when present. Never used to resolve.
+    public var bundleID: String?
+    public var platform: String?
+    public var metadataDir: String?
+    /// Explicit asc binary. Nil means auto-detect.
+    public var ascPath: String?
+
+    public init(appID: String? = nil, bundleID: String? = nil,
+                platform: String? = nil, metadataDir: String? = nil,
+                ascPath: String? = nil) {
+        self.appID = appID; self.bundleID = bundleID; self.platform = platform
+        self.metadataDir = metadataDir; self.ascPath = ascPath
+    }
+
+    public var resolvedPlatform: String { platform ?? Self.defaultPlatform }
+    public var resolvedMetadataDir: String { metadataDir ?? Self.defaultMetadataDir }
 }

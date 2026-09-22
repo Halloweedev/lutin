@@ -11,7 +11,7 @@ public extension LutinConfig {
             app: AppInfo(path: appPath),
             output: OutputInfo(directory: outputDir, dmgName: dmgName, volumeName: volumeName),
             window: nil, background: nil, items: nil, decorations: nil,
-            signing: nil, notarization: nil, sparkle: nil)
+            signing: nil, notarization: nil, sparkle: nil, store: nil)
     }
 }
 #endif
