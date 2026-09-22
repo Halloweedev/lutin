@@ -21,7 +21,7 @@ let package = Package(
         .target(name: "LutinRegistry", dependencies: ["LutinCore"]),
         .target(name: "LutinLicense", dependencies: ["LutinCore"]),
         .target(name: "LutinStoreMetadata", dependencies: ["LutinCore"]),
-        .target(name: "LutinStoreConnect", dependencies: ["LutinCore", "LutinStoreMetadata"]),
+        .target(name: "LutinStoreConnect", dependencies: ["LutinCore", "LutinConfig", "LutinStoreMetadata"]),
         .target(name: "LutinBuilder", dependencies: ["LutinCore", "LutinConfig"]),
         .target(name: "LutinSigning", dependencies: ["LutinCore"]),
         .target(name: "LutinNotarization", dependencies: ["LutinCore"]),
