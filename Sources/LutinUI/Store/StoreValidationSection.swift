@@ -14,14 +14,20 @@ public struct StoreValidationSection: View {
     }
 
     public var body: some View {
-        SettingsSection("Validation", headerMeta: { pill }) {
+        // Re-check lives in the header for every state, so the failed body can
+        // be exactly the shared failure view — one place draws a fix hint.
+        SettingsSection("Validation",
+                        headerMeta: { pill },
+                        headerTrailing: {
+                            LutinButton("Re-check", action: onRecheck)
+                        }) {
             switch state {
             case .loading:
                 Text("Checking the metadata tree…")
                     .font(Typography.inspectorLabel)
                     .foregroundStyle(Tokens.color(.textTertiary))
             case .failed(let failure):
-                failedBody(failure)
+                StoreSectionFailure(failure)
             case .loaded(let model):
                 loadedBody(model)
             }
@@ -103,20 +109,7 @@ public struct StoreValidationSection: View {
                 .foregroundStyle(Tokens.color(.textTertiary))
                 .fixedSize(horizontal: false, vertical: true)
         }
-        StatusRow(statusKind(model), model.headline,
-                  fix: .init(label: "Re-check", action: onRecheck))
-    }
-
-    @ViewBuilder
-    private func failedBody(_ failure: StoreFailure) -> some View {
-        StatusRow(.blocked, failure.message,
-                  fix: .init(label: "Re-check", action: onRecheck))
-        if let fix = failure.fix {
-            Text(fix)
-                .font(Typography.inspectorLabel)
-                .foregroundStyle(Tokens.color(.textTertiary))
-                .fixedSize(horizontal: false, vertical: true)
-        }
+        StatusRow(statusKind(model), model.headline)
     }
 
     private func findingRow(_ finding: StoreValidationModel.Finding) -> some View {

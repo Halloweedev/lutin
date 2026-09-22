@@ -110,15 +110,25 @@ final class StoreSectionsRenderTests: XCTestCase {
                              "the mismatch must paint the blocked row and the fix")
     }
 
-    /// The section splits its failed state into a body (the message) and a
-    /// footer (the fix); drawing the fix in both is the duplication this guards.
-    func testTheFailedBodyAndFooterNeverBothCarryTheFix() {
-        let failure = mismatchFailure
-        let content = StoreAppSection.content(for: .failed(failure))
-        XCTAssertEqual(content.bodyMessage, failure.message)
-        XCTAssertEqual(content.footer, failure.fix)
-        XCTAssertFalse(content.bodyMessage?.contains(failure.fix ?? "\u{0}") ?? false,
-                       "the body must not repeat the footer's fix")
+    /// The invariant behind the duplicate-fix finding: a failure's fix hint is
+    /// drawn in exactly one place — `StoreSectionFailure`. A section body that
+    /// mentions `failure.fix` re-introduces the duplicate, and this scan fails
+    /// when that comes back; the value-level assertion it replaces could not.
+    func testOnlyTheSharedFailureViewDrawsAFixHint() throws {
+        let storeDir = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()          // Tests/LutinUITests
+            .deletingLastPathComponent()          // Tests
+            .deletingLastPathComponent()          // repo root
+            .appendingPathComponent("Sources/LutinUI/Store")
+        let files = try FileManager.default.contentsOfDirectory(at: storeDir,
+                                                               includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "swift" }
+        XCTAssertFalse(files.isEmpty, "the scan must find the Store sources")
+        for file in files where file.lastPathComponent != "StoreSectionState.swift" {
+            let source = try String(contentsOf: file, encoding: .utf8)
+            XCTAssertFalse(source.contains("failure.fix"),
+                           "\(file.lastPathComponent) draws a failure's fix itself — use StoreSectionFailure")
+        }
     }
 
     private var mismatchFailure: StoreFailure {

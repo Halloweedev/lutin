@@ -1,5 +1,6 @@
 import Foundation
 import LutinCore
+import SwiftUI
 
 /// A failure a Store section can explain rather than swallow. `fix` comes from
 /// the shared suggestion table, so the GUI has one place for fix hints.
@@ -24,12 +25,23 @@ public enum StoreSectionState<Model: Equatable>: Equatable {
     case loading
     case loaded(Model)
     case failed(StoreFailure)
+}
 
-    /// The failure's fix hint — what a degraded section shows as its footer.
-    /// `nil` while loading or loaded; a loaded section's footer is its model's
-    /// to supply, because only the model knows what it can say.
-    public var failureFix: String? {
-        if case .failed(let failure) = self { return failure.fix }
-        return nil
+/// A failed Store section, rendered in exactly one place: the message, then the
+/// fix hint from the shared suggestion table. Every section's `.failed` body is
+/// this view — a section that draws a fix itself is how the duplicate hint the
+/// Task 2 review caught came back.
+public struct StoreSectionFailure: View {
+    let failure: StoreFailure
+    public init(_ failure: StoreFailure) { self.failure = failure }
+
+    public var body: some View {
+        StatusRow(.blocked, failure.message)
+        if let fix = failure.fix {
+            Text(fix)
+                .font(Typography.inspectorLabel)
+                .foregroundStyle(Tokens.color(.textTertiary))
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }

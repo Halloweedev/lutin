@@ -15,7 +15,7 @@ public struct StoreVersionsSection: View {
                     .font(Typography.inspectorLabel)
                     .foregroundStyle(Tokens.color(.textTertiary))
             case .failed(let failure):
-                failedBody(failure)
+                StoreSectionFailure(failure)
             case .loaded(let model):
                 if model.isEmpty {
                     Text("asc reports no versions for this app yet.")
@@ -67,14 +67,4 @@ public struct StoreVersionsSection: View {
         .padding(.vertical, Tokens.spacing(.xs))
     }
 
-    @ViewBuilder
-    private func failedBody(_ failure: StoreFailure) -> some View {
-        StatusRow(.blocked, failure.message)
-        if let fix = failure.fix {
-            Text(fix)
-                .font(Typography.inspectorLabel)
-                .foregroundStyle(Tokens.color(.textTertiary))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
 }
