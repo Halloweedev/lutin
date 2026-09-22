@@ -113,6 +113,8 @@ There is no `lutin show` or `lutin get` — for read access, just read `lutin.ym
 
 If an intent kind you need doesn't exist, that's a real gap — open an issue, don't work around it with raw YAML.
 
+The GUI probes `asc capabilities` once per (asc binary, asc version) and caches the answer in `~/Library/Application Support/Lutin/asc-capabilities.json`. The record is dropped as soon as the binary behind the path changes, so an upgrade or downgrade re-probes. If a stale entry ever makes `asc` look less capable than it is, set `LUTIN_ASC_CACHE=0` to bypass the cache entirely (or delete that file). The CLI does not cache — its commands are one-shot.
+
 One exception: the store workflow — `lutin store plan|approve|apply|pull` — is driven through `asc`, not intents, because it mutates App Store Connect state and local metadata files, not `lutin.yml`. `lutin store apply` is the only remote writer; `lutin store pull` writes local metadata files (pass `--force` to overwrite).
 
 ## Error codes you'll actually see

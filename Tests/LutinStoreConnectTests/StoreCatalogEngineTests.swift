@@ -5,7 +5,17 @@ import TestSupport
 
 final class StoreCatalogEngineTests: XCTestCase {
 
-    private let fakeAsc = "/fake/asc"
+    /// A real file: the capability cache identifies the binary an answer came
+    /// from, so a path that does not exist can never be a hit.
+    private var fakeAsc = ""
+
+    override func setUpWithError() throws {
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("lutin-fake-asc-\(UUID().uuidString)")
+        try Data("asc".utf8).write(to: url)
+        addTeardownBlock { try? FileManager.default.removeItem(at: url) }
+        fakeAsc = url.path
+    }
 
     private func project(appID: String?, bundleID: String? = nil) throws -> FixtureProject.Handle {
         try FixtureProject.make(metadata: [:], appID: appID, bundleID: bundleID)

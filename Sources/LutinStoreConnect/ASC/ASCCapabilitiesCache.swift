@@ -13,6 +13,8 @@ public final class ASCCapabilitiesCache: @unchecked Sendable {
 
     struct Entry: Codable, Equatable {
         let ascPath: String
+        /// Which binary this answer came from. See `fingerprint(of:)`.
+        let fingerprint: String?
         let version: String
         let cachedAt: Date
         let capabilities: ASCCapabilities?
@@ -20,14 +22,27 @@ public final class ASCCapabilitiesCache: @unchecked Sendable {
 
     private struct Store: Codable { var entries: [String: Entry] }
 
+    /// `~/Library/Application Support/Lutin/asc-capabilities.json`, built the
+    /// way `Registry` and `PreferencesStore` build theirs.
     public static var defaultURL: URL {
-        URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent("Library/Application Support/Lutin/asc-capabilities.json")
+        let base = FileManager.default.urls(for: .applicationSupportDirectory,
+                                            in: .userDomainMask)[0]
+        return base.appendingPathComponent("Lutin")
+            .appendingPathComponent("asc-capabilities.json")
+    }
+
+    /// `LUTIN_ASC_CACHE=0` turns the cache off. The gating direction is the
+    /// one worth an escape hatch: a stale entry that reports a capability as
+    /// `not-public-api` blocks a command that in fact works, and without this
+    /// the only recovery is knowing which file to delete.
+    static var isEnabledByEnvironment: Bool {
+        ProcessInfo.processInfo.environment["LUTIN_ASC_CACHE"] != "0"
     }
 
     private let url: URL
     private let ttl: TimeInterval
-    private let now: () -> Date
+    private let now: @Sendable () -> Date
+    private let isEnabled: Bool
     private let lock = NSLock()
     /// `nil` until the file has been read once. A missing or malformed file
     /// loads as an empty map — the cache is an optimisation, never a
@@ -36,42 +51,69 @@ public final class ASCCapabilitiesCache: @unchecked Sendable {
 
     public init(url: URL = ASCCapabilitiesCache.defaultURL,
                 ttl: TimeInterval = 24 * 3600,
-                now: @escaping () -> Date = Date.init) {
+                now: @escaping @Sendable () -> Date = { Date() }) {
         self.url = url
         self.ttl = ttl
         self.now = now
+        self.isEnabled = Self.isEnabledByEnvironment
     }
 
-    /// The version recorded for this path, when the record is fresh.
-    public func version(for ascPath: String) -> String? {
+    /// The version recorded for this path, when the record is fresh and was
+    /// recorded against the binary that is there now.
+    func version(for ascPath: String) -> String? {
         lock.lock(); defer { lock.unlock() }
         return fresh(ascPath)?.version
     }
 
     /// Capabilities recorded for this path, only when they were recorded for
     /// `version` — that is the upgrade invalidation.
-    public func capabilities(for ascPath: String, version: String) -> ASCCapabilities? {
+    func capabilities(for ascPath: String, version: String) -> ASCCapabilities? {
         lock.lock(); defer { lock.unlock() }
         guard let entry = fresh(ascPath), entry.version == version else { return nil }
         return entry.capabilities
     }
 
-    public func store(version: String, capabilities: ASCCapabilities?, for ascPath: String) {
+    func store(version: String, capabilities: ASCCapabilities?, for ascPath: String) {
+        guard isEnabled else { return }
         lock.lock(); defer { lock.unlock() }
         var map = loaded()
-        map[ascPath] = Entry(ascPath: ascPath, version: version,
-                             cachedAt: now(), capabilities: capabilities)
+        map[ascPath] = Entry(ascPath: ascPath, fingerprint: Self.fingerprint(of: ascPath),
+                             version: version, cachedAt: now(), capabilities: capabilities)
         entries = map
         persist(map)
     }
 
     // MARK: - Storage
 
-    /// The entry for a path when it has not aged out.
+    /// The entry for a path when it has not aged out **and** was recorded
+    /// against the binary that is there now.
+    ///
+    /// The binary check is what makes it safe for `ASCProbe` to skip
+    /// `ASCToolVersion.assertSupported` on a hit: the pin is a pure function
+    /// of the version string, and a version is only ever recorded after it
+    /// passed. An unchanged binary reports the version it reported before, so
+    /// re-asserting it could not reach a different answer. A changed binary is
+    /// a miss, and gets the full probe.
     private func fresh(_ ascPath: String) -> Entry? {
-        guard let entry = loaded()[ascPath] else { return nil }
-        guard now().timeIntervalSince(entry.cachedAt) < ttl else { return nil }
+        guard isEnabled, let entry = loaded()[ascPath] else { return nil }
+        // A `cachedAt` in the future is a clock that moved, not a fresh record.
+        guard (0..<ttl).contains(now().timeIntervalSince(entry.cachedAt)) else { return nil }
+        guard let fingerprint = Self.fingerprint(of: ascPath),
+              entry.fingerprint == fingerprint else { return nil }
         return entry
+    }
+
+    /// Identity of the binary behind a path: the resolved path, its size and
+    /// its modification date. `brew upgrade` lands a different file in the
+    /// Cellar and repoints the symlink, so both an upgrade and a downgrade
+    /// change this. Unreadable is `nil`, which never matches — the cache then
+    /// degrades to probing every time, which is the safe direction.
+    private static func fingerprint(of ascPath: String) -> String? {
+        let resolved = URL(fileURLWithPath: ascPath).resolvingSymlinksInPath().path
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: resolved),
+              let size = attributes[.size] as? Int,
+              let modified = attributes[.modificationDate] as? Date else { return nil }
+        return "\(resolved):\(size):\(modified.timeIntervalSince1970)"
     }
 
     private func loaded() -> [String: Entry] {
@@ -97,9 +139,11 @@ public final class ASCCapabilitiesCache: @unchecked Sendable {
 /// always probe — the CLI's one-shot commands keep today's behaviour.
 enum ASCProbe {
 
-    /// The cached version when fresh; otherwise `asc --version`, checked
-    /// against the pin before anything is recorded — an unsupported asc is
-    /// rejected on every call, never cached into an assumption.
+    /// The recorded version when it belongs to the binary that is there now;
+    /// otherwise `asc --version`, checked against the pin before anything is
+    /// recorded. A version is never stored unasserted, and a record never
+    /// outlives the binary it describes, so no asc reaches a command without
+    /// having passed the pin.
     static func version(ascPath: String, runner: CommandRunning,
                         cache: ASCCapabilitiesCache?) throws -> String {
         if let cached = cache?.version(for: ascPath) { return cached }
@@ -113,10 +157,9 @@ enum ASCProbe {
         let version = ASCToolVersion(result.stdout)?.description
             ?? result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // The capabilities recorded against a different version are not this
-        // version's capabilities — an upgrade drops them.
-        let carried = cache?.capabilities(for: ascPath, version: version)
-        cache?.store(version: version, capabilities: carried, for: ascPath)
+        // A miss means the previous record was expired, absent, or another
+        // binary's — there are no capabilities worth carrying into this one.
+        cache?.store(version: version, capabilities: nil, for: ascPath)
         return version
     }
 

@@ -11,14 +11,24 @@ import TestSupport
 @MainActor
 final class StoreTabStateTests: XCTestCase {
 
-    private static let fakeAsc = "/fake/asc"
+    /// A real file: the capability cache identifies the binary an answer came
+    /// from, so a path that does not exist can never be a hit.
+    private var fakeAsc = ""
+
+    override func setUpWithError() throws {
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("lutin-fake-asc-\(UUID().uuidString)")
+        try Data("asc".utf8).write(to: url)
+        addTeardownBlock { try? FileManager.default.removeItem(at: url) }
+        fakeAsc = url.path
+    }
 
     private static let fixtures = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent()          // Tests/LutinUITests
         .deletingLastPathComponent()          // Tests
         .appendingPathComponent("LutinStoreConnectTests/Fixtures")
 
-    private func isExecutable(_ path: String) -> Bool { path == Self.fakeAsc }
+    private func isExecutable(_ path: String) -> Bool { path == fakeAsc }
 
     /// A project with the pinned app, a review artifact on disk, and an
     /// approval record — the state a developer sees after `plan` + `approve`.
@@ -61,25 +71,25 @@ final class StoreTabStateTests: XCTestCase {
     private func makeState(_ document: LutinProjectDocument) throws -> (StoreTabState, FakeCommandRunner) {
         let fake = FakeCommandRunner()
         fake.stub(executable: "/usr/bin/which",
-                  result: ShellResult(exitCode: 0, stdout: "\(Self.fakeAsc)\n", stderr: ""))
-        fake.stub(executable: Self.fakeAsc, argumentsContaining: "--version",
+                  result: ShellResult(exitCode: 0, stdout: "\(fakeAsc)\n", stderr: ""))
+        fake.stub(executable: fakeAsc, argumentsContaining: "--version",
                   result: ShellResult(exitCode: 0,
                                       stdout: try text("version.txt"), stderr: ""))
-        fake.stub(executable: Self.fakeAsc, argumentsContaining: "web",
+        fake.stub(executable: fakeAsc, argumentsContaining: "web",
                   result: ShellResult(exitCode: 0, stdout: try text("web-auth-status.json"), stderr: ""))
-        fake.stub(executable: Self.fakeAsc, argumentsContaining: "auth",
+        fake.stub(executable: fakeAsc, argumentsContaining: "auth",
                   result: ShellResult(exitCode: 0, stdout: try text("auth-status.json"), stderr: ""))
-        fake.stub(executable: Self.fakeAsc, argumentsContaining: "capabilities",
+        fake.stub(executable: fakeAsc, argumentsContaining: "capabilities",
                   result: ShellResult(exitCode: 0, stdout: try text("capabilities.json"), stderr: ""))
-        fake.stub(executable: Self.fakeAsc, argumentsContaining: "apps",
+        fake.stub(executable: fakeAsc, argumentsContaining: "apps",
                   result: ShellResult(exitCode: 0, stdout: try text("apps-view.json"), stderr: ""))
-        fake.stub(executable: Self.fakeAsc, argumentsContaining: "versions",
+        fake.stub(executable: fakeAsc, argumentsContaining: "versions",
                   result: ShellResult(exitCode: 0, stdout: try text("versions-list.json"), stderr: ""))
-        fake.stub(executable: Self.fakeAsc, argumentsContaining: "validate",
+        fake.stub(executable: fakeAsc, argumentsContaining: "validate",
                   result: ShellResult(exitCode: 0,
                                       stdout: #"{"filesScanned":0,"issues":[],"errorCount":0,"warningCount":0,"valid":true}"#,
                                       stderr: ""))
-        fake.stub(executable: Self.fakeAsc,
+        fake.stub(executable: fakeAsc,
                   arguments: ["metadata", "status", "--review-dir", reviewDir(document),
                               "--output", "json"],
                   result: ShellResult(exitCode: 0, stdout: try text("review-status.json"), stderr: ""))
@@ -107,7 +117,7 @@ final class StoreTabStateTests: XCTestCase {
 
     private func probes(_ fake: FakeCommandRunner, _ argument: String) -> Int {
         fake.invocations.filter {
-            $0.executable == Self.fakeAsc && $0.arguments.contains(argument)
+            $0.executable == fakeAsc && $0.arguments.contains(argument)
         }.count
     }
 
@@ -148,7 +158,7 @@ final class StoreTabStateTests: XCTestCase {
 
         XCTAssertFalse(fake.invocations.isEmpty)
         XCTAssertTrue(fake.invocations.allSatisfy {
-            $0.executable == Self.fakeAsc || $0.executable == "/usr/bin/which"
+            $0.executable == fakeAsc || $0.executable == "/usr/bin/which"
         }, "one injected runner serves every section")
     }
 
@@ -164,7 +174,7 @@ final class StoreTabStateTests: XCTestCase {
                             keys: ["app-info:fr-FR:subtitle"], scope: nil)
 
         let approve = try XCTUnwrap(fake.invocations.first {
-            $0.executable == Self.fakeAsc && $0.arguments.contains("approve")
+            $0.executable == fakeAsc && $0.arguments.contains("approve")
         })
         XCTAssertEqual(approve.arguments,
                        ["metadata", "approve",
@@ -182,7 +192,7 @@ final class StoreTabStateTests: XCTestCase {
         guard case .loaded(let before) = state.review else { return XCTFail("review: \(state.review)") }
         let statusCallsBefore = statusInvocations(fake).count
 
-        fake.stub(executable: Self.fakeAsc, argumentsContaining: "approve",
+        fake.stub(executable: fakeAsc, argumentsContaining: "approve",
                   result: ShellResult(exitCode: 2, stdout: "",
                                       stderr: "Error: json: unknown field \"bogus\"\n"))
         await state.approve(document: document, all: true, keys: [], scope: nil)
@@ -233,7 +243,7 @@ final class StoreTabStateTests: XCTestCase {
     func testAFailedStatusKeepsItsCodeInsteadOfLookingLikeAMissingAsc() async throws {
         let document = try makeDocument()
         let (state, fake) = try makeState(document)
-        fake.stub(executable: Self.fakeAsc,
+        fake.stub(executable: fakeAsc,
                   arguments: ["metadata", "status", "--review-dir", reviewDir(document),
                               "--output", "json"],
                   result: ShellResult(exitCode: 1, stdout: "",
@@ -257,7 +267,7 @@ final class StoreTabStateTests: XCTestCase {
         await state.confirmApply(document: document)
 
         let apply = try XCTUnwrap(fake.invocations.first {
-            $0.executable == Self.fakeAsc && $0.arguments.contains("apply")
+            $0.executable == fakeAsc && $0.arguments.contains("apply")
         })
         XCTAssertTrue(apply.arguments.starts(with: ["metadata", "apply"]))
         XCTAssertTrue(apply.arguments.contains("--confirm"))

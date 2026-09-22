@@ -3,6 +3,7 @@ import SwiftUI
 import XCTest
 import LutinCore
 import LutinDocument
+import LutinStoreConnect
 import TestSupport
 @testable import LutinUI
 
@@ -55,7 +56,16 @@ final class StoreTabRenderTests: XCTestCase {
                   result: ShellResult(exitCode: 0,
                                       stdout: #"{"data":[{"type":"appStoreVersions","id":"1","attributes":{"platform":"MAC_OS","versionString":"1.2.3","appStoreState":"READY_FOR_SALE","createdDate":"2026-01-01T00:00:00Z","releaseType":"AFTER_APPROVAL"}},{"type":"appStoreVersions","id":"2","attributes":{"platform":"MAC_OS","versionString":"1.3.0","appStoreState":"","appVersionState":"IN_REVIEW","createdDate":"2026-02-01T00:00:00Z","releaseType":"MANUAL"}}]}"#,
                                       stderr: ""))
-        return StoreTabState(runner: fake, isExecutable: { $0 == Self.fakeAsc })
+        return StoreTabState(runner: fake, isExecutable: { $0 == Self.fakeAsc },
+                             cache: throwawayCache())
+    }
+
+    /// The real cache lives in `~/Library`; no test may read or write it.
+    private func throwawayCache() -> ASCCapabilitiesCache {
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("lutin-asc-cache-\(UUID().uuidString).json")
+        addTeardownBlock { try? FileManager.default.removeItem(at: url) }
+        return ASCCapabilitiesCache(url: url, ttl: 3600)
     }
 
     private func makeDocument() throws -> LutinProjectDocument {
@@ -138,7 +148,12 @@ final class StoreTabRenderTests: XCTestCase {
         try Data(#"{"description":"A description of the app.","whatsNew":"First release."}"#.utf8)
             .write(to: tree.appendingPathComponent("version/1.2.3/en-US.json"))
 
-        let state = StoreTabState(runner: FakeCommandRunner())
+        // `isExecutable` is pinned so the real `/opt/homebrew/bin/asc` cannot be
+        // resolved, and the cache is a throwaway file: this test renders the
+        // metadata tree it wrote, and must not depend on the developer's machine.
+        let state = StoreTabState(runner: FakeCommandRunner(),
+                                  isExecutable: { _ in false },
+                                  cache: throwawayCache())
         await state.refresh(document: document)
 
         XCTAssertEqual(state.listing.name, "Sayrise", "the canvas reads the tree it was pointed at")
